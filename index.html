@@ -15,6 +15,9 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
+        .tab-inactive:hover { color: #334155; border-bottom: 2px solid #cbd5e1; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -63,21 +66,35 @@
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col min-w-0 bg-slate-50">
-        <header class="bg-white border-b border-slate-200 px-8 py-5 flex justify-between items-center sticky top-0 z-10">
-            <div>
-                <h2 id="header-title" class="text-2xl font-bold text-slate-800">전체 현황 대시보드</h2>
-                <p id="header-desc" class="text-sm text-slate-500 mt-1">모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.</p>
+        <!-- Header & Tabs -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+            <div class="px-8 py-5 flex justify-between items-center">
+                <div>
+                    <h2 id="header-title" class="text-2xl font-bold text-slate-800">전체 현황 대시보드</h2>
+                    <p id="header-desc" class="text-sm text-slate-500 mt-1">모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="add-task-btn" onclick="openModal('task-modal')" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> 새 업무
+                    </button>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="openModal('task-modal')" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                    <i data-lucide="plus" class="w-4 h-4"></i> 새 업무
+            
+            <!-- Navigation Tabs -->
+            <div class="px-8 flex gap-6">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active pb-3 text-sm flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> 대시보드 (Tasks)
+                </button>
+                <button onclick="switchTab('routine')" id="tab-routine" class="tab-inactive pb-3 text-sm flex items-center gap-2">
+                    <i data-lucide="repeat" class="w-4 h-4"></i> 루틴 체크 (Monthly)
                 </button>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-8">
-            <div class="max-w-6xl mx-auto space-y-8">
-                
+            
+            <!-- VIEW 1: DASHBOARD (TASKS) -->
+            <div id="view-dashboard" class="max-w-6xl mx-auto space-y-8">
                 <!-- Urgent Section -->
                 <section id="urgent-section" class="hidden">
                     <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -121,6 +138,27 @@
                     </div>
                 </section>
             </div>
+
+            <!-- VIEW 2: ROUTINE CHECK -->
+            <div id="view-routine" class="hidden max-w-5xl mx-auto space-y-6">
+                <div class="flex justify-between items-center bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-100 rounded-lg text-blue-600"><i data-lucide="calendar-clock" class="w-6 h-6"></i></div>
+                        <div>
+                            <h3 class="text-lg font-bold text-blue-900">월간 루틴 체크리스트</h3>
+                            <p class="text-xs text-blue-700">매월 반복되는 계약/보고서 업무입니다. 주의사항을 꼭 확인하세요.</p>
+                        </div>
+                    </div>
+                    <button onclick="resetRoutines()" class="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors shadow-sm">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 새 달 시작 (초기화)
+                    </button>
+                </div>
+
+                <div id="routine-list" class="space-y-4">
+                    <!-- Routine Cards Injected Here -->
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -214,11 +252,12 @@
         let currentUser = null;
         let clients = [];
         let tasks = [];
+        let routines = [];
         let events = [];
         let selectedClientId = 'all';
         let filterStatus = 'active';
 
-        // --- SEED DATA (UPDATED: 2026-01-07) ---
+        // --- SEED DATA (UPDATED: 2026-01-07 with Routine) ---
         const SEED_DATA = {
             clients: [
                 { name: '미즈메디', status: 'Stable', note: '2,200만원 계약, 노후화 심각' },
@@ -231,57 +270,29 @@
                 { name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
             ],
             tasks: [
-                // 미즈메디
-                { clientName: '미즈메디', title: '11월 월간보고서 제작', status: 'done', due: '2025-12-26', priority: 'Low', note: 'CSR 조회: 전달 27일~이달 26일' },
-                { clientName: '미즈메디', title: '12월 월간보고서 제작', status: 'done', due: '2026-01-05', priority: 'Low' },
-                { clientName: '미즈메디', title: 'RPA 청구 및 데이터 수신', status: 'todo', due: '2026-01-27', priority: 'High', note: '매월 27일 필수' },
-                { clientName: '미즈메디', title: '정기 방문 모니터링 체크', status: 'todo', due: '', priority: 'Medium', note: '박재영 상무 수행 현황 확인' },
-                { clientName: '미즈메디', title: 'MM 모듈 개발 요구 방어', status: 'in-progress', due: '', priority: 'High', note: '김종암 실장: ROI 부족 논리 대응' },
-
-                // 카카오스타일
                 { clientName: '카카오스타일', title: 'ISMS-P/감사 인터뷰 F/U', status: 'done', due: '2026-01-11', priority: 'High', note: '11일 목요일까지 F/U' },
                 { clientName: '카카오스타일', title: '네트워크 구성도 파악 (DTE)', status: 'done', due: '2026-01-06', priority: 'High', note: '회신 없으면 점심쯤 확인 후 종합 결정' },
-                { clientName: '카카오스타일', title: '26년 계약서 날인 및 등기', status: 'done', due: '2026-01-05', priority: 'High', note: '김서연 위원: 결재 후 퀵 발송 -> 완료' },
-                { clientName: '카카오스타일', title: '[HRS] 12월 유지보수 내역', status: 'todo', due: '', priority: 'Low', note: '무상공수 HR 제외 확인' },
-                { clientName: '카카오스타일', title: '[ASPN] 12월 e-HR 보고서', status: 'todo', due: '', priority: 'Low', note: 'CSM 8시간 수기 추가' },
-
-                // 헬리녹스
-                { clientName: '헬리녹스', title: '12월 월간보고서 제작', status: 'todo', due: '', priority: 'Low' },
-                { clientName: '헬리녹스', title: '26년 유지보수 견적 전달', status: 'todo', due: '', priority: 'Medium' },
                 { clientName: '헬리녹스', title: '계약서 답변 대기 (신규담당자)', status: 'todo', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신' },
-
-                // 스카이하이
-                { clientName: '스카이하이', title: 'EPM 등록 (9,780만원)', status: 'todo', due: '', priority: 'High', note: '원화 기입 필수' },
                 { clientName: '스카이하이', title: '계약변경 합의서 확인', status: 'done', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의' },
-                { clientName: '스카이하이', title: '11월 월간보고서 (단가유지)', status: 'done', due: '', priority: 'Low', note: 'CSM 8시간(1MD) 기입' },
-
-                // 선우프레시
-                { clientName: '선우프레시', title: '26년 계약서 작성 (SLA별첨)', status: 'done', due: '', priority: 'Medium' },
-                { clientName: '선우프레시', title: '세금계산서 발행 (12/29)', status: 'done', due: '2025-12-29', priority: 'Medium', note: '유경래 차장 소통 완료' },
                 { clientName: '선우프레시', title: 'SFA 이슈 F/U (장용재 이사)', status: 'todo', due: '', priority: 'High' },
-                { clientName: '선우프레시', title: '12월 월간보고서 제작', status: 'done', due: '', priority: 'Low', note: 'MS 애저(MSP) 공수 제외 확인' },
-
-                // 깨끗한나라
-                { clientName: '깨끗한나라', title: '재계약 협상 (2-3% 인상)', status: 'done', due: '', priority: 'High', note: '이성훈 상무' },
                 { clientName: '깨끗한나라', title: '클레임 2건 공수 차감', status: 'todo', due: '', priority: 'High', note: '오상무 자료 대기' },
-                { clientName: '깨끗한나라', title: '잘레시아 발주서 수령', status: 'done', due: '', priority: 'Medium', note: '견적서X 발주서O' },
-                { clientName: '깨끗한나라', title: '25년 추가공수 세금계산서', status: 'done', due: '2025-12-29', priority: 'Medium' },
-                { clientName: '깨끗한나라', title: '26년 계약서 협상 완료', status: 'done', due: '2026-01-05', priority: 'High' },
                 { clientName: '깨끗한나라', title: '방문 보고 (4주차)', status: 'todo', due: '2026-01-27', priority: 'Medium', note: '화요일 오후 3시' },
-                { clientName: '깨끗한나라', title: '튜닝보고서 공유', status: 'todo', due: '', priority: 'Low', note: '양다은 사원 수신 시 구글업로드' },
-
-                // 딜로이트
-                { clientName: '딜로이트', title: '12월 월간보고서', status: 'done', due: '', priority: 'Low', note: 'BC리포트 첨부 X' },
                 { clientName: '딜로이트', title: '보안 서약서 징구 (3종)', status: 'todo', due: '', priority: 'Medium', note: '오진혁 위원 서명 -> 경영관리팀 제출' },
-                { clientName: '딜로이트', title: 'PO(구매주문서) 수령 및 EPM 입력', status: 'todo', due: '', priority: 'Medium', note: '박경천 차장 협의' },
-
-                // 젝시믹스
-                { clientName: '젝시믹스', title: '26년 계약서 전자결재', status: 'done', due: '2026-01-06', priority: 'High', note: '1/5 퀵수령 -> 1/6 등기발송 완료' }
+                { clientName: '딜로이트', title: 'PO(구매주문서) 수령 및 EPM 입력', status: 'todo', due: '', priority: 'Medium', note: '박경천 차장 협의' }
+            ],
+            routines: [
+                { clientName: '스카이하이', type: 'Contract', title: '계약 공수 이월 체크', guide: '⚠️ 주의: 개발/CPI 파트만 이월 가능. 일반 기술지원은 절대 이월 약속 금지.' },
+                { clientName: '스카이하이', type: 'Report', title: '월간보고서 CSM 공수 기입', guide: 'CSM(고객지원) 공수는 8시간(1MD) 정도로 맞춰서 기입 권장.' },
+                { clientName: '카카오스타일', type: 'Report', title: '월간보고서 작성 (3종 체크)', guide: '1. 무상공수 HR 제외\n2. CSM 공수 8시간 수기 추가\n3. CONS 건은 유지보수와 분리 작성' },
+                { clientName: '깨끗한나라', type: 'Report', title: '월간보고서 및 튜닝보고서', guide: '자동 산출 기준(수정X). 튜닝보고서 수신 시 구글드라이브 업로드 후 안내 메일.' },
+                { clientName: '깨끗한나라', type: 'System', title: 'CSR 수정 요청', guide: '참조 필수: 김영준, 김영균 위원' },
+                { clientName: '선우프레시', type: 'Report', title: '월간보고서 공수 확인', guide: 'MSP(MS애저) 공수는 CSR 계약 공수에서 제외되었는지 확인.' },
+                { clientName: '미즈메디', type: 'Report', title: 'RPA 청구 및 보고서', guide: '매월 27일 데이터 수신 즉시 작성 및 청구 진행.' },
+                { clientName: '딜로이트', type: 'Report', title: '월간보고서 (BC리포트 제외)', guide: 'BC리포트는 첨부하지 않음.' },
+                { clientName: '딜로이트', type: 'Contract', title: '계약 갱신/보안서약서', guide: '계약 갱신 시마다 보안서약서(3종) 오진혁 위원 서명 필요.' },
+                { clientName: '전체공통', type: 'Contract', title: '전자결재 매입 기재', guide: '매입 작성 시 [내부용역비] 항목으로 기재할 것.' }
             ],
             events: [
-                { title: 'SAP CX 웨비나', date: '2025-12-10', time: '16:00', type: 'done' },
-                { title: '가족 초청 문화행사', date: '2025-12-12', time: '19:30', type: 'done' },
-                { title: '고객초청행사', date: '2025-12-17', time: '16:30', type: 'done' },
                 { title: '등기 수령 확인 (젝시,카카오,스카이)', date: '2026-01-06', type: 'done' },
                 { title: '헬리녹스 신규 담당자 입사', date: '2026-01-19', type: 'upcoming' },
                 { title: '깨끗한나라 방문 보고', date: '2026-01-27', time: '15:00', type: 'upcoming' }
@@ -305,30 +316,33 @@
         });
 
         function initListeners(uid) {
-            // Listen Clients
+            // Clients
             onSnapshot(collection(db, 'pm_users', uid, 'clients'), (snapshot) => {
-                const loadedClients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                clients = loadedClients;
-                
-                // Seed if empty
-                if (snapshot.empty && !localStorage.getItem('pm_seeded')) {
+                clients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                if (snapshot.empty && !localStorage.getItem('pm_seeded_v2')) {
                     seedDatabase(uid);
-                    localStorage.setItem('pm_seeded', 'true');
+                    localStorage.setItem('pm_seeded_v2', 'true');
                 }
-                
                 renderClients();
-                populateClientSelect(); // For Modal
-                renderTasks(); // Re-render tasks to update client names
+                populateClientSelect();
+                renderTasks();
+                renderRoutines();
             });
 
-            // Listen Tasks
+            // Tasks
             onSnapshot(collection(db, 'pm_users', uid, 'tasks'), (snapshot) => {
                 tasks = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 renderTasks();
                 renderUrgent();
             });
 
-            // Listen Events
+            // Routines (New)
+            onSnapshot(collection(db, 'pm_users', uid, 'routines'), (snapshot) => {
+                routines = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                renderRoutines();
+            });
+
+            // Events
             onSnapshot(collection(db, 'pm_users', uid, 'events'), (snapshot) => {
                 events = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 renderEvents();
@@ -351,16 +365,17 @@
                 const clientId = clientMap[t.clientName];
                 if(clientId) {
                     const ref = doc(collection(db, 'pm_users', uid, 'tasks'));
-                    batch.set(ref, {
-                        clientId, 
-                        title: t.title, 
-                        status: t.status, 
-                        due: t.due, 
-                        priority: t.priority,
-                        note: t.note || ''
-                    });
+                    batch.set(ref, { clientId, ...t });
                 }
             }
+
+            // Routines
+            for(const r of SEED_DATA.routines) {
+                const clientId = clientMap[r.clientName] || 'ALL'; // Common ID
+                const ref = doc(collection(db, 'pm_users', uid, 'routines'));
+                batch.set(ref, { clientId, isChecked: false, ...r });
+            }
+
             // Events
             for(const e of SEED_DATA.events) {
                 const ref = doc(collection(db, 'pm_users', uid, 'events'));
@@ -372,22 +387,123 @@
                 console.log("Seeded successfully");
             } catch(e) {
                 console.error("Seeding Failed:", e);
-                alert("데이터 초기화 실패! Firebase Console에서 Rules와 Auth 설정을 확인하세요.");
+                alert("초기화 실패. 콘솔을 확인하세요.");
             }
         }
 
         // --- GLOBAL ACTIONS ---
         window.forceSeed = () => {
-            if(confirm("기존 데이터를 모두 지우고 초기 상태로 되돌리시겠습니까?")) {
-                if(currentUser) {
-                    seedDatabase(currentUser.uid);
-                    alert("초기화 명령을 보냈습니다.");
-                } else {
-                    alert("서버 연결 전입니다. 잠시 후 다시 시도하세요.");
-                }
+            if(confirm("기존 데이터를 모두 지우고 '루틴 탭'이 포함된 최신 버전으로 초기화하시겠습니까?")) {
+                if(currentUser) seedDatabase(currentUser.uid);
             }
         };
 
+        window.switchTab = (tab) => {
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-routine').classList.add('hidden');
+            document.getElementById('tab-dashboard').className = 'tab-inactive pb-3 text-sm flex items-center gap-2';
+            document.getElementById('tab-routine').className = 'tab-inactive pb-3 text-sm flex items-center gap-2';
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = 'tab-active pb-3 text-sm flex items-center gap-2';
+            
+            // Hide Add Task button on Routine tab
+            const addBtn = document.getElementById('add-task-btn');
+            if(tab === 'routine') addBtn.classList.add('hidden');
+            else addBtn.classList.remove('hidden');
+        };
+
+        // --- ROUTINE LOGIC ---
+        function renderRoutines() {
+            const list = document.getElementById('routine-list');
+            list.innerHTML = '';
+
+            // Group by Client
+            const grouped = routines.reduce((acc, r) => {
+                const clientName = r.clientName || '전체공통';
+                if(!acc[clientName]) acc[clientName] = [];
+                acc[clientName].push(r);
+                return acc;
+            }, {});
+
+            // Sort logic: '전체공통' first, then filtered client, then others
+            const clientNames = Object.keys(grouped).sort((a,b) => {
+                if(a === '전체공통') return -1;
+                if(b === '전체공통') return 1;
+                return a.localeCompare(b);
+            });
+
+            // Filter logic inside render
+            const activeGroup = selectedClientId === 'all' ? clientNames : 
+                                clientNames.filter(name => {
+                                    const client = clients.find(c => c.id === selectedClientId);
+                                    return name === (client ? client.name : '') || name === '전체공통';
+                                });
+
+            if(activeGroup.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-400">해당 고객사의 루틴 업무가 없습니다.</div>`;
+                return;
+            }
+
+            activeGroup.forEach(name => {
+                const groupItems = grouped[name];
+                let groupHtml = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-slate-700 flex justify-between items-center">
+                        <span>${name}</span>
+                        <span class="text-xs font-normal text-slate-500">${groupItems.length} Tasks</span>
+                    </div>
+                    <div class="divide-y divide-slate-100">`;
+                
+                groupItems.forEach(r => {
+                    const isChecked = r.isChecked;
+                    const checkColor = isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 text-transparent hover:border-blue-500';
+                    const textStyle = isChecked ? 'text-slate-400 line-through' : 'text-slate-800 font-medium';
+                    const guideBox = r.guide ? `
+                        <div class="mt-2 text-xs bg-amber-50 border border-amber-100 text-amber-800 p-2 rounded flex gap-2 items-start">
+                            <i data-lucide="alert-triangle" class="w-3 h-3 mt-0.5 flex-shrink-0"></i>
+                            <pre class="whitespace-pre-wrap font-sans">${r.guide}</pre>
+                        </div>` : '';
+
+                    groupHtml += `
+                        <div class="p-4 hover:bg-slate-50 transition-colors">
+                            <div class="flex items-start gap-3">
+                                <button onclick="toggleRoutine('${r.id}', ${!isChecked})" class="mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${checkColor} flex-shrink-0">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">${r.type}</span>
+                                        <span class="${textStyle}">${r.title}</span>
+                                    </div>
+                                    ${guideBox}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                groupHtml += `</div></div>`;
+                list.innerHTML += groupHtml;
+            });
+            lucide.createIcons();
+        }
+
+        window.toggleRoutine = async (id, status) => {
+            await updateDoc(doc(db, 'pm_users', currentUser.uid, 'routines', id), { isChecked: status });
+        };
+
+        window.resetRoutines = async () => {
+            if(!confirm("새로운 달이 시작되었습니까? 모든 루틴 체크박스를 초기화합니다.")) return;
+            
+            const batch = writeBatch(db);
+            routines.forEach(r => {
+                const ref = doc(db, 'pm_users', currentUser.uid, 'routines', r.id);
+                batch.update(ref, { isChecked: false });
+            });
+            await batch.commit();
+            alert("모든 루틴이 초기화되었습니다.");
+        };
+
+        // --- EXISTING UI FUNCTIONS ---
         window.setFilter = (status) => {
             filterStatus = status;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -406,6 +522,7 @@
             selectedClientId = id;
             renderClients(); // Update active state
             renderTasks();
+            renderRoutines(); // Also filter routines
             
             const client = clients.find(c => c.id === id);
             if(id === 'all') {
