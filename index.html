@@ -218,30 +218,73 @@
         let selectedClientId = 'all';
         let filterStatus = 'active';
 
-        // --- SEED DATA (최초 실행 시 DB 생성용) ---
+        // --- SEED DATA (UPDATED: 2026-01-07) ---
         const SEED_DATA = {
             clients: [
-                { name: '미즈메디', status: 'Stable' },
-                { name: '카카오스타일', status: 'Risk', note: '감사/ISMS-P' },
-                { name: '헬리녹스', status: 'Stable' },
-                { name: '스카이하이', status: 'Active', note: '계약변경' },
-                { name: '선우프레시', status: 'Active', note: 'SFA이슈' },
-                { name: '깨끗한나라', status: 'Warning', note: '클레임/협상' },
-                { name: '딜로이트', status: 'Stable' },
-                { name: '젝시믹스', status: 'Active', note: '계약날인' }
+                { name: '미즈메디', status: 'Stable', note: '2,200만원 계약, 노후화 심각' },
+                { name: '카카오스타일', status: 'Risk', note: 'ISMS-P 감사 대비, 계약 체결' },
+                { name: '헬리녹스', status: 'Stable', note: '신규 담당자 입사(1/19) 대기' },
+                { name: '스카이하이', status: 'Active', note: '계약변경 합의, EPM 원화 등록' },
+                { name: '선우프레시', status: 'Active', note: 'SFA 이슈, MS애저 제외' },
+                { name: '깨끗한나라', status: 'Warning', note: '클레임 차감, 튜닝보고서 공유' },
+                { name: '딜로이트', status: 'Stable', note: '보안서약서 징구, 8월~7월 계약' },
+                { name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
             ],
             tasks: [
-                { clientName: '미즈메디', title: '11월 월간보고서 제작', status: 'done', due: '2025-12-26', priority: 'Low' },
+                // 미즈메디
+                { clientName: '미즈메디', title: '11월 월간보고서 제작', status: 'done', due: '2025-12-26', priority: 'Low', note: 'CSR 조회: 전달 27일~이달 26일' },
+                { clientName: '미즈메디', title: '12월 월간보고서 제작', status: 'done', due: '2026-01-05', priority: 'Low' },
+                { clientName: '미즈메디', title: 'RPA 청구 및 데이터 수신', status: 'todo', due: '2026-01-27', priority: 'High', note: '매월 27일 필수' },
+                { clientName: '미즈메디', title: '정기 방문 모니터링 체크', status: 'todo', due: '', priority: 'Medium', note: '박재영 상무 수행 현황 확인' },
+                { clientName: '미즈메디', title: 'MM 모듈 개발 요구 방어', status: 'in-progress', due: '', priority: 'High', note: '김종암 실장: ROI 부족 논리 대응' },
+
+                // 카카오스타일
                 { clientName: '카카오스타일', title: 'ISMS-P/감사 인터뷰 F/U', status: 'done', due: '2026-01-11', priority: 'High', note: '11일 목요일까지 F/U' },
-                { clientName: '카카오스타일', title: '네트워크 구성도 파악 (DTE)', status: 'todo', due: '2026-01-06', priority: 'High', note: '회신 없으면 점심쯤 확인 후 종합 결정' },
-                { clientName: '카카오스타일', title: '26년 계약서 날인 및 등기', status: 'in-progress', due: '2026-01-05', priority: 'High', note: '김서연 위원: 결재 후 퀵 발송 예정' },
-                { clientName: '헬리녹스', title: 'EPM 등록 및 계약서 작성', status: 'todo', due: '2026-02-01', priority: 'Medium' },
+                { clientName: '카카오스타일', title: '네트워크 구성도 파악 (DTE)', status: 'done', due: '2026-01-06', priority: 'High', note: '회신 없으면 점심쯤 확인 후 종합 결정' },
+                { clientName: '카카오스타일', title: '26년 계약서 날인 및 등기', status: 'done', due: '2026-01-05', priority: 'High', note: '김서연 위원: 결재 후 퀵 발송 -> 완료' },
+                { clientName: '카카오스타일', title: '[HRS] 12월 유지보수 내역', status: 'todo', due: '', priority: 'Low', note: '무상공수 HR 제외 확인' },
+                { clientName: '카카오스타일', title: '[ASPN] 12월 e-HR 보고서', status: 'todo', due: '', priority: 'Low', note: 'CSM 8시간 수기 추가' },
+
+                // 헬리녹스
+                { clientName: '헬리녹스', title: '12월 월간보고서 제작', status: 'todo', due: '', priority: 'Low' },
+                { clientName: '헬리녹스', title: '26년 유지보수 견적 전달', status: 'todo', due: '', priority: 'Medium' },
+                { clientName: '헬리녹스', title: '계약서 답변 대기 (신규담당자)', status: 'todo', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신' },
+
+                // 스카이하이
                 { clientName: '스카이하이', title: 'EPM 등록 (9,780만원)', status: 'todo', due: '', priority: 'High', note: '원화 기입 필수' },
-                { clientName: '스카이하이', title: '계약변경 합의서 확인', status: 'in-progress', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의' },
-                { clientName: '선우프레시', title: '세금계산서 발행 (12/29)', status: 'todo', due: '2025-12-29', priority: 'Medium', note: '유경래 차장 소통' },
-                { clientName: '깨끗한나라', title: '재계약 협상 (2-3% 인상)', status: 'todo', due: '', priority: 'High', note: '이성훈 상무' },
+                { clientName: '스카이하이', title: '계약변경 합의서 확인', status: 'done', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의' },
+                { clientName: '스카이하이', title: '11월 월간보고서 (단가유지)', status: 'done', due: '', priority: 'Low', note: 'CSM 8시간(1MD) 기입' },
+
+                // 선우프레시
+                { clientName: '선우프레시', title: '26년 계약서 작성 (SLA별첨)', status: 'done', due: '', priority: 'Medium' },
+                { clientName: '선우프레시', title: '세금계산서 발행 (12/29)', status: 'done', due: '2025-12-29', priority: 'Medium', note: '유경래 차장 소통 완료' },
+                { clientName: '선우프레시', title: 'SFA 이슈 F/U (장용재 이사)', status: 'todo', due: '', priority: 'High' },
+                { clientName: '선우프레시', title: '12월 월간보고서 제작', status: 'done', due: '', priority: 'Low', note: 'MS 애저(MSP) 공수 제외 확인' },
+
+                // 깨끗한나라
+                { clientName: '깨끗한나라', title: '재계약 협상 (2-3% 인상)', status: 'done', due: '', priority: 'High', note: '이성훈 상무' },
                 { clientName: '깨끗한나라', title: '클레임 2건 공수 차감', status: 'todo', due: '', priority: 'High', note: '오상무 자료 대기' },
-                { clientName: '젝시믹스', title: '26년 계약서 전자결재', status: 'todo', due: '2026-01-06', priority: 'High', note: '1/5 퀵수령 -> 날인 -> 1/6 등기발송' }
+                { clientName: '깨끗한나라', title: '잘레시아 발주서 수령', status: 'done', due: '', priority: 'Medium', note: '견적서X 발주서O' },
+                { clientName: '깨끗한나라', title: '25년 추가공수 세금계산서', status: 'done', due: '2025-12-29', priority: 'Medium' },
+                { clientName: '깨끗한나라', title: '26년 계약서 협상 완료', status: 'done', due: '2026-01-05', priority: 'High' },
+                { clientName: '깨끗한나라', title: '방문 보고 (4주차)', status: 'todo', due: '2026-01-27', priority: 'Medium', note: '화요일 오후 3시' },
+                { clientName: '깨끗한나라', title: '튜닝보고서 공유', status: 'todo', due: '', priority: 'Low', note: '양다은 사원 수신 시 구글업로드' },
+
+                // 딜로이트
+                { clientName: '딜로이트', title: '12월 월간보고서', status: 'done', due: '', priority: 'Low', note: 'BC리포트 첨부 X' },
+                { clientName: '딜로이트', title: '보안 서약서 징구 (3종)', status: 'todo', due: '', priority: 'Medium', note: '오진혁 위원 서명 -> 경영관리팀 제출' },
+                { clientName: '딜로이트', title: 'PO(구매주문서) 수령 및 EPM 입력', status: 'todo', due: '', priority: 'Medium', note: '박경천 차장 협의' },
+
+                // 젝시믹스
+                { clientName: '젝시믹스', title: '26년 계약서 전자결재', status: 'done', due: '2026-01-06', priority: 'High', note: '1/5 퀵수령 -> 1/6 등기발송 완료' }
+            ],
+            events: [
+                { title: 'SAP CX 웨비나', date: '2025-12-10', time: '16:00', type: 'done' },
+                { title: '가족 초청 문화행사', date: '2025-12-12', time: '19:30', type: 'done' },
+                { title: '고객초청행사', date: '2025-12-17', time: '16:30', type: 'done' },
+                { title: '등기 수령 확인 (젝시,카카오,스카이)', date: '2026-01-06', type: 'done' },
+                { title: '헬리녹스 신규 담당자 입사', date: '2026-01-19', type: 'upcoming' },
+                { title: '깨끗한나라 방문 보고', date: '2026-01-27', time: '15:00', type: 'upcoming' }
             ]
         };
 
@@ -318,6 +361,12 @@
                     });
                 }
             }
+            // Events
+            for(const e of SEED_DATA.events) {
+                const ref = doc(collection(db, 'pm_users', uid, 'events'));
+                batch.set(ref, e);
+            }
+
             try {
                 await batch.commit();
                 console.log("Seeded successfully");
