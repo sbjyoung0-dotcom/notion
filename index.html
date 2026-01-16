@@ -308,44 +308,69 @@
         let selectedClientId = 'all';
         let filterStatus = 'active';
 
-        // --- SEED DATA (UPDATED: 2026-01-07 with Stable Status) ---
+        // --- SEED DATA (UPDATED: 2026-01-16 with IrisBright) ---
         const SEED_DATA = {
             clients: [
+                { id: 'c_iris', name: '아이리스브라이트', status: 'Risk', note: '신규 제안(RFP) 진행 중' },
                 { id: 'c_mizmedi', name: '미즈메디', status: 'Stable', note: '2,200만원 계약, 노후화 심각' },
-                { id: 'c_kakao', name: '카카오스타일', status: 'Stable', note: 'ISMS-P/DTE/계약 완료' },
+                { id: 'c_kakao', name: '카카오스타일', status: 'Stable', note: 'ISMS-P/DTE/계약 완료, 보안 이슈 소명' },
                 { id: 'c_helinox', name: '헬리녹스', status: 'Stable', note: '신규 담당자 입사(1/19) 대기' },
                 { id: 'c_skyhigh', name: '스카이하이', status: 'Active', note: '계약변경 합의, EPM 원화 등록' },
                 { id: 'c_sunwoo', name: '선우프레시', status: 'Active', note: 'SFA 이슈, MS애저 제외' },
-                { id: 'c_klean', name: '깨끗한나라', status: 'Stable', note: '계약완료, 클레임 차감 대기' },
+                { id: 'c_klean', name: '깨끗한나라', status: 'Stable', note: '발주서 날인 완료, 공수 검증' },
                 { id: 'c_deloitte', name: '딜로이트', status: 'Stable', note: '보안서약서 징구, 8월~7월 계약' },
                 { id: 'c_xexymix', name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
             ],
             tasks: [
-                { id: 't_kakao_isms', clientId: 'c_kakao', title: 'ISMS-P/감사 인터뷰 F/U', status: 'done', due: '2026-01-11', priority: 'High', note: '11일 목요일까지 F/U' },
-                { id: 't_kakao_dte', clientId: 'c_kakao', title: '네트워크 구성도 파악 (DTE)', status: 'done', due: '2026-01-06', priority: 'High', note: '회신 없으면 점심쯤 확인 후 종합 결정' },
+                // 아이리스브라이트
+                { id: 't_iris_proposal', clientId: 'c_iris', title: '운영제안서 제작 (16:9)', status: 'todo', due: '2026-01-19', priority: 'High', note: '오스템임플란트/GREPP 참조. 제출: 1/20 16:00 (USB 8개 직접)' },
+                { id: 't_iris_profile', clientId: 'c_iris', title: '인력프로파일 정리', status: 'done', due: '', priority: 'Medium' },
+                
+                // 카카오스타일
+                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료. (wisehre-hr, ealif 등)' },
+                
+                // 헬리녹스
                 { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신' },
+                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', due: '', priority: 'Low' },
+
+                // 스카이하이
                 { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의' },
-                { id: 't_sunwoo_sfa', clientId: 'c_sunwoo', title: 'SFA 이슈 F/U (장용재 이사)', status: 'todo', due: '', priority: 'High' },
+                { id: 't_sky_report_dec', clientId: 'c_skyhigh', title: '12월 월간보고서 작성 (잔여공수)', status: 'todo', due: '', priority: 'Medium', note: '연말 잔여공수 계산하여 첨부 필수.' },
+
+                // 선우프레시
+                { id: 't_sunwoo_sfa', clientId: 'c_sunwoo', title: 'SFA 이슈 CSR 요청', status: 'todo', due: '', priority: 'High', note: '장용재 이사 -> 유경래 차장에게 내용 정리 전달 (정식 CSR 요청)' },
+                { id: 't_sunwoo_report', clientId: 'c_sunwoo', title: '12월 월간보고서 제작', status: 'done', due: '', priority: 'Low' },
+
+                // 깨끗한나라
                 { id: 't_klean_claim', clientId: 'c_klean', title: '클레임 2건 공수 차감', status: 'todo', due: '', priority: 'Low', note: '오상무 자료 대기 (진행보류)' },
+                { id: 't_klean_order', clientId: 'c_klean', title: '발주서 날인 및 전달', status: 'done', due: '2026-01-15', priority: 'High', note: '완료. 차기 계약은 매출과 동일하게 작성(이소담 의견)' },
+                { id: 't_klean_check', clientId: 'c_klean', title: '9~11월 월간보고서 공수 검증', status: 'todo', due: '', priority: 'Medium', note: '공수 시간 재검토 필요.' },
                 { id: 't_klean_visit', clientId: 'c_klean', title: '방문 보고 (4주차)', status: 'todo', due: '2026-01-27', priority: 'Medium', note: '화요일 오후 3시' },
+
+                // 딜로이트
                 { id: 't_delo_security', clientId: 'c_deloitte', title: '보안 서약서 징구 (3종)', status: 'todo', due: '', priority: 'Medium', note: '오진혁 위원 서명 -> 경영관리팀 제출' },
                 { id: 't_delo_po', clientId: 'c_deloitte', title: 'PO(구매주문서) 수령 및 EPM 입력', status: 'todo', due: '', priority: 'Medium', note: '박경천 차장 협의' }
             ],
             routines: [
                 { id: 'r_sky_carryover', clientId: 'c_skyhigh', type: 'Contract', title: '계약 공수 이월 체크', guide: '⚠️ 주의: 개발/CPI 파트만 이월 가능. 일반 기술지원은 절대 이월 약속 금지.' },
                 { id: 'r_sky_csm', clientId: 'c_skyhigh', type: 'Report', title: '월간보고서 CSM 공수 기입', guide: 'CSM(고객지원) 공수는 8시간(1MD) 정도로 맞춰서 기입 권장.' },
+                { id: 'r_helinox_fue', clientId: 'c_helinox', type: 'Report', title: '월간보고서 FUE 현황 첨부', guide: '이메일에 SAP FOR ME-consumption 캡처 첨부 필수.' },
                 { id: 'r_kakao_report', clientId: 'c_kakao', type: 'Report', title: '월간보고서 작성 (3종 체크)', guide: '1. 무상공수 HR 제외\n2. CSM 공수 8시간 수기 추가\n3. CONS 건은 유지보수와 분리 작성' },
                 { id: 'r_klean_report', clientId: 'c_klean', type: 'Report', title: '월간보고서 및 튜닝보고서', guide: '자동 산출 기준(수정X). 튜닝보고서 수신 시 구글드라이브 업로드 후 안내 메일.' },
                 { id: 'r_klean_csr', clientId: 'c_klean', type: 'System', title: 'CSR 수정 요청', guide: '참조 필수: 김영준, 김영균 위원' },
+                { id: 'r_klean_vlookup', clientId: 'c_klean', type: 'Report', title: '월간보고서 모듈별 공수 기재', guide: '담당자별 VLOOKUP으로 공수 계산하여 기재.' },
                 { id: 'r_sunwoo_report', clientId: 'c_sunwoo', type: 'Report', title: '월간보고서 공수 확인', guide: 'MSP(MS애저) 공수는 CSR 계약 공수에서 제외되었는지 확인.' },
                 { id: 'r_miz_rpa', clientId: 'c_mizmedi', type: 'Report', title: 'RPA 청구 및 보고서', guide: '매월 27일 데이터 수신 즉시 작성 및 청구 진행.' },
                 { id: 'r_delo_report', clientId: 'c_deloitte', type: 'Report', title: '월간보고서 (BC리포트 제외)', guide: 'BC리포트는 첨부하지 않음.' },
                 { id: 'r_delo_contract', clientId: 'c_deloitte', type: 'Contract', title: '계약 갱신/보안서약서', guide: '계약 갱신 시마다 보안서약서(3종) 오진혁 위원 서명 필요.' },
-                { id: 'r_common_epm', clientId: 'ALL', type: 'Contract', title: '전자결재 매입 기재', guide: '매입 작성 시 [내부용역비] 항목으로 기재할 것.' }
+                { id: 'r_common_epm', clientId: 'ALL', type: 'Contract', title: '전자결재 매입 기재', guide: '매입 작성 시 [내부용역비] 항목으로 기재할 것.' },
+                { id: 'r_common_ies', clientId: 'ALL', type: 'System', title: 'IES 청구 공수 검증', guide: '분기별 CSR 다운로드 후 피벗테이블로 내부 매출/청구 공수 검증.' }
             ],
             events: [
                 { id: 'e_doc_check', title: '등기 수령 확인 (젝시,카카오,스카이)', date: '2026-01-06', type: 'done' },
                 { id: 'e_heli_new', title: '헬리녹스 신규 담당자 입사', date: '2026-01-19', type: 'upcoming' },
+                { id: 'e_iris_submit', title: '아이리스브라이트 제안서 제출', date: '2026-01-20', time: '16:00', type: 'upcoming' },
+                { id: 'e_iris_pt', title: '아이리스브라이트 제안 발표', date: '2026-01-22', time: '14:30', type: 'upcoming' },
                 { id: 'e_klean_visit', title: '깨끗한나라 방문 보고', date: '2026-01-27', time: '15:00', type: 'upcoming' }
             ]
         };
@@ -370,9 +395,10 @@
             // Clients
             onSnapshot(collection(db, 'pm_users', uid, 'clients'), (snapshot) => {
                 clients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                if (snapshot.empty && !localStorage.getItem('pm_seeded_v4')) {
+                // Auto seed ONLY if completely empty (Safety)
+                if (snapshot.empty && !localStorage.getItem('pm_seeded_v5')) {
                     seedDatabase(uid);
-                    localStorage.setItem('pm_seeded_v4', 'true');
+                    localStorage.setItem('pm_seeded_v5', 'true');
                 }
                 renderClients();
                 populateClientSelect();
@@ -424,19 +450,26 @@
         async function seedDatabase(uid) {
             const batch = writeBatch(db);
             
+            // Clients (Use fixed ID)
             for(const c of SEED_DATA.clients) {
                 const ref = doc(db, 'pm_users', uid, 'clients', c.id);
                 batch.set(ref, c);
             }
+
+            // Tasks (Use fixed ID)
             for(const t of SEED_DATA.tasks) {
                 const ref = doc(db, 'pm_users', uid, 'tasks', t.id);
                 batch.set(ref, t);
             }
+
+            // Routines (Use fixed ID)
             for(const r of SEED_DATA.routines) {
                 const clientId = r.clientId === 'ALL' ? 'ALL' : r.clientId;
                 const ref = doc(db, 'pm_users', uid, 'routines', r.id);
                 batch.set(ref, { isChecked: false, ...r });
             }
+
+            // Events (Use fixed ID)
             for(const e of SEED_DATA.events) {
                 const ref = doc(db, 'pm_users', uid, 'events', e.id);
                 batch.set(ref, e);
@@ -444,7 +477,7 @@
 
             try {
                 await batch.commit();
-                console.log("Seeded successfully");
+                console.log("Seeded successfully with IDEMPOTENCY");
             } catch(e) {
                 console.error("Seeding Failed:", e);
                 alert("초기화 실패. 콘솔을 확인하세요.");
@@ -457,14 +490,17 @@
                 alert("서버 연결 전입니다. 잠시 후 시도하세요.");
                 return;
             }
-            if(confirm("⚠️ 경고: 모든 데이터를 삭제하고 초기 상태로 되돌립니다. 계속하시겠습니까?")) {
+            if(confirm("⚠️ 경고: 모든 데이터를 삭제하고 '중복 없는' 초기 상태로 되돌립니다. 계속하시겠습니까?")) {
                 try {
+                    // Wipe everything first
                     await clearCollection(`pm_users/${currentUser.uid}/tasks`);
                     await clearCollection(`pm_users/${currentUser.uid}/routines`);
                     await clearCollection(`pm_users/${currentUser.uid}/events`);
                     await clearCollection(`pm_users/${currentUser.uid}/clients`);
+                    
+                    // Then Seed
                     await seedDatabase(currentUser.uid);
-                    alert("초기화 완료!");
+                    alert("전체 초기화 및 재설치 완료! 중복이 제거되었습니다.");
                 } catch(e) {
                     console.error(e);
                     alert("초기화 중 오류 발생.");
@@ -519,6 +555,7 @@
             const list = document.getElementById('routine-list');
             list.innerHTML = '';
 
+            // Group by Client
             const grouped = routines.reduce((acc, r) => {
                 const clientName = r.clientId === 'ALL' ? '전체공통' : (clients.find(c => c.id === r.clientId)?.name || 'Unknown');
                 if(!acc[clientName]) acc[clientName] = [];
@@ -526,12 +563,14 @@
                 return acc;
             }, {});
 
+            // Sort logic: '전체공통' first, then filtered client, then others
             const clientNames = Object.keys(grouped).sort((a,b) => {
                 if(a === '전체공통') return -1;
                 if(b === '전체공통') return 1;
                 return a.localeCompare(b);
             });
 
+            // Filter logic inside render
             const activeGroup = selectedClientId === 'all' ? clientNames : 
                                 clientNames.filter(name => {
                                     const client = clients.find(c => c.id === selectedClientId);
@@ -591,13 +630,14 @@
 
         window.resetRoutines = async () => {
             if(!confirm("새로운 달이 시작되었습니까? 모든 루틴 체크박스를 초기화합니다.")) return;
+            
             const batch = writeBatch(db);
             routines.forEach(r => {
                 const ref = doc(db, 'pm_users', currentUser.uid, 'routines', r.id);
                 batch.update(ref, { isChecked: false });
             });
             await batch.commit();
-            alert("초기화 완료");
+            alert("모든 루틴이 초기화되었습니다.");
         };
 
         window.addRoutine = async () => {
@@ -608,14 +648,18 @@
 
             if(!title) return alert("루틴명을 입력하세요");
 
-            await addDoc(collection(db, 'pm_users', currentUser.uid, 'routines'), {
-                clientId, type, title, guide, isChecked: false
+            // Generate ID manually to keep structure clean
+            const newRoutineId = 'r_manual_' + Date.now();
+
+            await setDoc(doc(db, 'pm_users', currentUser.uid, 'routines', newRoutineId), {
+                id: newRoutineId, clientId, type, title, guide, isChecked: false
             });
             closeModal('routine-modal');
             document.getElementById('routine-title').value = '';
             document.getElementById('routine-guide').value = '';
         };
 
+        // --- EXISTING UI FUNCTIONS ---
         window.setFilter = (status) => {
             filterStatus = status;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -632,9 +676,9 @@
 
         window.setSelectedClient = (id) => {
             selectedClientId = id;
-            renderClients();
+            renderClients(); // Update active state
             renderTasks();
-            renderRoutines();
+            renderRoutines(); // Also filter routines
             
             const client = clients.find(c => c.id === id);
             if(id === 'all') {
@@ -653,11 +697,15 @@
                     <div class="flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> 전체 보기</div>
                 </button>
             `;
+
+            // Sort clients by name
             clients.sort((a,b) => a.name.localeCompare(b.name));
+
             clients.forEach(c => {
                 const color = c.status === 'Risk' ? 'bg-red-500' : c.status === 'Warning' ? 'bg-orange-400' : 'bg-green-400';
                 const activeClass = selectedClientId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50';
                 const alertIcon = c.status === 'Risk' ? '<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-red-500"></i>' : '';
+                
                 nav.innerHTML += `
                     <button onclick="setSelectedClient('${c.id}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeClass}">
                         <div class="flex items-center gap-2">
