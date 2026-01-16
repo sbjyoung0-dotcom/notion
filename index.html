@@ -74,8 +74,13 @@
                     <p id="header-desc" class="text-sm text-slate-500 mt-1">모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.</p>
                 </div>
                 <div class="flex gap-2">
+                    <!-- Dashboard Add Button -->
                     <button id="add-task-btn" onclick="openModal('task-modal')" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
                         <i data-lucide="plus" class="w-4 h-4"></i> 새 업무
+                    </button>
+                    <!-- Routine Add Button (Hidden by default) -->
+                    <button id="add-routine-btn" onclick="openModal('routine-modal')" class="hidden flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> 루틴 추가
                     </button>
                 </div>
             </div>
@@ -95,6 +100,18 @@
             
             <!-- VIEW 1: DASHBOARD (TASKS) -->
             <div id="view-dashboard" class="max-w-6xl mx-auto space-y-8">
+                
+                <!-- Quick Memo Section -->
+                <section class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-bold text-yellow-800 flex items-center gap-2">
+                            <i data-lucide="sticky-note" class="w-4 h-4"></i> Quick Memo (자동 저장)
+                        </h3>
+                        <span id="memo-status" class="text-xs text-yellow-600 font-medium"></span>
+                    </div>
+                    <textarea id="quick-memo" class="w-full bg-yellow-100/50 border-none rounded-lg text-sm text-slate-700 placeholder-yellow-400/70 resize-none focus:ring-2 focus:ring-yellow-400 p-2" rows="3" placeholder="급한 업무나 잊지 말아야 할 내용을 자유롭게 적으세요... (입력 후 바깥을 클릭하면 저장됩니다)"></textarea>
+                </section>
+
                 <!-- Urgent Section -->
                 <section id="urgent-section" class="hidden">
                     <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -164,12 +181,12 @@
 
     <!-- Task Modal -->
     <div id="task-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold">새 업무 추가</h3>
                 <button onclick="closeModal('task-modal')"><i data-lucide="x" class="text-gray-400"></i></button>
             </div>
-            <div class="space-y-3">
+            <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">고객사</label>
                     <select id="modal-client" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"></select>
@@ -180,7 +197,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">상세 내용 (메모)</label>
-                    <input type="text" id="modal-note" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="특이사항 입력">
+                    <textarea id="modal-note" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="업무 관련 특이사항이나 상세 내용을 입력하세요."></textarea>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -197,6 +214,40 @@
                     </div>
                 </div>
                 <button onclick="addTask()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-blue-700 transition">추가하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Routine Modal (NEW) -->
+    <div id="routine-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-indigo-900">새 루틴 추가 (반복 업무)</h3>
+                <button onclick="closeModal('routine-modal')"><i data-lucide="x" class="text-gray-400"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">고객사</label>
+                    <select id="routine-client" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">구분 (Type)</label>
+                    <select id="routine-type" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white">
+                        <option value="Report">월간 보고 (Report)</option>
+                        <option value="Contract">계약 관리 (Contract)</option>
+                        <option value="System">시스템 점검 (System)</option>
+                        <option value="Other">기타 (Other)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">루틴명</label>
+                    <input type="text" id="routine-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 매월 25일 CSR 마감">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">가이드/주의사항</label>
+                    <textarea id="routine-guide" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="이 업무를 진행할 때 주의해야 할 점 (예: OO님 참조 필수)"></textarea>
+                </div>
+                <button onclick="addRoutine()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-indigo-700 transition">루틴 추가</button>
             </div>
         </div>
     </div>
@@ -232,7 +283,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         // --- USER FIREBASE CONFIGURATION ---
         const firebaseConfig = {
@@ -257,15 +308,15 @@
         let selectedClientId = 'all';
         let filterStatus = 'active';
 
-        // --- SEED DATA (UPDATED: 2026-01-07 with ID) ---
+        // --- SEED DATA (UPDATED: 2026-01-07 with Stable Status) ---
         const SEED_DATA = {
             clients: [
                 { id: 'c_mizmedi', name: '미즈메디', status: 'Stable', note: '2,200만원 계약, 노후화 심각' },
-                { id: 'c_kakao', name: '카카오스타일', status: 'Risk', note: 'ISMS-P 감사 대비, 계약 체결' },
+                { id: 'c_kakao', name: '카카오스타일', status: 'Stable', note: 'ISMS-P/DTE/계약 완료' },
                 { id: 'c_helinox', name: '헬리녹스', status: 'Stable', note: '신규 담당자 입사(1/19) 대기' },
                 { id: 'c_skyhigh', name: '스카이하이', status: 'Active', note: '계약변경 합의, EPM 원화 등록' },
                 { id: 'c_sunwoo', name: '선우프레시', status: 'Active', note: 'SFA 이슈, MS애저 제외' },
-                { id: 'c_klean', name: '깨끗한나라', status: 'Warning', note: '클레임 차감, 튜닝보고서 공유' },
+                { id: 'c_klean', name: '깨끗한나라', status: 'Stable', note: '계약완료, 클레임 차감 대기' },
                 { id: 'c_deloitte', name: '딜로이트', status: 'Stable', note: '보안서약서 징구, 8월~7월 계약' },
                 { id: 'c_xexymix', name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
             ],
@@ -275,7 +326,7 @@
                 { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신' },
                 { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의' },
                 { id: 't_sunwoo_sfa', clientId: 'c_sunwoo', title: 'SFA 이슈 F/U (장용재 이사)', status: 'todo', due: '', priority: 'High' },
-                { id: 't_klean_claim', clientId: 'c_klean', title: '클레임 2건 공수 차감', status: 'todo', due: '', priority: 'High', note: '오상무 자료 대기' },
+                { id: 't_klean_claim', clientId: 'c_klean', title: '클레임 2건 공수 차감', status: 'todo', due: '', priority: 'Low', note: '오상무 자료 대기 (진행보류)' },
                 { id: 't_klean_visit', clientId: 'c_klean', title: '방문 보고 (4주차)', status: 'todo', due: '2026-01-27', priority: 'Medium', note: '화요일 오후 3시' },
                 { id: 't_delo_security', clientId: 'c_deloitte', title: '보안 서약서 징구 (3종)', status: 'todo', due: '', priority: 'Medium', note: '오진혁 위원 서명 -> 경영관리팀 제출' },
                 { id: 't_delo_po', clientId: 'c_deloitte', title: 'PO(구매주문서) 수령 및 EPM 입력', status: 'todo', due: '', priority: 'Medium', note: '박경천 차장 협의' }
@@ -319,7 +370,6 @@
             // Clients
             onSnapshot(collection(db, 'pm_users', uid, 'clients'), (snapshot) => {
                 clients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                // Auto seed ONLY if completely empty (Safety)
                 if (snapshot.empty && !localStorage.getItem('pm_seeded_v4')) {
                     seedDatabase(uid);
                     localStorage.setItem('pm_seeded_v4', 'true');
@@ -348,6 +398,17 @@
                 events = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 renderEvents();
             });
+
+            // Quick Memo Listener
+            onSnapshot(doc(db, 'pm_users', uid, 'memos', 'quick'), (docSnap) => {
+                const memoArea = document.getElementById('quick-memo');
+                if (docSnap.exists()) {
+                    // Only update if not currently focused to prevent cursor jumping
+                    if (document.activeElement !== memoArea) {
+                        memoArea.value = docSnap.data().content || '';
+                    }
+                }
+            });
         }
 
         async function clearCollection(collectionPath) {
@@ -363,26 +424,19 @@
         async function seedDatabase(uid) {
             const batch = writeBatch(db);
             
-            // Clients (Use fixed ID)
             for(const c of SEED_DATA.clients) {
                 const ref = doc(db, 'pm_users', uid, 'clients', c.id);
                 batch.set(ref, c);
             }
-
-            // Tasks (Use fixed ID)
             for(const t of SEED_DATA.tasks) {
                 const ref = doc(db, 'pm_users', uid, 'tasks', t.id);
                 batch.set(ref, t);
             }
-
-            // Routines (Use fixed ID)
             for(const r of SEED_DATA.routines) {
                 const clientId = r.clientId === 'ALL' ? 'ALL' : r.clientId;
                 const ref = doc(db, 'pm_users', uid, 'routines', r.id);
                 batch.set(ref, { isChecked: false, ...r });
             }
-
-            // Events (Use fixed ID)
             for(const e of SEED_DATA.events) {
                 const ref = doc(db, 'pm_users', uid, 'events', e.id);
                 batch.set(ref, e);
@@ -390,7 +444,7 @@
 
             try {
                 await batch.commit();
-                console.log("Seeded successfully with IDEMPOTENCY");
+                console.log("Seeded successfully");
             } catch(e) {
                 console.error("Seeding Failed:", e);
                 alert("초기화 실패. 콘솔을 확인하세요.");
@@ -403,17 +457,14 @@
                 alert("서버 연결 전입니다. 잠시 후 시도하세요.");
                 return;
             }
-            if(confirm("⚠️ 경고: 모든 데이터를 삭제하고 '중복 없는' 초기 상태로 되돌립니다. 계속하시겠습니까?")) {
+            if(confirm("⚠️ 경고: 모든 데이터를 삭제하고 초기 상태로 되돌립니다. 계속하시겠습니까?")) {
                 try {
-                    // Wipe everything first
                     await clearCollection(`pm_users/${currentUser.uid}/tasks`);
                     await clearCollection(`pm_users/${currentUser.uid}/routines`);
                     await clearCollection(`pm_users/${currentUser.uid}/events`);
                     await clearCollection(`pm_users/${currentUser.uid}/clients`);
-                    
-                    // Then Seed
                     await seedDatabase(currentUser.uid);
-                    alert("전체 초기화 및 재설치 완료! 중복이 제거되었습니다.");
+                    alert("초기화 완료!");
                 } catch(e) {
                     console.error(e);
                     alert("초기화 중 오류 발생.");
@@ -430,18 +481,44 @@
             document.getElementById(`view-${tab}`).classList.remove('hidden');
             document.getElementById(`tab-${tab}`).className = 'tab-active pb-3 text-sm flex items-center gap-2';
             
-            // Hide Add Task button on Routine tab
-            const addBtn = document.getElementById('add-task-btn');
-            if(tab === 'routine') addBtn.classList.add('hidden');
-            else addBtn.classList.remove('hidden');
+            // Buttons logic
+            const addTaskBtn = document.getElementById('add-task-btn');
+            const addRoutineBtn = document.getElementById('add-routine-btn');
+            
+            if(tab === 'routine') {
+                addTaskBtn.classList.add('hidden');
+                addRoutineBtn.classList.remove('hidden');
+            } else {
+                addTaskBtn.classList.remove('hidden');
+                addRoutineBtn.classList.add('hidden');
+            }
         };
 
-        // --- ROUTINE LOGIC ---
+        // --- QUICK MEMO LOGIC ---
+        const memoArea = document.getElementById('quick-memo');
+        const memoStatus = document.getElementById('memo-status');
+
+        memoArea.addEventListener('blur', async () => {
+            if(!currentUser) return;
+            memoStatus.innerText = '저장 중...';
+            try {
+                await setDoc(doc(db, 'pm_users', currentUser.uid, 'memos', 'quick'), {
+                    content: memoArea.value,
+                    updatedAt: new Date().toISOString()
+                });
+                memoStatus.innerText = '저장됨';
+                setTimeout(() => memoStatus.innerText = '', 2000);
+            } catch(e) {
+                console.error(e);
+                memoStatus.innerText = '저장 실패';
+            }
+        });
+
+        // --- RENDER LOGIC ---
         function renderRoutines() {
             const list = document.getElementById('routine-list');
             list.innerHTML = '';
 
-            // Group by Client
             const grouped = routines.reduce((acc, r) => {
                 const clientName = r.clientId === 'ALL' ? '전체공통' : (clients.find(c => c.id === r.clientId)?.name || 'Unknown');
                 if(!acc[clientName]) acc[clientName] = [];
@@ -449,14 +526,12 @@
                 return acc;
             }, {});
 
-            // Sort logic: '전체공통' first, then filtered client, then others
             const clientNames = Object.keys(grouped).sort((a,b) => {
                 if(a === '전체공통') return -1;
                 if(b === '전체공통') return 1;
                 return a.localeCompare(b);
             });
 
-            // Filter logic inside render
             const activeGroup = selectedClientId === 'all' ? clientNames : 
                                 clientNames.filter(name => {
                                     const client = clients.find(c => c.id === selectedClientId);
@@ -516,17 +591,31 @@
 
         window.resetRoutines = async () => {
             if(!confirm("새로운 달이 시작되었습니까? 모든 루틴 체크박스를 초기화합니다.")) return;
-            
             const batch = writeBatch(db);
             routines.forEach(r => {
                 const ref = doc(db, 'pm_users', currentUser.uid, 'routines', r.id);
                 batch.update(ref, { isChecked: false });
             });
             await batch.commit();
-            alert("모든 루틴이 초기화되었습니다.");
+            alert("초기화 완료");
         };
 
-        // --- EXISTING UI FUNCTIONS ---
+        window.addRoutine = async () => {
+            const clientId = document.getElementById('routine-client').value;
+            const type = document.getElementById('routine-type').value;
+            const title = document.getElementById('routine-title').value;
+            const guide = document.getElementById('routine-guide').value;
+
+            if(!title) return alert("루틴명을 입력하세요");
+
+            await addDoc(collection(db, 'pm_users', currentUser.uid, 'routines'), {
+                clientId, type, title, guide, isChecked: false
+            });
+            closeModal('routine-modal');
+            document.getElementById('routine-title').value = '';
+            document.getElementById('routine-guide').value = '';
+        };
+
         window.setFilter = (status) => {
             filterStatus = status;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -543,9 +632,9 @@
 
         window.setSelectedClient = (id) => {
             selectedClientId = id;
-            renderClients(); // Update active state
+            renderClients();
             renderTasks();
-            renderRoutines(); // Also filter routines
+            renderRoutines();
             
             const client = clients.find(c => c.id === id);
             if(id === 'all') {
@@ -564,15 +653,11 @@
                     <div class="flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> 전체 보기</div>
                 </button>
             `;
-
-            // Sort clients by name
             clients.sort((a,b) => a.name.localeCompare(b.name));
-
             clients.forEach(c => {
                 const color = c.status === 'Risk' ? 'bg-red-500' : c.status === 'Warning' ? 'bg-orange-400' : 'bg-green-400';
                 const activeClass = selectedClientId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50';
                 const alertIcon = c.status === 'Risk' ? '<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-red-500"></i>' : '';
-                
                 nav.innerHTML += `
                     <button onclick="setSelectedClient('${c.id}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeClass}">
                         <div class="flex items-center gap-2">
@@ -604,7 +689,9 @@
 
             filtered.forEach(t => {
                 const client = clients.find(c => c.id === t.clientId);
-                const clientName = client ? client.name : 'Unknown';
+                // Handle 'ALL' client ID for Common tasks
+                const clientName = t.clientId === 'ALL' ? '공통' : (client ? client.name : 'Unknown');
+                
                 const isDone = t.status === 'done';
                 const trClass = isDone ? 'bg-slate-50/50' : 'hover:bg-slate-50';
                 const titleClass = isDone ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800';
@@ -661,7 +748,7 @@
 
             urgent.forEach(t => {
                 const client = clients.find(c => c.id === t.clientId);
-                const clientName = client ? client.name : '-';
+                const clientName = t.clientId === 'ALL' ? '공통' : (client ? client.name : '-');
                 const daysLeft = Math.ceil((new Date(t.due) - new Date(today)) / (1000 * 60 * 60 * 24));
 
                 container.innerHTML += `
@@ -709,11 +796,14 @@
         }
 
         function populateClientSelect() {
-            const select = document.getElementById('modal-client');
-            select.innerHTML = '';
-            clients.forEach(c => {
-                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-            });
+            const selectTask = document.getElementById('modal-client');
+            const selectRoutine = document.getElementById('routine-client');
+            
+            const options = `<option value="ALL" class="font-bold">✨ 공통 (General)</option>` + 
+                clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                
+            selectTask.innerHTML = options;
+            selectRoutine.innerHTML = options;
         }
 
         // --- ACTIONS (Attached to Window) ---
