@@ -75,7 +75,7 @@
                 </div>
                 <div class="flex gap-2">
                     <!-- Dashboard Add Button -->
-                    <button id="add-task-btn" onclick="openModal('task-modal')" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                    <button id="add-task-btn" onclick="openAddTaskModal()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
                         <i data-lucide="plus" class="w-4 h-4"></i> 새 업무
                     </button>
                     <!-- Routine Add Button (Hidden by default) -->
@@ -145,7 +145,7 @@
                                     <th class="px-6 py-4">업무명 / 내용</th>
                                     <th class="px-6 py-4 w-32">마감일</th>
                                     <th class="px-6 py-4 w-24">우선순위</th>
-                                    <th class="px-6 py-4 w-12"></th>
+                                    <th class="px-6 py-4 w-24 text-right">관리</th>
                                 </tr>
                             </thead>
                             <tbody id="task-table-body" class="divide-y divide-slate-100">
@@ -179,13 +179,16 @@
         </div>
     </main>
 
-    <!-- Task Modal -->
+    <!-- Task Modal (Add & Edit) -->
     <div id="task-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold">새 업무 추가</h3>
+                <h3 class="text-lg font-bold" id="task-modal-title">새 업무 추가</h3>
                 <button onclick="closeModal('task-modal')"><i data-lucide="x" class="text-gray-400"></i></button>
             </div>
+            <!-- Hidden ID field for Edit Mode -->
+            <input type="hidden" id="modal-task-id">
+            
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">고객사</label>
@@ -213,7 +216,7 @@
                         <input type="date" id="modal-due" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
                     </div>
                 </div>
-                <button onclick="addTask()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-blue-700 transition">추가하기</button>
+                <button onclick="saveTask()" id="modal-save-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-blue-700 transition">저장하기</button>
             </div>
         </div>
     </div>
@@ -630,7 +633,6 @@
 
         window.resetRoutines = async () => {
             if(!confirm("새로운 달이 시작되었습니까? 모든 루틴 체크박스를 초기화합니다.")) return;
-            
             const batch = writeBatch(db);
             routines.forEach(r => {
                 const ref = doc(db, 'pm_users', currentUser.uid, 'routines', r.id);
@@ -765,7 +767,10 @@
                         <td class="px-6 py-4">
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priorityClass}">${t.priority}</span>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="openEditTask('${t.id}')" class="text-slate-300 hover:text-blue-500 transition-colors mr-2 opacity-0 group-hover:opacity-100">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
                             <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
@@ -866,7 +871,9 @@
             }
         };
 
-        window.addTask = async () => {
+        // SAVE TASK (Create or Update)
+        window.saveTask = async () => {
+            const id = document.getElementById('modal-task-id').value;
             const clientId = document.getElementById('modal-client').value;
             const title = document.getElementById('modal-title').value;
             const note = document.getElementById('modal-note').value;
@@ -875,13 +882,55 @@
 
             if(!title) return alert("업무명을 입력하세요");
 
-            await addDoc(collection(db, 'pm_users', currentUser.uid, 'tasks'), {
-                clientId, title, note, priority, due, status: 'todo'
-            });
+            if (id) {
+                // UPDATE Existing Task
+                await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), {
+                    clientId, title, note, priority, due
+                });
+            } else {
+                // CREATE New Task
+                await addDoc(collection(db, 'pm_users', currentUser.uid, 'tasks'), {
+                    clientId, title, note, priority, due, status: 'todo'
+                });
+            }
             closeModal('task-modal');
-            document.getElementById('modal-title').value = '';
-            document.getElementById('modal-note').value = '';
         };
+
+        // Open Modal for New Task
+        window.openAddTaskModal = () => {
+            document.getElementById('modal-task-id').value = ""; // Clear ID
+            document.getElementById('task-modal-title').innerText = "새 업무 추가";
+            document.getElementById('modal-save-btn').innerText = "추가하기";
+            
+            document.getElementById('modal-client').value = selectedClientId === 'all' ? 'ALL' : selectedClientId;
+            document.getElementById('modal-title').value = "";
+            document.getElementById('modal-note').value = "";
+            document.getElementById('modal-priority').value = "Medium";
+            document.getElementById('modal-due').value = "";
+            
+            openModal('task-modal');
+        };
+
+        // Open Modal for Editing Task
+        window.openEditTask = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('modal-task-id').value = id; // Set ID
+            document.getElementById('task-modal-title').innerText = "업무 수정";
+            document.getElementById('modal-save-btn').innerText = "수정 저장";
+
+            document.getElementById('modal-client').value = task.clientId;
+            document.getElementById('modal-title').value = task.title;
+            document.getElementById('modal-note').value = task.note || "";
+            document.getElementById('modal-priority').value = task.priority;
+            document.getElementById('modal-due').value = task.due || "";
+
+            openModal('task-modal');
+        };
+
+        // Kept for backward compatibility with routine logic if needed, but addTask now handles logic via saveTask
+        window.addTask = window.saveTask; 
 
         window.addEvent = async () => {
             const title = document.getElementById('event-title').value;
