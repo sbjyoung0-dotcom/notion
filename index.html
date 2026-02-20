@@ -396,12 +396,10 @@
                 { id: 'c_xexymix', name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
             ],
             tasks: [
-                { id: 't_iris_proposal', clientId: 'c_iris', title: '운영제안서 제작 (16:9)', status: 'todo', due: '2026-01-19', priority: 'High', note: '오스템임플란트/GREPP 참조. 제출: 1/20 16:00 (USB 8개 직접)', createdAt: new Date().toISOString() },
-                { id: 't_iris_profile', clientId: 'c_iris', title: '인력프로파일 정리', status: 'done', due: '', priority: 'Medium', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료.', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신', createdAt: new Date().toISOString() },
-                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', due: '', priority: 'Low', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() }
+                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', startDate: '2026-01-10', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료.', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+                { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', startDate: '2026-01-18', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신', createdAt: new Date().toISOString() },
+                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', startDate: '', due: '', priority: 'Low', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+                { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', startDate: '2026-01-02', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() }
             ],
             routines: [
                 { id: 'r_sky_carryover', clientId: 'c_skyhigh', type: 'Contract', title: '계약 공수 이월 체크', guide: '주의: 개발/CPI 파트만 이월 가능.' },
