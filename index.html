@@ -608,7 +608,13 @@
             const searchQuery = document.getElementById('search-input').value.toLowerCase();
             let filtered = tasks.filter(t => {
                 const clientMatch = selectedClientId === 'all' || t.clientId === selectedClientId;
-                const statusMatch = filterStatus === 'all' ? true : filterStatus === 'active' ? t.status !== 'done' : t.status === filterStatus;
+                
+                // 수정된 부분: 보드(칸반) 뷰일 때는 상단 필터를 무시하고 '전체' 데이터를 불러옵니다.
+                const statusMatch = currentViewMode === 'kanban' ? true : 
+                                    (filterStatus === 'all' ? true : 
+                                     filterStatus === 'active' ? t.status !== 'done' : 
+                                     t.status === filterStatus);
+                                     
                 const searchMatch = !searchQuery || (t.title && t.title.toLowerCase().includes(searchQuery)) || (t.note && t.note.toLowerCase().includes(searchQuery));
                 return clientMatch && statusMatch && searchMatch;
             });
