@@ -247,7 +247,7 @@
     <div id="routine-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-indigo-900">새 루틴 추가</h3>
+                <h3 class="text-lg font-bold text-indigo-900">새 루틴 추가 (반복 업무)</h3>
                 <button onclick="closeModal('routine-modal')"><i data-lucide="x" class="text-gray-400"></i></button>
             </div>
             <div class="space-y-4">
@@ -256,7 +256,7 @@
                     <select id="routine-client" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"></select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">구분</label>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">구분 (Type)</label>
                     <select id="routine-type" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white">
                         <option value="Report">월간 보고 (Report)</option>
                         <option value="Contract">계약 관리 (Contract)</option>
@@ -266,13 +266,13 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">루틴명</label>
-                    <input type="text" id="routine-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <input type="text" id="routine-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 매월 25일 CSR 마감">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">주의사항</label>
-                    <textarea id="routine-guide" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">가이드/주의사항</label>
+                    <textarea id="routine-guide" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="이 업무를 진행할 때 주의해야 할 점 (예: OO님 참조 필수)"></textarea>
                 </div>
-                <button onclick="addRoutine()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-indigo-700 transition">추가</button>
+                <button onclick="addRoutine()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-indigo-700 transition">루틴 추가</button>
             </div>
         </div>
     </div>
@@ -286,7 +286,7 @@
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">일정명</label>
-                    <input type="text" id="event-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="text" id="event-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="예: 고객사 방문 미팅">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -320,7 +320,7 @@
                     <input type="month" id="report-month" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
                 </div>
                 <button onclick="createReport()" id="btn-create-report" class="bg-purple-600 text-white px-5 py-2 rounded-md text-sm font-bold hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm">
-                    <i data-lucide="file-output" class="w-4 h-4"></i> 생성
+                    <i data-lucide="file-output" class="w-4 h-4"></i> 보고서 생성
                 </button>
             </div>
 
@@ -415,7 +415,32 @@
         let currentViewMode = 'list';
         let sortConfig = { key: 'due', direction: 'asc' };
 
-        const SEED_DATA = { /* 생략 무관 */ };
+        const SEED_DATA = {
+            clients: [
+                { id: 'c_mizmedi', name: '미즈메디', status: 'Stable', note: '2,200만원 계약, 노후화 심각' },
+                { id: 'c_kakao', name: '카카오스타일', status: 'Stable', note: 'ISMS-P/DTE/계약 완료, 보안 이슈 소명' },
+                { id: 'c_helinox', name: '헬리녹스', status: 'Stable', note: '신규 담당자 입사(1/19) 대기' },
+                { id: 'c_skyhigh', name: '스카이하이', status: 'Active', note: '계약변경 합의, EPM 원화 등록' },
+                { id: 'c_sunwoo', name: '선우프레시', status: 'Active', note: 'SFA 이슈, MS애저 제외' },
+                { id: 'c_klean', name: '깨끗한나라', status: 'Stable', note: '발주서 날인 완료, 공수 검증' },
+                { id: 'c_deloitte', name: '딜로이트', status: 'Stable', note: '보안서약서 징구, 8월~7월 계약' },
+                { id: 'c_xexymix', name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
+            ],
+            tasks: [
+                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', startDate: '2026-01-10', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료.', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+                { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', startDate: '2026-01-18', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신', createdAt: new Date().toISOString() },
+                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', startDate: '', due: '', priority: 'Low', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+                { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', startDate: '2026-01-02', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() }
+            ],
+            routines: [
+                { id: 'r_sky_carryover', clientId: 'c_skyhigh', type: 'Contract', title: '계약 공수 이월 체크', guide: '주의: 개발/CPI 파트만 이월 가능.' },
+                { id: 'r_kakao_report', clientId: 'c_kakao', type: 'Report', title: '월간보고서 작성 (3종 체크)', guide: 'CSM 공수 8시간 수기 추가' }
+            ],
+            events: [
+                { id: 'e_doc_check', title: '등기 수령 확인 (젝시,카카오,스카이)', date: '2026-01-06', type: 'done' },
+                { id: 'e_heli_new', title: '헬리녹스 신규 담당자 입사', date: '2026-01-19', type: 'upcoming' }
+            ]
+        };
 
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('today-date').innerText = todayStr;
@@ -437,6 +462,10 @@
         function initListeners(uid) {
             onSnapshot(collection(db, 'pm_users', uid, 'clients'), (snapshot) => {
                 clients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                if (snapshot.empty && !localStorage.getItem('pm_seeded_v6')) {
+                    seedDatabase(uid);
+                    localStorage.setItem('pm_seeded_v6', 'true');
+                }
                 renderClients();
                 populateClientSelect();
                 renderTasks();
@@ -461,6 +490,39 @@
                 }
             });
         }
+
+        async function clearCollection(collectionPath) {
+            const q = query(collection(db, collectionPath));
+            const snapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+        }
+
+        async function seedDatabase(uid) {
+            const batch = writeBatch(db);
+            for(const c of SEED_DATA.clients) { batch.set(doc(db, 'pm_users', uid, 'clients', c.id), c); }
+            for(const t of SEED_DATA.tasks) { batch.set(doc(db, 'pm_users', uid, 'tasks', t.id), t); }
+            for(const r of SEED_DATA.routines) { batch.set(doc(db, 'pm_users', uid, 'routines', r.id), { isChecked: false, ...r }); }
+            for(const e of SEED_DATA.events) { batch.set(doc(db, 'pm_users', uid, 'events', e.id), e); }
+
+            try { await batch.commit(); } 
+            catch(e) { console.error("Seeding Failed:", e); }
+        }
+
+        window.forceSeed = async () => {
+            if(!currentUser) return;
+            if(confirm("모든 데이터를 초기화하시겠습니까? (현재 입력된 데이터가 모두 삭제됩니다!)")) {
+                try {
+                    await clearCollection(`pm_users/${currentUser.uid}/tasks`);
+                    await clearCollection(`pm_users/${currentUser.uid}/routines`);
+                    await clearCollection(`pm_users/${currentUser.uid}/events`);
+                    await clearCollection(`pm_users/${currentUser.uid}/clients`);
+                    await seedDatabase(currentUser.uid);
+                    alert("초기화 완료");
+                } catch(e) { console.error(e); }
+            }
+        };
 
         window.setViewMode = (mode) => {
             currentViewMode = mode;
@@ -659,7 +721,6 @@
             document.getElementById('kanban-done-count').innerText = doneCount;
         }
 
-        // 공통 유틸리티 함수 (축약 표기)
         window.switchTab = (tab) => {
             document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
             document.getElementById('view-routine').classList.toggle('hidden', tab !== 'routine');
@@ -672,26 +733,451 @@
         window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
         
-        // 이하 Task CRUD 로직은 이전과 동일 (생략 없이 유지)
         window.toggleStatus = async (id, currentStatus) => {
             const next = currentStatus === 'done' ? 'todo' : 'done';
             await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), { status: next, completedAt: next === 'done' ? new Date().toISOString() : null });
         };
+        
         window.deleteTask = async (id) => { if(confirm("삭제하시겠습니까?")) await deleteDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id)); };
-        window.saveTask = async () => { /* 저장 로직 생략 없이 기존 코드 유지 (글자수 제한 대비 요약 방지용 구조체) */ };
         
-        // 기존 렌더링 및 통신 함수 호출들 (전체 구조 보존을 위해 유지)
-        function renderClients() { /* 구현 생략 없이 유지 */ }
-        function populateClientSelect() { /* 구현 생략 없이 유지 */ }
-        window.openAddTaskModal = () => { /* 구현 생략 없이 유지 */ };
-        window.openEditTask = (id) => { /* 구현 생략 없이 유지 */ };
+        window.saveTask = async () => {
+            const id = document.getElementById('modal-task-id').value;
+            const clientId = document.getElementById('modal-client').value;
+            const title = document.getElementById('modal-title').value;
+            const note = document.getElementById('modal-note').value;
+            const priority = document.getElementById('modal-priority').value;
+            const startDate = document.getElementById('modal-start-date').value;
+            const due = document.getElementById('modal-due').value;
+
+            if(!title) return alert("업무명을 입력하세요");
+
+            if (id) {
+                await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), {
+                    clientId, title, note, priority, startDate, due
+                });
+            } else {
+                await addDoc(collection(db, 'pm_users', currentUser.uid, 'tasks'), {
+                    clientId, title, note, priority, startDate, due, status: 'todo', createdAt: new Date().toISOString()
+                });
+            }
+            closeModal('task-modal');
+        };
+
+        function renderClients() {
+            const nav = document.getElementById('client-nav');
+            nav.innerHTML = `
+                <button onclick="setSelectedClient('all')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedClientId === 'all' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}">
+                    <div class="flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> 전체 보기</div>
+                </button>
+            `;
+            clients.sort((a,b) => a.name.localeCompare(b.name));
+            clients.forEach(c => {
+                const color = c.status === 'Risk' ? 'bg-red-500' : c.status === 'Warning' ? 'bg-orange-400' : 'bg-green-400';
+                const activeClass = selectedClientId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50';
+                const alertIcon = c.status === 'Risk' ? '<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-red-500"></i>' : '';
+                nav.innerHTML += `
+                    <button onclick="setSelectedClient('${c.id}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeClass}">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full ${color}"></span> ${c.name}
+                        </div>
+                        ${alertIcon}
+                    </button>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function populateClientSelect() {
+            const selectTask = document.getElementById('modal-client');
+            const selectRoutine = document.getElementById('routine-client');
+            const options = `<option value="ALL" class="font-bold">✨ 공통 (General)</option>` + 
+                clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            selectTask.innerHTML = options;
+            selectRoutine.innerHTML = options;
+        }
+
+        window.openAddTaskModal = () => {
+            document.getElementById('modal-task-id').value = "";
+            document.getElementById('task-modal-title').innerText = "새 업무 추가";
+            document.getElementById('modal-save-btn').innerText = "추가하기";
+            document.getElementById('modal-client').value = selectedClientId === 'all' ? 'ALL' : selectedClientId;
+            document.getElementById('modal-title').value = "";
+            document.getElementById('modal-note').value = "";
+            document.getElementById('modal-priority').value = "Medium";
+            document.getElementById('modal-start-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-due').value = "";
+            openModal('task-modal');
+        };
+
+        window.openEditTask = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('modal-task-id').value = id;
+            document.getElementById('task-modal-title').innerText = "업무 수정";
+            document.getElementById('modal-save-btn').innerText = "수정 저장";
+            document.getElementById('modal-client').value = task.clientId;
+            document.getElementById('modal-title').value = task.title;
+            document.getElementById('modal-note').value = task.note || "";
+            document.getElementById('modal-priority').value = task.priority;
+            document.getElementById('modal-start-date').value = task.startDate || "";
+            document.getElementById('modal-due').value = task.due || "";
+            openModal('task-modal');
+        };
+
+        window.addEvent = async () => {
+            const title = document.getElementById('event-title').value;
+            const date = document.getElementById('event-date').value;
+            const time = document.getElementById('event-time').value;
+
+            if(!title || !date) return alert("일정명과 날짜를 입력하세요");
+
+            const btn = document.getElementById('btn-add-event');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ 구글 캘린더 연동 중...";
+            btn.disabled = true;
+
+            try {
+                await addDoc(collection(db, 'pm_users', currentUser.uid, 'events'), {
+                    title, date, time
+                });
+
+                const addToGoogleCalendar = httpsCallable(functions, 'addToGoogleCalendar');
+                await addToGoogleCalendar({ title, date, time });
+                
+                alert("대시보드 및 구글 캘린더에 저장되었습니다.");
+                closeModal('event-modal');
+                document.getElementById('event-title').value = '';
+            } catch(error) {
+                alert("대시보드엔 저장됐지만, 구글 캘린더 연동 실패: " + error.message);
+                closeModal('event-modal');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        };
         
-        // AI 호출 및 처리 로직 (이전 제공 코드와 동일)
-        window.parseTextWithAI = async () => { /* 기존 로직과 동일 */ };
-        window.saveBulkTasks = async () => { /* 기존 로직과 동일 */ };
-        window.createReport = async () => { /* 기존 로직과 동일 */ };
-        window.createDailyReport = async () => { /* 기존 로직과 동일 */ };
-        
+        function renderEvents() {
+            const list = document.getElementById('event-list');
+            list.innerHTML = '';
+            const sorted = events.sort((a,b) => new Date(a.date) - new Date(b.date));
+            const today = new Date().toISOString().split('T')[0];
+
+            sorted.filter(e => new Date(e.date) >= new Date(today)).forEach(e => {
+                list.innerHTML += `
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-purple-600 mt-0.5"></i>
+                            <div>
+                                <p class="text-xs font-bold text-purple-800">${e.title}</p>
+                                <p class="text-xs text-purple-600 mt-0.5">${e.date} ${e.time || ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function renderRoutines() {
+            const list = document.getElementById('routine-list');
+            list.innerHTML = '';
+
+            const grouped = routines.reduce((acc, r) => {
+                const clientName = r.clientId === 'ALL' ? '전체공통' : (clients.find(c => c.id === r.clientId)?.name || 'Unknown');
+                if(!acc[clientName]) acc[clientName] = [];
+                acc[clientName].push(r);
+                return acc;
+            }, {});
+
+            const clientNames = Object.keys(grouped).sort((a,b) => {
+                if(a === '전체공통') return -1;
+                if(b === '전체공통') return 1;
+                return a.localeCompare(b);
+            });
+
+            const activeGroup = selectedClientId === 'all' ? clientNames : 
+                                clientNames.filter(name => {
+                                    const client = clients.find(c => c.id === selectedClientId);
+                                    return name === (client ? client.name : '') || name === '전체공통';
+                                });
+
+            if(activeGroup.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-400">루틴 업무가 없습니다.</div>`;
+                return;
+            }
+
+            activeGroup.forEach(name => {
+                const groupItems = grouped[name];
+                let groupHtml = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-slate-700 flex justify-between items-center">
+                        <span>${name}</span>
+                        <span class="text-xs font-normal text-slate-500">${groupItems.length} Tasks</span>
+                    </div>
+                    <div class="divide-y divide-slate-100">`;
+                
+                groupItems.forEach(r => {
+                    const isChecked = r.isChecked;
+                    const checkColor = isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 text-transparent hover:border-blue-500';
+                    const textStyle = isChecked ? 'text-slate-400 line-through' : 'text-slate-800 font-medium';
+                    const guideBox = r.guide ? `<div class="mt-2 text-xs bg-amber-50 border border-amber-100 text-amber-800 p-2 rounded flex gap-2 items-start"><i data-lucide="alert-triangle" class="w-3 h-3 mt-0.5 flex-shrink-0"></i><pre class="whitespace-pre-wrap font-sans">${r.guide}</pre></div>` : '';
+
+                    groupHtml += `
+                        <div class="p-4 hover:bg-slate-50 transition-colors">
+                            <div class="flex items-start gap-3">
+                                <button onclick="toggleRoutine('${r.id}', ${!isChecked})" class="mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${checkColor} flex-shrink-0">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">${r.type}</span>
+                                        <span class="${textStyle}">${r.title}</span>
+                                    </div>
+                                    ${guideBox}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                groupHtml += `</div></div>`;
+                list.innerHTML += groupHtml;
+            });
+            lucide.createIcons();
+        }
+
+        window.toggleRoutine = async (id, status) => {
+            await updateDoc(doc(db, 'pm_users', currentUser.uid, 'routines', id), { isChecked: status });
+        };
+
+        window.resetRoutines = async () => {
+            if(!confirm("모든 루틴 체크박스를 초기화합니다.")) return;
+            const batch = writeBatch(db);
+            routines.forEach(r => {
+                const ref = doc(db, 'pm_users', currentUser.uid, 'routines', r.id);
+                batch.update(ref, { isChecked: false });
+            });
+            await batch.commit();
+        };
+
+        window.addRoutine = async () => {
+            const clientId = document.getElementById('routine-client').value;
+            const type = document.getElementById('routine-type').value;
+            const title = document.getElementById('routine-title').value;
+            const guide = document.getElementById('routine-guide').value;
+
+            if(!title) return alert("루틴명을 입력하세요");
+            const newRoutineId = 'r_manual_' + Date.now();
+            await setDoc(doc(db, 'pm_users', currentUser.uid, 'routines', newRoutineId), {
+                id: newRoutineId, clientId, type, title, guide, isChecked: false
+            });
+            closeModal('routine-modal');
+            document.getElementById('routine-title').value = '';
+            document.getElementById('routine-guide').value = '';
+        };
+
+        window.parseTextWithAI = async () => {
+            const text = document.getElementById('bulk-input-text').value;
+            if(!text.trim()) return alert("분석할 텍스트를 입력하세요.");
+
+            const btn = document.getElementById('btn-parse-ai');
+            const preview = document.getElementById('bulk-preview-area');
+            
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> 분석 중...';
+            btn.disabled = true;
+            preview.innerHTML = '<div class="h-full flex items-center justify-center text-slate-500 text-sm gap-2"><div class="loader"></div>Gemini가 텍스트에서 업무와 고객사를 발라내고 있습니다...</div>';
+
+            const clientString = clients.map(c => c.id + ': ' + c.name).join(', ');
+
+            try {
+                const parseFn = httpsCallable(functions, 'parseTasksWithAI');
+                const res = await parseFn({ text: text, clientList: clientString });
+                bulkParsedTasks = res.data.data;
+
+                if(!Array.isArray(bulkParsedTasks) || bulkParsedTasks.length === 0) {
+                    preview.innerHTML = '<div class="text-center text-slate-500 py-10">추출할 업무가 발견되지 않았습니다.</div>';
+                    return;
+                }
+
+                let html = '';
+                bulkParsedTasks.forEach((t, i) => {
+                    let options = '<option value="ALL">✨ 공통 (General)</option>';
+                    clients.forEach(c => {
+                        options += '<option value="' + c.id + '" ' + (c.id === t.clientId ? 'selected' : '') + '>' + c.name + '</option>';
+                    });
+
+                    html += '<div class="bg-white p-3 rounded border border-slate-200 flex gap-3 items-start shadow-sm">';
+                    html += '<input type="checkbox" id="chk-' + i + '" checked class="mt-2 w-4 h-4 text-emerald-600 rounded">';
+                    html += '<div class="flex-1 space-y-2">';
+                    html += '<div class="flex gap-2">';
+                    html += '<select id="client-' + i + '" class="border border-slate-300 rounded p-1 text-xs bg-slate-50 w-32">' + options + '</select>';
+                    html += '<input type="text" id="title-' + i + '" value="' + (t.title || '') + '" class="border border-slate-300 rounded p-1 text-xs flex-1">';
+                    html += '</div>';
+                    html += '<div class="flex gap-2">';
+                    html += '<input type="text" id="due-' + i + '" value="' + (t.due || '') + '" placeholder="마감일(YYYY-MM-DD)" class="border border-slate-300 rounded p-1 text-xs w-32">';
+                    html += '<select id="pri-' + i + '" class="border border-slate-300 rounded p-1 text-xs bg-slate-50 w-24"><option value="High" ' + (t.priority === 'High' ? 'selected' : '') + '>High</option><option value="Medium" ' + (t.priority === 'Medium' ? 'selected' : '') + '>Medium</option><option value="Low" ' + (t.priority === 'Low' ? 'selected' : '') + '>Low</option></select>';
+                    html += '<input type="text" id="note-' + i + '" value="' + (t.note || '') + '" placeholder="상세 내용 메모" class="border border-slate-300 rounded p-1 text-xs flex-1">';
+                    html += '</div></div></div>';
+                });
+
+                preview.innerHTML = html;
+                document.getElementById('btn-save-bulk').classList.remove('hidden');
+
+            } catch(e) {
+                preview.innerHTML = '<div class="text-red-500 p-4">분석 실패: ' + e.message + '</div>';
+            } finally {
+                btn.innerHTML = '<i data-lucide="wand-2" class="w-4 h-4"></i> 텍스트 분석 시작';
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        };
+
+        window.saveBulkTasks = async () => {
+            if(!confirm("선택한 업무들을 대시보드에 등록하시겠습니까?")) return;
+            
+            const batch = writeBatch(db);
+            let count = 0;
+
+            for(let i=0; i<bulkParsedTasks.length; i++) {
+                if(document.getElementById('chk-' + i).checked) {
+                    const newRef = doc(collection(db, 'pm_users', currentUser.uid, 'tasks'));
+                    batch.set(newRef, {
+                        clientId: document.getElementById('client-' + i).value,
+                        title: document.getElementById('title-' + i).value,
+                        startDate: new Date().toISOString().split('T')[0],
+                        due: document.getElementById('due-' + i).value,
+                        priority: document.getElementById('pri-' + i).value,
+                        note: document.getElementById('note-' + i).value,
+                        status: 'todo',
+                        createdAt: new Date().toISOString()
+                    });
+                    count++;
+                }
+            }
+
+            if(count > 0) {
+                await batch.commit();
+                alert(count + "개의 업무가 성공적으로 등록되었습니다.");
+                closeModal('bulk-modal');
+            } else {
+                alert("선택된 업무가 없습니다.");
+            }
+        };
+
+        window.createReport = async () => {
+            const month = document.getElementById('report-month').value;
+            const resultDiv = document.getElementById('report-result');
+            const btn = document.getElementById('btn-create-report');
+
+            if(!month) return alert("생성할 월을 선택해주세요.");
+
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> 생성 중...';
+            btn.disabled = true;
+            resultDiv.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">Gemini 2.5 Pro가 데이터를 분석 및 구조화하고 있습니다...</p></div>`;
+            lucide.createIcons();
+
+            try {
+                const generateReport = httpsCallable(functions, 'generateMonthlyReport');
+                const response = await generateReport({ 
+                    userId: currentUser.uid, 
+                    month: month 
+                });
+
+                const data = response.data.data;
+
+                let htmlHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+                const groupedArray = Array.isArray(data) ? data : [data];
+
+                groupedArray.forEach(group => {
+                    htmlHTML += '<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">';
+                    htmlHTML += '<div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-2">';
+                    htmlHTML += '<i data-lucide="building-2" class="w-5 h-5 text-purple-600"></i>';
+                    htmlHTML += '<h3 class="text-lg font-bold text-slate-800">' + (group.client_name || '분류 없음') + '</h3>';
+                    htmlHTML += '</div>';
+                    htmlHTML += '<div class="p-5 flex-1 space-y-4">';
+
+                    const tasks = Array.isArray(group.tasks) ? group.tasks : [];
+                    if(tasks.length === 0) {
+                        htmlHTML += '<div class="text-center py-6 text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200">완료된 업무가 없습니다.</div>';
+                    } else {
+                        tasks.forEach(row => {
+                            htmlHTML += '<div class="bg-slate-50/50 p-4 rounded-lg border border-slate-100">';
+                            htmlHTML += '<h4 class="text-purple-700 font-bold mb-2 flex items-start gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-purple-500 flex-shrink-0"></i> [' + (row.item || '항목 없음') + ']</h4>';
+                            htmlHTML += '<div class="pl-5 space-y-1.5 text-slate-600">';
+                            htmlHTML += '<p><span class="font-semibold text-slate-700">상세내용:</span> ' + (row.details || '') + '</p>';
+                            htmlHTML += '<p><span class="font-semibold text-slate-700">대응방안:</span> ' + (row.action_plan || '') + '</p>';
+                            htmlHTML += '<p class="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-200"><span class="font-semibold">비고:</span> ' + (row.remarks || '-') + '</p>';
+                            htmlHTML += '</div></div>';
+                        });
+                    }
+                    htmlHTML += '</div></div>';
+                });
+                htmlHTML += '</div>';
+
+                resultDiv.innerHTML = htmlHTML;
+
+            } catch (error) {
+                console.error(error);
+                resultDiv.innerHTML = `<div class="bg-red-50 p-6 rounded-lg border border-red-200 text-center"><i data-lucide="alert-triangle" class="w-10 h-10 text-red-500 mx-auto mb-2"></i><p class="text-red-700 font-bold text-lg">리포트 생성 실패</p><p class="text-sm text-red-500 mt-1">${error.message}</p></div>`;
+            } finally {
+                btn.innerHTML = '<i data-lucide="file-output" class="w-4 h-4"></i> 보고서 생성';
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        };
+
+        window.createDailyReport = async () => {
+            const date = document.getElementById('daily-date').value;
+            const resultDiv = document.getElementById('daily-result');
+            const btn = document.getElementById('btn-create-daily');
+
+            if(!date) return alert("날짜를 선택해주세요.");
+
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> 생성 중...';
+            btn.disabled = true;
+            resultDiv.innerHTML = '<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">Gemini가 데일리 브리핑 자료를 작성 중입니다...</p></div>';
+            lucide.createIcons();
+
+            try {
+                const generateDaily = httpsCallable(functions, 'generateDailyReport');
+                const response = await generateDaily({ userId: currentUser.uid, date: date });
+                const data = response.data.data;
+
+                let html = '<div class="space-y-4">';
+                
+                const sections = [
+                    { title: '어제 한 일', icon: 'check-circle', color: 'text-green-600', data: data.yesterday_done },
+                    { title: '오늘 할 일', icon: 'calendar', color: 'text-blue-600', data: data.today_todo },
+                    { title: '정보 공유', icon: 'info', color: 'text-purple-600', data: data.sharing_points },
+                    { title: '공조 요청', icon: 'users', color: 'text-orange-600', data: data.cooperation_needed },
+                    { title: '시사점 및 리스크', icon: 'alert-triangle', color: 'text-red-600', data: data.insights }
+                ];
+
+                sections.forEach(sec => {
+                    html += '<div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">';
+                    html += '<h4 class="font-bold flex items-center gap-2 mb-3 ' + sec.color + '"><i data-lucide="' + sec.icon + '" class="w-5 h-5"></i> ' + sec.title + '</h4>';
+                    html += '<ul class="space-y-2 text-sm text-slate-700">';
+                    if(Array.isArray(sec.data) && sec.data.length > 0 && sec.data[0] !== "해당 없음") {
+                        sec.data.forEach(item => {
+                            html += '<li class="flex items-start gap-2"><span class="text-slate-400 mt-0.5">•</span><span>' + item + '</span></li>';
+                        });
+                    } else {
+                        html += '<li class="text-slate-400">해당 없음</li>';
+                    }
+                    html += '</ul></div>';
+                });
+                
+                html += '</div>';
+                resultDiv.innerHTML = html;
+
+            } catch (e) {
+                console.error(e);
+                resultDiv.innerHTML = '<div class="bg-red-50 p-4 rounded-lg text-red-600">오류 발생: ' + e.message + '</div>';
+            } finally {
+                btn.innerHTML = '<i data-lucide="file-output" class="w-4 h-4"></i> 생성';
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        };
+
         const memoArea = document.getElementById('quick-memo');
         const memoStatus = document.getElementById('memo-status');
         memoArea.addEventListener('blur', async () => {
