@@ -156,7 +156,7 @@
                                     <th class="px-6 py-4 w-28 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('startDate')">시작일 ↕</th>
                                     <th class="px-6 py-4 w-32 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('due')">마감일 ↕</th>
                                     <th class="px-6 py-4 w-24 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('priority')">우선순위 ↕</th>
-                                    <th class="px-6 py-4 w-24 text-right">관리</th>
+                                    <th class="px-6 py-4 w-28 text-right">관리</th>
                                 </tr>
                             </thead>
                             <tbody id="task-table-body" class="divide-y divide-slate-100">
@@ -218,8 +218,12 @@
                     <input type="text" id="modal-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="예: 12월 월간보고서 송부">
                 </div>
                 <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> 관련 메일 제목 (검색용)</label>
+                    <input type="text" id="modal-ref-mail" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="원본 메일 제목을 복사해 넣으세요">
+                </div>
+                <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">상세 내용 (메모)</label>
-                    <textarea id="modal-note" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+                    <textarea id="modal-note" rows="2" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -244,10 +248,34 @@
         </div>
     </div>
 
+    <div id="history-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-xl p-6 h-[80vh] flex flex-col">
+            <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-3 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
+                        <i data-lucide="history" class="text-blue-600 w-5 h-5"></i> 진행 이력 관리
+                    </h3>
+                    <p id="history-task-title" class="text-sm font-medium text-slate-600"></p>
+                </div>
+                <button onclick="closeModal('history-modal')" class="text-gray-400 hover:text-slate-600 p-1"><i data-lucide="x"></i></button>
+            </div>
+            
+            <input type="hidden" id="history-target-task-id">
+
+            <div class="flex-1 overflow-y-auto pr-2 space-y-4 mb-4" id="history-list-container">
+                </div>
+
+            <div class="border-t border-slate-200 pt-4 flex-shrink-0 bg-slate-50 p-3 rounded-lg flex gap-2">
+                <input type="text" id="history-input-text" class="flex-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="진행 상황이나 특이사항 추가..." onkeypress="if(event.key==='Enter') addHistory()">
+                <button onclick="addHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm whitespace-nowrap">기록</button>
+            </div>
+        </div>
+    </div>
+
     <div id="routine-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-indigo-900">새 루틴 추가 (반복 업무)</h3>
+                <h3 class="text-lg font-bold text-indigo-900">새 루틴 추가</h3>
                 <button onclick="closeModal('routine-modal')"><i data-lucide="x" class="text-gray-400"></i></button>
             </div>
             <div class="space-y-4">
@@ -256,7 +284,7 @@
                     <select id="routine-client" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"></select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">구분 (Type)</label>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">구분</label>
                     <select id="routine-type" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white">
                         <option value="Report">월간 보고 (Report)</option>
                         <option value="Contract">계약 관리 (Contract)</option>
@@ -266,13 +294,13 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">루틴명</label>
-                    <input type="text" id="routine-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="예: 매월 25일 CSR 마감">
+                    <input type="text" id="routine-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">가이드/주의사항</label>
-                    <textarea id="routine-guide" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="이 업무를 진행할 때 주의해야 할 점 (예: OO님 참조 필수)"></textarea>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">주의사항</label>
+                    <textarea id="routine-guide" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
                 </div>
-                <button onclick="addRoutine()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-indigo-700 transition">루틴 추가</button>
+                <button onclick="addRoutine()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold mt-4 hover:bg-indigo-700 transition">추가</button>
             </div>
         </div>
     </div>
@@ -286,7 +314,7 @@
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">일정명</label>
-                    <input type="text" id="event-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="예: 고객사 방문 미팅">
+                    <input type="text" id="event-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -320,7 +348,7 @@
                     <input type="month" id="report-month" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
                 </div>
                 <button onclick="createReport()" id="btn-create-report" class="bg-purple-600 text-white px-5 py-2 rounded-md text-sm font-bold hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm">
-                    <i data-lucide="file-output" class="w-4 h-4"></i> 보고서 생성
+                    <i data-lucide="file-output" class="w-4 h-4"></i> 생성
                 </button>
             </div>
 
@@ -388,7 +416,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, arrayUnion } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
 
         const firebaseConfig = {
@@ -427,10 +455,10 @@
                 { id: 'c_xexymix', name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
             ],
             tasks: [
-                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', startDate: '2026-01-10', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료.', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', startDate: '2026-01-18', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신', createdAt: new Date().toISOString() },
-                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', startDate: '', due: '', priority: 'Low', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', startDate: '2026-01-02', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() }
+                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', startDate: '2026-01-10', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료.', refMail: '[카카오스타일] 권한 소명 요청 건', history: [], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+                { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', startDate: '2026-01-18', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신', refMail: '', history: [], createdAt: new Date().toISOString() },
+                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', startDate: '', due: '', priority: 'Low', refMail: '', history: [], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+                { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', startDate: '2026-01-02', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의', refMail: 'FW: [스카이하이메모리] 계약 변경 관련', history: [], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() }
             ],
             routines: [
                 { id: 'r_sky_carryover', clientId: 'c_skyhigh', type: 'Contract', title: '계약 공수 이월 체크', guide: '주의: 개발/CPI 파트만 이월 가능.' },
@@ -462,9 +490,9 @@
         function initListeners(uid) {
             onSnapshot(collection(db, 'pm_users', uid, 'clients'), (snapshot) => {
                 clients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                if (snapshot.empty && !localStorage.getItem('pm_seeded_v6')) {
+                if (snapshot.empty && !localStorage.getItem('pm_seeded_v7')) {
                     seedDatabase(uid);
-                    localStorage.setItem('pm_seeded_v6', 'true');
+                    localStorage.setItem('pm_seeded_v7', 'true');
                 }
                 renderClients();
                 populateClientSelect();
@@ -474,6 +502,11 @@
             onSnapshot(collection(db, 'pm_users', uid, 'tasks'), (snapshot) => {
                 tasks = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 renderTasks();
+                
+                const openHistoryId = document.getElementById('history-target-task-id').value;
+                if(openHistoryId && !document.getElementById('history-modal').classList.contains('hidden')) {
+                    renderHistoryList(openHistoryId);
+                }
             });
             onSnapshot(collection(db, 'pm_users', uid, 'routines'), (snapshot) => {
                 routines = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
@@ -505,9 +538,7 @@
             for(const t of SEED_DATA.tasks) { batch.set(doc(db, 'pm_users', uid, 'tasks', t.id), t); }
             for(const r of SEED_DATA.routines) { batch.set(doc(db, 'pm_users', uid, 'routines', r.id), { isChecked: false, ...r }); }
             for(const e of SEED_DATA.events) { batch.set(doc(db, 'pm_users', uid, 'events', e.id), e); }
-
-            try { await batch.commit(); } 
-            catch(e) { console.error("Seeding Failed:", e); }
+            try { await batch.commit(); } catch(e) { console.error("Seeding Failed:", e); }
         }
 
         window.forceSeed = async () => {
@@ -582,9 +613,7 @@
         };
 
         function updateStats(filtered) {
-            let activeCount = 0;
-            let doneCount = 0;
-            let urgentCount = 0;
+            let activeCount = 0; let doneCount = 0; let urgentCount = 0;
             const today = new Date().toISOString().split('T')[0];
 
             filtered.forEach(t => {
@@ -608,20 +637,20 @@
             const searchQuery = document.getElementById('search-input').value.toLowerCase();
             let filtered = tasks.filter(t => {
                 const clientMatch = selectedClientId === 'all' || t.clientId === selectedClientId;
-                
-                // 수정된 부분: 보드(칸반) 뷰일 때는 상단 필터를 무시하고 '전체' 데이터를 불러옵니다.
                 const statusMatch = currentViewMode === 'kanban' ? true : 
                                     (filterStatus === 'all' ? true : 
                                      filterStatus === 'active' ? t.status !== 'done' : 
                                      t.status === filterStatus);
                                      
-                const searchMatch = !searchQuery || (t.title && t.title.toLowerCase().includes(searchQuery)) || (t.note && t.note.toLowerCase().includes(searchQuery));
+                const searchMatch = !searchQuery || 
+                                    (t.title && t.title.toLowerCase().includes(searchQuery)) || 
+                                    (t.note && t.note.toLowerCase().includes(searchQuery)) ||
+                                    (t.refMail && t.refMail.toLowerCase().includes(searchQuery));
                 return clientMatch && statusMatch && searchMatch;
             });
 
             filtered.sort((a, b) => {
-                let valA = a[sortConfig.key] || '';
-                let valB = b[sortConfig.key] || '';
+                let valA = a[sortConfig.key] || ''; let valB = b[sortConfig.key] || '';
                 if(sortConfig.key === 'priority') {
                     const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
                     valA = p[valA] || 0; valB = p[valB] || 0;
@@ -668,6 +697,10 @@
                         ddayBadge = `<span class="text-orange-600 font-bold ml-1 text-xs">(D-${daysLeft})</span>`;
                     }
                 }
+                
+                const refMailHtml = t.refMail ? `<div class="text-xs text-blue-600 mt-1 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
+                const historyCount = Array.isArray(t.history) ? t.history.length : 0;
+                const historyBadge = historyCount > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">${historyCount}</span>` : '';
 
                 tbody.innerHTML += `
                     <tr class="${trClass} transition-colors group border-b border-slate-100">
@@ -675,11 +708,16 @@
                             <button onclick="toggleStatus('${t.id}', '${t.status}')" class="mx-auto w-5 h-5 rounded border flex items-center justify-center transition-colors ${checkColor}"><i data-lucide="check" class="w-3 h-3"></i></button>
                         </td>
                         <td class="px-6 py-4 font-medium text-slate-700">${clientName}</td>
-                        <td class="px-6 py-4"><div class="font-medium ${titleClass}">${t.title}</div>${t.note ? `<div class="text-xs text-slate-500 mt-1">${t.note}</div>` : ''}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium ${titleClass}">${t.title}</div>
+                            ${t.note ? `<div class="text-xs text-slate-500 mt-1">${t.note}</div>` : ''}
+                            ${refMailHtml}
+                        </td>
                         <td class="px-6 py-4 text-slate-500 font-mono text-xs">${t.startDate || '-'}</td>
                         <td class="px-6 py-4 text-slate-500 font-mono text-xs">${t.due || '-'}<br>${ddayBadge}</td>
                         <td class="px-6 py-4"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priorityClass}">${t.priority}</span></td>
                         <td class="px-6 py-4 text-right">
+                            <button onclick="openHistoryModal('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors mr-3 relative" title="이력 관리"><i data-lucide="history" class="w-4 h-4"></i>${historyBadge}</button>
                             <button onclick="openEditTask('${t.id}')" class="text-slate-300 hover:text-blue-500 transition-colors mr-2 opacity-0 group-hover:opacity-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
                             <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </td>
@@ -702,19 +740,24 @@
                 let priorityColor = t.priority === 'High' ? 'bg-red-500' : t.priority === 'Medium' ? 'bg-orange-400' : 'bg-slate-400';
                 
                 let dueText = t.due ? `<span class="text-xs text-slate-500 flex items-center gap-1 mt-2"><i data-lucide="calendar" class="w-3 h-3"></i> 마감: ${t.due}</span>` : '';
+                const refMailHtml = t.refMail ? `<div class="text-[10px] text-blue-600 mt-2 flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
+                const historyCount = Array.isArray(t.history) ? t.history.length : 0;
+                const historyBadge = historyCount > 0 ? `<span class="text-[10px] text-blue-600 font-bold ml-1">+${historyCount}</span>` : '';
 
                 const html = `
                     <div class="${cardClass} border border-slate-200 rounded-lg p-3 transition-shadow relative group">
                         <div class="absolute top-0 left-0 w-1 h-full ${priorityColor} rounded-l-lg"></div>
                         <div class="pl-2 flex justify-between items-start">
                             <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${clientName}</span>
-                            <div class="flex gap-1">
+                            <div class="flex gap-2">
+                                <button onclick="openHistoryModal('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors flex items-center" title="이력 관리"><i data-lucide="history" class="w-3.5 h-3.5"></i>${historyBadge}</button>
                                 <button onclick="toggleStatus('${t.id}', '${t.status}')" class="text-slate-400 hover:text-${isDone?'orange':'green'}-500 transition-colors" title="${isDone?'대기 상태로 변경':'완료 처리'}"><i data-lucide="${isDone?'rotate-ccw':'check-square'}" class="w-4 h-4"></i></button>
                                 <button onclick="openEditTask('${t.id}')" class="text-slate-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
                             </div>
                         </div>
                         <h5 class="pl-2 font-bold text-sm text-slate-800 mt-2 ${isDone?'line-through':''}">${t.title}</h5>
                         ${t.note ? `<p class="pl-2 text-xs text-slate-500 mt-1 line-clamp-2">${t.note}</p>` : ''}
+                        ${refMailHtml}
                         <div class="pl-2">${dueText}</div>
                     </div>
                 `;
@@ -750,6 +793,7 @@
             const id = document.getElementById('modal-task-id').value;
             const clientId = document.getElementById('modal-client').value;
             const title = document.getElementById('modal-title').value;
+            const refMail = document.getElementById('modal-ref-mail').value;
             const note = document.getElementById('modal-note').value;
             const priority = document.getElementById('modal-priority').value;
             const startDate = document.getElementById('modal-start-date').value;
@@ -759,14 +803,102 @@
 
             if (id) {
                 await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), {
-                    clientId, title, note, priority, startDate, due
+                    clientId, title, refMail, note, priority, startDate, due
                 });
             } else {
                 await addDoc(collection(db, 'pm_users', currentUser.uid, 'tasks'), {
-                    clientId, title, note, priority, startDate, due, status: 'todo', createdAt: new Date().toISOString()
+                    clientId, title, refMail, note, priority, startDate, due, status: 'todo', history: [], createdAt: new Date().toISOString()
                 });
             }
             closeModal('task-modal');
+        };
+
+        window.openAddTaskModal = () => {
+            document.getElementById('modal-task-id').value = "";
+            document.getElementById('task-modal-title').innerText = "새 업무 추가";
+            document.getElementById('modal-save-btn').innerText = "추가하기";
+            document.getElementById('modal-client').value = selectedClientId === 'all' ? 'ALL' : selectedClientId;
+            document.getElementById('modal-title').value = "";
+            document.getElementById('modal-ref-mail').value = "";
+            document.getElementById('modal-note').value = "";
+            document.getElementById('modal-priority').value = "Medium";
+            document.getElementById('modal-start-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-due').value = "";
+            openModal('task-modal');
+        };
+
+        window.openEditTask = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('modal-task-id').value = id;
+            document.getElementById('task-modal-title').innerText = "업무 수정";
+            document.getElementById('modal-save-btn').innerText = "수정 저장";
+            document.getElementById('modal-client').value = task.clientId;
+            document.getElementById('modal-title').value = task.title;
+            document.getElementById('modal-ref-mail').value = task.refMail || "";
+            document.getElementById('modal-note').value = task.note || "";
+            document.getElementById('modal-priority').value = task.priority;
+            document.getElementById('modal-start-date').value = task.startDate || "";
+            document.getElementById('modal-due').value = task.due || "";
+            openModal('task-modal');
+        };
+
+        window.openHistoryModal = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('history-target-task-id').value = id;
+            document.getElementById('history-task-title').innerText = `[${clients.find(c=>c.id===task.clientId)?.name||'공통'}] ${task.title}`;
+            document.getElementById('history-input-text').value = '';
+            renderHistoryList(id);
+            openModal('history-modal');
+        };
+
+        window.renderHistoryList = (id) => {
+            const task = tasks.find(t => t.id === id);
+            const container = document.getElementById('history-list-container');
+            if(!task || !task.history || task.history.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">기록된 진행 이력이 없습니다.<br>아래에서 첫 이력을 남겨보세요.</div>`;
+                return;
+            }
+
+            let html = '';
+            // 역순 렌더링 (최신순)
+            const reversedHistory = [...task.history].reverse();
+            reversedHistory.forEach(h => {
+                const dateObj = new Date(h.date);
+                const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
+                html += `
+                    <div class="flex gap-3 items-start">
+                        <div class="w-2 h-2 mt-1.5 rounded-full bg-blue-400 flex-shrink-0"></div>
+                        <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 flex-1 text-sm text-slate-700">
+                            <div class="text-[10px] text-slate-400 font-bold mb-1">${dateStr}</div>
+                            <div>${h.text}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        };
+
+        window.addHistory = async () => {
+            const id = document.getElementById('history-target-task-id').value;
+            const textInput = document.getElementById('history-input-text');
+            const text = textInput.value.trim();
+            if(!text) return;
+
+            const newLog = {
+                date: new Date().toISOString(),
+                text: text
+            };
+
+            try {
+                await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), {
+                    history: arrayUnion(newLog)
+                });
+                textInput.value = '';
+            } catch(e) {
+                alert("기록 추가 실패: " + e.message);
+            }
         };
 
         function renderClients() {
@@ -801,34 +933,6 @@
             selectTask.innerHTML = options;
             selectRoutine.innerHTML = options;
         }
-
-        window.openAddTaskModal = () => {
-            document.getElementById('modal-task-id').value = "";
-            document.getElementById('task-modal-title').innerText = "새 업무 추가";
-            document.getElementById('modal-save-btn').innerText = "추가하기";
-            document.getElementById('modal-client').value = selectedClientId === 'all' ? 'ALL' : selectedClientId;
-            document.getElementById('modal-title').value = "";
-            document.getElementById('modal-note').value = "";
-            document.getElementById('modal-priority').value = "Medium";
-            document.getElementById('modal-start-date').value = new Date().toISOString().split('T')[0];
-            document.getElementById('modal-due').value = "";
-            openModal('task-modal');
-        };
-
-        window.openEditTask = (id) => {
-            const task = tasks.find(t => t.id === id);
-            if (!task) return;
-            document.getElementById('modal-task-id').value = id;
-            document.getElementById('task-modal-title').innerText = "업무 수정";
-            document.getElementById('modal-save-btn').innerText = "수정 저장";
-            document.getElementById('modal-client').value = task.clientId;
-            document.getElementById('modal-title').value = task.title;
-            document.getElementById('modal-note').value = task.note || "";
-            document.getElementById('modal-priority').value = task.priority;
-            document.getElementById('modal-start-date').value = task.startDate || "";
-            document.getElementById('modal-due').value = task.due || "";
-            openModal('task-modal');
-        };
 
         window.addEvent = async () => {
             const title = document.getElementById('event-title').value;
@@ -1052,6 +1156,8 @@
                         due: document.getElementById('due-' + i).value,
                         priority: document.getElementById('pri-' + i).value,
                         note: document.getElementById('note-' + i).value,
+                        refMail: '',
+                        history: [],
                         status: 'todo',
                         createdAt: new Date().toISOString()
                     });
@@ -1128,6 +1234,12 @@
                 btn.disabled = false;
                 lucide.createIcons();
             }
+        };
+
+        window.openDailyModal = () => {
+            document.getElementById('daily-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('daily-result').innerHTML = '<div class="h-full flex flex-col items-center justify-center text-slate-400 text-sm"><i data-lucide="sun" class="w-12 h-12 mb-3 text-slate-300"></i>기준 일자를 선택하고 생성 버튼을 누르세요.</div>';
+            openModal('daily-modal');
         };
 
         window.createDailyReport = async () => {
