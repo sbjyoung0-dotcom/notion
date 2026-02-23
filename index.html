@@ -39,7 +39,7 @@
 
             <div class="mt-6 px-4 mb-2 flex justify-between items-center">
                 <span class="text-xs font-bold text-slate-400 uppercase">Upcoming Events</span>
-                <button onclick="openModal('event-modal')" class="text-slate-400 hover:text-blue-600 transition-colors">
+                <button onclick="openAddEventModal()" class="text-slate-400 hover:text-blue-600 transition-colors">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -308,9 +308,10 @@
     <div id="event-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold">일정 등록 (캘린더 연동)</h3>
+                <h3 class="text-lg font-bold" id="event-modal-title">일정 등록 (캘린더 연동)</h3>
                 <button onclick="closeModal('event-modal')"><i data-lucide="x" class="text-gray-400"></i></button>
             </div>
+            <input type="hidden" id="modal-event-id">
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">일정명</label>
@@ -443,7 +444,7 @@
         let currentViewMode = 'list';
         let sortConfig = { key: 'due', direction: 'asc' };
 
-        const SEED_DATA = { /* 생략 무관 */ };
+        const SEED_DATA = { /* 생략 */ };
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('today-date').innerText = todayStr;
         document.getElementById('report-month').value = todayStr.substring(0, 7);
@@ -526,18 +527,15 @@
 
         function renderListOptimized(filtered) {
             const tbody = document.getElementById('task-table-body');
-            
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">데이터가 없습니다.</td></tr>`;
                 return;
             }
-            
             if (tbody.children.length === 1 && tbody.children[0].textContent === '데이터가 없습니다.') {
                 tbody.innerHTML = '';
             }
 
             const currentIds = new Set(filtered.map(t => 'list-row-' + t.id));
-            
             Array.from(tbody.children).forEach(child => {
                 if (!currentIds.has(child.id)) tbody.removeChild(child);
             });
@@ -555,17 +553,14 @@
                     tr.className = trClass;
                     tr.setAttribute('data-raw', htmlContent);
                     tr.innerHTML = htmlContent;
-                    
                     if (previousNode) previousNode.after(tr);
                     else tbody.prepend(tr);
                 } else {
                     if (tr.className !== trClass) tr.className = trClass;
-                    
                     if (tr.getAttribute('data-raw') !== htmlContent) {
                         tr.setAttribute('data-raw', htmlContent);
                         tr.innerHTML = htmlContent;
                     }
-                    
                     if (previousNode && previousNode.nextSibling !== tr) {
                         previousNode.after(tr);
                     } else if (!previousNode && tbody.firstChild !== tr) {
@@ -751,15 +746,10 @@
 
         window.setSelectedClient = (id) => {
             selectedClientId = id;
-            renderClients();
-            renderTasks();
-            renderRoutines();
+            renderClients(); renderTasks(); renderRoutines();
             const client = clients.find(c => c.id === id);
-            if(id === 'all') {
-                document.getElementById('header-title').innerText = "전체 현황 대시보드";
-            } else if(client) {
-                document.getElementById('header-title').innerText = client.name;
-            }
+            if(id === 'all') document.getElementById('header-title').innerText = "전체 현황 대시보드";
+            else if(client) document.getElementById('header-title').innerText = client.name;
         };
 
         function updateStats(filtered) {
@@ -871,7 +861,6 @@
                 container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">기록된 진행 이력이 없습니다.<br>아래에서 첫 이력을 남겨보세요.</div>`;
                 return;
             }
-
             let html = '';
             const reversedHistory = [...task.history].reverse();
             reversedHistory.forEach(h => {
@@ -895,20 +884,12 @@
             const textInput = document.getElementById('history-input-text');
             const text = textInput.value.trim();
             if(!text) return;
-
-            const newLog = {
-                date: new Date().toISOString(),
-                text: text
-            };
-
             try {
                 await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), {
-                    history: arrayUnion(newLog)
+                    history: arrayUnion({ date: new Date().toISOString(), text: text })
                 });
                 textInput.value = '';
-            } catch(e) {
-                alert("기록 추가 실패: " + e.message);
-            }
+            } catch(e) { alert("기록 추가 실패: " + e.message); }
         };
 
         function renderClients() {
@@ -944,7 +925,45 @@
             selectRoutine.innerHTML = options;
         }
 
+        window.openAddEventModal = () => {
+            document.getElementById('modal-event-id').value = "";
+            document.getElementById('event-modal-title').innerText = "일정 등록 (캘린더 연동)";
+            document.getElementById('event-title').value = "";
+            document.getElementById('event-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('event-time').value = "";
+            document.getElementById('btn-add-event').innerText = "캘린더 등록";
+            openModal('event-modal');
+        };
+
+        window.openEditEvent = (id) => {
+            const ev = events.find(e => e.id === id);
+            if (!ev) return;
+            document.getElementById('modal-event-id').value = id;
+            document.getElementById('event-modal-title').innerText = "일정 수정";
+            document.getElementById('event-title').value = ev.title;
+            document.getElementById('event-date').value = ev.date;
+            document.getElementById('event-time').value = ev.time || "";
+            document.getElementById('btn-add-event').innerText = ev.gCalEventId ? "동기화 수정 (구글 캘린더 포함)" : "수정 저장 (대시보드만)";
+            openModal('event-modal');
+        };
+
+        window.deleteEvent = async (id) => {
+            const ev = events.find(e => e.id === id);
+            if(!ev) return;
+            const msg = ev.gCalEventId ? "대시보드와 구글 캘린더에서 일정을 완전히 삭제하시겠습니까?" : "일정을 삭제하시겠습니까? (과거 일정은 구글 캘린더에서 직접 지워야 합니다)";
+            if(confirm(msg)) {
+                try {
+                    if(ev.gCalEventId) {
+                        const deleteFromGoogleCalendar = httpsCallable(functions, 'deleteFromGoogleCalendar');
+                        await deleteFromGoogleCalendar({ eventId: ev.gCalEventId });
+                    }
+                    await deleteDoc(doc(db, 'pm_users', currentUser.uid, 'events', id));
+                } catch(e) { alert("삭제 실패: " + e.message); }
+            }
+        };
+
         window.addEvent = async () => {
+            const id = document.getElementById('modal-event-id').value;
             const title = document.getElementById('event-title').value;
             const date = document.getElementById('event-date').value;
             const time = document.getElementById('event-time').value;
@@ -953,19 +972,31 @@
 
             const btn = document.getElementById('btn-add-event');
             const originalText = btn.innerText;
-            btn.innerText = "⏳ 구글 캘린더 연동 중...";
             btn.disabled = true;
 
             try {
-                await addDoc(collection(db, 'pm_users', currentUser.uid, 'events'), { title, date, time });
-                const addToGoogleCalendar = httpsCallable(functions, 'addToGoogleCalendar');
-                await addToGoogleCalendar({ title, date, time });
-                alert("대시보드 및 구글 캘린더에 저장되었습니다.");
+                if (id) {
+                    btn.innerText = "수정 중...";
+                    const ev = events.find(e => e.id === id);
+                    await updateDoc(doc(db, 'pm_users', currentUser.uid, 'events', id), { title, date, time });
+                    
+                    if(ev && ev.gCalEventId) {
+                        const updateGoogleCalendar = httpsCallable(functions, 'updateGoogleCalendar');
+                        await updateGoogleCalendar({ eventId: ev.gCalEventId, title, date, time });
+                    }
+                    alert("일정이 성공적으로 수정되었습니다.");
+                } else {
+                    btn.innerText = "구글 캘린더 연동 중...";
+                    const addToGoogleCalendar = httpsCallable(functions, 'addToGoogleCalendar');
+                    const res = await addToGoogleCalendar({ title, date, time });
+                    const gCalEventId = res.data.eventId;
+                    
+                    await addDoc(collection(db, 'pm_users', currentUser.uid, 'events'), { title, date, time, gCalEventId });
+                    alert("새 일정이 대시보드 및 구글 캘린더에 연동 저장되었습니다.");
+                }
                 closeModal('event-modal');
-                document.getElementById('event-title').value = '';
             } catch(error) {
-                alert("대시보드엔 저장됐지만, 구글 캘린더 연동 실패: " + error.message);
-                closeModal('event-modal');
+                alert("처리 중 오류 발생: " + error.message);
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -980,13 +1011,17 @@
 
             sorted.filter(e => new Date(e.date) >= new Date(today)).forEach(e => {
                 list.innerHTML += `
-                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 group relative">
                         <div class="flex items-start gap-2">
                             <i data-lucide="calendar" class="w-3.5 h-3.5 text-purple-600 mt-0.5"></i>
-                            <div>
+                            <div class="flex-1">
                                 <p class="text-xs font-bold text-purple-800">${e.title}</p>
                                 <p class="text-xs text-purple-600 mt-0.5">${e.date} ${e.time || ''}</p>
                             </div>
+                        </div>
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-purple-50 pl-2">
+                            <button onclick="openEditEvent('${e.id}')" class="text-purple-400 hover:text-purple-700 transition-colors" title="수정"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteEvent('${e.id}')" class="text-purple-400 hover:text-red-600 transition-colors" title="삭제"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </div>
                     </div>
                 `;
