@@ -218,8 +218,8 @@
                     <input type="text" id="modal-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="예: 12월 월간보고서 송부">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> 관련 메일 제목 (검색용)</label>
-                    <input type="text" id="modal-ref-mail" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="원본 메일 제목을 복사해 넣으세요">
+                    <label class="block text-xs font-bold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="link" class="w-3 h-3"></i> 원본 레퍼런스 (검색용)</label>
+                    <input type="text" id="modal-ref-doc" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="관련 문서나 제목을 입력하세요">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">상세 내용 (메모)</label>
@@ -596,7 +596,7 @@
                 else if (daysLeft <= 7) ddayBadge = `<span class="text-orange-600 font-bold ml-1 text-xs">(D-${daysLeft})</span>`;
             }
             
-            const refMailHtml = t.refMail ? `<div class="text-xs text-blue-600 mt-1 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
+            const refMailHtml = t.refMail ? `<div class="text-xs text-blue-600 mt-1 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded w-max"><i data-lucide="link" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
             const historyCount = Array.isArray(t.history) ? t.history.length : 0;
             const historyBadge = historyCount > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">${historyCount}</span>` : '';
 
@@ -679,7 +679,7 @@
             let priorityColor = t.priority === 'High' ? 'bg-red-500' : t.priority === 'Medium' ? 'bg-orange-400' : 'bg-slate-400';
             
             let dueText = t.due ? `<span class="text-xs text-slate-500 flex items-center gap-1 mt-2"><i data-lucide="calendar" class="w-3 h-3"></i> 마감: ${t.due}</span>` : '';
-            const refMailHtml = t.refMail ? `<div class="text-[10px] text-blue-600 mt-2 flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
+            const refMailHtml = t.refMail ? `<div class="text-[10px] text-blue-600 mt-2 flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded w-max"><i data-lucide="link" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
             const historyCount = Array.isArray(t.history) ? t.history.length : 0;
             const historyBadge = historyCount > 0 ? `<span class="text-[10px] text-blue-600 font-bold ml-1">+${historyCount}</span>` : '';
 
@@ -794,7 +794,7 @@
             const id = document.getElementById('modal-task-id').value;
             const clientId = document.getElementById('modal-client').value;
             const title = document.getElementById('modal-title').value;
-            const refMail = document.getElementById('modal-ref-mail').value;
+            const refMail = document.getElementById('modal-ref-doc').value;
             const note = document.getElementById('modal-note').value;
             const priority = document.getElementById('modal-priority').value;
             const startDate = document.getElementById('modal-start-date').value;
@@ -820,7 +820,7 @@
             document.getElementById('modal-save-btn').innerText = "추가하기";
             document.getElementById('modal-client').value = selectedClientId === 'all' ? 'ALL' : selectedClientId;
             document.getElementById('modal-title').value = "";
-            document.getElementById('modal-ref-mail').value = "";
+            document.getElementById('modal-ref-doc').value = "";
             document.getElementById('modal-note').value = "";
             document.getElementById('modal-priority').value = "Medium";
             document.getElementById('modal-start-date').value = new Date().toISOString().split('T')[0];
@@ -836,7 +836,7 @@
             document.getElementById('modal-save-btn').innerText = "수정 저장";
             document.getElementById('modal-client').value = task.clientId;
             document.getElementById('modal-title').value = task.title;
-            document.getElementById('modal-ref-mail').value = task.refMail || "";
+            document.getElementById('modal-ref-doc').value = task.refMail || "";
             document.getElementById('modal-note').value = task.note || "";
             document.getElementById('modal-priority').value = task.priority;
             document.getElementById('modal-start-date').value = task.startDate || "";
