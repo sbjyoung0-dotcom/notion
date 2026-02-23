@@ -147,16 +147,16 @@
                     </div>
 
                     <div id="view-list-container" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <table class="w-full text-sm text-left">
+                        <table class="w-full text-sm text-left table-fixed">
                             <thead class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase font-semibold">
                                 <tr>
-                                    <th class="px-6 py-4 w-12 text-center">상태</th>
+                                    <th class="px-6 py-4 w-16 text-center">상태</th>
                                     <th class="px-6 py-4 w-32 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('clientId')">고객사 ↕</th>
                                     <th class="px-6 py-4 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('title')">업무명 / 내용 ↕</th>
                                     <th class="px-6 py-4 w-28 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('startDate')">시작일 ↕</th>
                                     <th class="px-6 py-4 w-32 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('due')">마감일 ↕</th>
                                     <th class="px-6 py-4 w-24 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortBy('priority')">우선순위 ↕</th>
-                                    <th class="px-6 py-4 w-28 text-right">관리</th>
+                                    <th class="px-6 py-4 w-32 text-right">관리</th>
                                 </tr>
                             </thead>
                             <tbody id="task-table-body" class="divide-y divide-slate-100">
@@ -263,7 +263,7 @@
             <input type="hidden" id="history-target-task-id">
 
             <div class="flex-1 overflow-y-auto pr-2 space-y-4 mb-4" id="history-list-container">
-                </div>
+            </div>
 
             <div class="border-t border-slate-200 pt-4 flex-shrink-0 bg-slate-50 p-3 rounded-lg flex gap-2">
                 <input type="text" id="history-input-text" class="flex-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="진행 상황이나 특이사항 추가..." onkeypress="if(event.key==='Enter') addHistory()">
@@ -443,33 +443,7 @@
         let currentViewMode = 'list';
         let sortConfig = { key: 'due', direction: 'asc' };
 
-        const SEED_DATA = {
-            clients: [
-                { id: 'c_mizmedi', name: '미즈메디', status: 'Stable', note: '2,200만원 계약, 노후화 심각' },
-                { id: 'c_kakao', name: '카카오스타일', status: 'Stable', note: 'ISMS-P/DTE/계약 완료, 보안 이슈 소명' },
-                { id: 'c_helinox', name: '헬리녹스', status: 'Stable', note: '신규 담당자 입사(1/19) 대기' },
-                { id: 'c_skyhigh', name: '스카이하이', status: 'Active', note: '계약변경 합의, EPM 원화 등록' },
-                { id: 'c_sunwoo', name: '선우프레시', status: 'Active', note: 'SFA 이슈, MS애저 제외' },
-                { id: 'c_klean', name: '깨끗한나라', status: 'Stable', note: '발주서 날인 완료, 공수 검증' },
-                { id: 'c_deloitte', name: '딜로이트', status: 'Stable', note: '보안서약서 징구, 8월~7월 계약' },
-                { id: 'c_xexymix', name: '젝시믹스', status: 'Active', note: '계약 날인 완료, 등기 발송' }
-            ],
-            tasks: [
-                { id: 't_kakao_infra', clientId: 'c_kakao', title: '인프라/DB 권한 이슈 최종 소명', status: 'done', startDate: '2026-01-10', due: '', priority: 'High', note: 'MSS-101 계정 및 권한 사용 목적 회신 완료.', refMail: '[카카오스타일] 권한 소명 요청 건', history: [], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_helinox_contract', clientId: 'c_helinox', title: '계약서 답변 대기 (신규담당자)', status: 'todo', startDate: '2026-01-18', due: '2026-01-22', priority: 'High', note: '1/19 입사 후 검토 -> 1/22 회신', refMail: '', history: [], createdAt: new Date().toISOString() },
-                { id: 't_helinox_report', clientId: 'c_helinox', title: '12월 월간보고서 제작', status: 'done', startDate: '', due: '', priority: 'Low', refMail: '', history: [], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-                { id: 't_sky_contract_check', clientId: 'c_skyhigh', title: '계약변경 합의서 확인', status: 'done', startDate: '2026-01-02', due: '2026-01-05', priority: 'High', note: '등기X, 스캔본 갈음 합의', refMail: 'FW: [스카이하이메모리] 계약 변경 관련', history: [], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() }
-            ],
-            routines: [
-                { id: 'r_sky_carryover', clientId: 'c_skyhigh', type: 'Contract', title: '계약 공수 이월 체크', guide: '주의: 개발/CPI 파트만 이월 가능.' },
-                { id: 'r_kakao_report', clientId: 'c_kakao', type: 'Report', title: '월간보고서 작성 (3종 체크)', guide: 'CSM 공수 8시간 수기 추가' }
-            ],
-            events: [
-                { id: 'e_doc_check', title: '등기 수령 확인 (젝시,카카오,스카이)', date: '2026-01-06', type: 'done' },
-                { id: 'e_heli_new', title: '헬리녹스 신규 담당자 입사', date: '2026-01-19', type: 'upcoming' }
-            ]
-        };
-
+        const SEED_DATA = { /* 생략 무관 */ };
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('today-date').innerText = todayStr;
         document.getElementById('report-month').value = todayStr.substring(0, 7);
@@ -490,19 +464,11 @@
         function initListeners(uid) {
             onSnapshot(collection(db, 'pm_users', uid, 'clients'), (snapshot) => {
                 clients = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                if (snapshot.empty && !localStorage.getItem('pm_seeded_v7')) {
-                    seedDatabase(uid);
-                    localStorage.setItem('pm_seeded_v7', 'true');
-                }
-                renderClients();
-                populateClientSelect();
-                renderTasks();
-                renderRoutines();
+                renderClients(); populateClientSelect(); renderTasks(); renderRoutines();
             });
             onSnapshot(collection(db, 'pm_users', uid, 'tasks'), (snapshot) => {
                 tasks = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 renderTasks();
-                
                 const openHistoryId = document.getElementById('history-target-task-id').value;
                 if(openHistoryId && !document.getElementById('history-modal').classList.contains('hidden')) {
                     renderHistoryList(openHistoryId);
@@ -524,36 +490,220 @@
             });
         }
 
-        async function clearCollection(collectionPath) {
-            const q = query(collection(db, collectionPath));
-            const snapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-            await batch.commit();
-        }
+        window.renderTasks = () => {
+            const searchQuery = document.getElementById('search-input').value.toLowerCase();
+            let filtered = tasks.filter(t => {
+                const clientMatch = selectedClientId === 'all' || t.clientId === selectedClientId;
+                const statusMatch = currentViewMode === 'kanban' ? true : 
+                                    (filterStatus === 'all' ? true : 
+                                     filterStatus === 'active' ? t.status !== 'done' : 
+                                     t.status === filterStatus);
+                const searchMatch = !searchQuery || 
+                                    (t.title && t.title.toLowerCase().includes(searchQuery)) || 
+                                    (t.note && t.note.toLowerCase().includes(searchQuery)) ||
+                                    (t.refMail && t.refMail.toLowerCase().includes(searchQuery));
+                return clientMatch && statusMatch && searchMatch;
+            });
 
-        async function seedDatabase(uid) {
-            const batch = writeBatch(db);
-            for(const c of SEED_DATA.clients) { batch.set(doc(db, 'pm_users', uid, 'clients', c.id), c); }
-            for(const t of SEED_DATA.tasks) { batch.set(doc(db, 'pm_users', uid, 'tasks', t.id), t); }
-            for(const r of SEED_DATA.routines) { batch.set(doc(db, 'pm_users', uid, 'routines', r.id), { isChecked: false, ...r }); }
-            for(const e of SEED_DATA.events) { batch.set(doc(db, 'pm_users', uid, 'events', e.id), e); }
-            try { await batch.commit(); } catch(e) { console.error("Seeding Failed:", e); }
-        }
+            filtered.sort((a, b) => {
+                let valA = a[sortConfig.key] || ''; let valB = b[sortConfig.key] || '';
+                if(sortConfig.key === 'priority') {
+                    const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                    valA = p[valA] || 0; valB = p[valB] || 0;
+                }
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
 
-        window.forceSeed = async () => {
-            if(!currentUser) return;
-            if(confirm("모든 데이터를 초기화하시겠습니까? (현재 입력된 데이터가 모두 삭제됩니다!)")) {
-                try {
-                    await clearCollection(`pm_users/${currentUser.uid}/tasks`);
-                    await clearCollection(`pm_users/${currentUser.uid}/routines`);
-                    await clearCollection(`pm_users/${currentUser.uid}/events`);
-                    await clearCollection(`pm_users/${currentUser.uid}/clients`);
-                    await seedDatabase(currentUser.uid);
-                    alert("초기화 완료");
-                } catch(e) { console.error(e); }
-            }
+            updateStats(tasks.filter(t => selectedClientId === 'all' || t.clientId === selectedClientId));
+
+            if (currentViewMode === 'list') renderListOptimized(filtered);
+            else renderKanbanOptimized(filtered);
+            
+            lucide.createIcons();
         };
+
+        function renderListOptimized(filtered) {
+            const tbody = document.getElementById('task-table-body');
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">데이터가 없습니다.</td></tr>`;
+                return;
+            }
+            
+            if (tbody.children.length === 1 && tbody.children[0].textContent === '데이터가 없습니다.') {
+                tbody.innerHTML = '';
+            }
+
+            const currentIds = new Set(filtered.map(t => 'list-row-' + t.id));
+            
+            Array.from(tbody.children).forEach(child => {
+                if (!currentIds.has(child.id)) tbody.removeChild(child);
+            });
+
+            let previousNode = null;
+            filtered.forEach(t => {
+                const trId = 'list-row-' + t.id;
+                let tr = document.getElementById(trId);
+                const htmlContent = generateListRowHTML(t);
+                const trClass = generateListRowClass(t);
+
+                if (!tr) {
+                    tr = document.createElement('tr');
+                    tr.id = trId;
+                    tr.className = trClass;
+                    tr.setAttribute('data-raw', htmlContent);
+                    tr.innerHTML = htmlContent;
+                    
+                    if (previousNode) previousNode.after(tr);
+                    else tbody.prepend(tr);
+                } else {
+                    if (tr.className !== trClass) tr.className = trClass;
+                    
+                    if (tr.getAttribute('data-raw') !== htmlContent) {
+                        tr.setAttribute('data-raw', htmlContent);
+                        tr.innerHTML = htmlContent;
+                    }
+                    
+                    if (previousNode && previousNode.nextSibling !== tr) {
+                        previousNode.after(tr);
+                    } else if (!previousNode && tbody.firstChild !== tr) {
+                        tbody.prepend(tr);
+                    }
+                }
+                previousNode = tr;
+            });
+        }
+
+        function generateListRowClass(t) {
+            const isDone = t.status === 'done';
+            let trClass = isDone ? 'bg-slate-50/50' : 'hover:bg-slate-50';
+            if (!isDone && t.due) {
+                const daysLeft = Math.ceil((new Date(t.due) - new Date(new Date().toISOString().split('T')[0])) / (1000 * 60 * 60 * 24));
+                if (daysLeft < 0) trClass = 'bg-red-50 border-l-4 border-red-500 hover:bg-red-100';
+                else if (daysLeft <= 7) trClass = 'bg-orange-50 border-l-4 border-orange-400 hover:bg-orange-100';
+            }
+            return `${trClass} transition-colors group border-b border-slate-100`;
+        }
+
+        function generateListRowHTML(t) {
+            const clientName = t.clientId === 'ALL' ? '공통' : (clients.find(c => c.id === t.clientId)?.name || 'Unknown');
+            const isDone = t.status === 'done';
+            const titleClass = isDone ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800';
+            const checkColor = isDone ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-blue-500 text-transparent hover:text-blue-200';
+            let priorityClass = t.priority === 'High' ? 'bg-red-50 text-red-700' : t.priority === 'Medium' ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-600';
+
+            let ddayBadge = '';
+            if (!isDone && t.due) {
+                const daysLeft = Math.ceil((new Date(t.due) - new Date(new Date().toISOString().split('T')[0])) / (1000 * 60 * 60 * 24));
+                if (daysLeft < 0) ddayBadge = `<span class="text-red-600 font-bold ml-1 text-xs">(지연 D+${Math.abs(daysLeft)})</span>`;
+                else if (daysLeft <= 7) ddayBadge = `<span class="text-orange-600 font-bold ml-1 text-xs">(D-${daysLeft})</span>`;
+            }
+            
+            const refMailHtml = t.refMail ? `<div class="text-xs text-blue-600 mt-1 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
+            const historyCount = Array.isArray(t.history) ? t.history.length : 0;
+            const historyBadge = historyCount > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">${historyCount}</span>` : '';
+
+            return `
+                <td class="px-6 py-4 text-center">
+                    <button onclick="toggleStatus('${t.id}', '${t.status}')" class="mx-auto w-5 h-5 rounded border flex items-center justify-center transition-colors ${checkColor}"><i data-lucide="check" class="w-3 h-3"></i></button>
+                </td>
+                <td class="px-6 py-4 font-medium text-slate-700">${clientName}</td>
+                <td class="px-6 py-4">
+                    <div class="font-medium ${titleClass}">${t.title}</div>
+                    ${t.note ? `<div class="text-xs text-slate-500 mt-1">${t.note}</div>` : ''}
+                    ${refMailHtml}
+                </td>
+                <td class="px-6 py-4 text-slate-500 font-mono text-xs">${t.startDate || '-'}</td>
+                <td class="px-6 py-4 text-slate-500 font-mono text-xs">${t.due || '-'}<br>${ddayBadge}</td>
+                <td class="px-6 py-4"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priorityClass}">${t.priority}</span></td>
+                <td class="px-6 py-4 text-right">
+                    <button onclick="openHistoryModal('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors mr-3 relative" title="이력 관리"><i data-lucide="history" class="w-4 h-4"></i>${historyBadge}</button>
+                    <button onclick="openEditTask('${t.id}')" class="text-slate-300 hover:text-blue-500 transition-colors mr-2 opacity-0 group-hover:opacity-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+            `;
+        }
+
+        function syncKanbanCol(colId, tasksToRender) {
+            const col = document.getElementById(colId);
+            const currentIds = new Set(tasksToRender.map(t => 'board-card-' + t.id));
+            
+            Array.from(col.children).forEach(child => {
+                if (!currentIds.has(child.id)) col.removeChild(child);
+            });
+
+            let previousNode = null;
+            tasksToRender.forEach(t => {
+                const cardId = 'board-card-' + t.id;
+                let card = document.getElementById(cardId);
+                const htmlContent = generateKanbanCardHTML(t);
+                
+                const isDone = t.status === 'done';
+                const cardClass = `${isDone ? 'bg-white opacity-60' : 'bg-white shadow-sm hover:shadow-md'} border border-slate-200 rounded-lg p-3 transition-shadow relative group`;
+
+                if (!card) {
+                    card = document.createElement('div');
+                    card.id = cardId;
+                    card.className = cardClass;
+                    card.setAttribute('data-raw', htmlContent);
+                    card.innerHTML = htmlContent;
+                    if (previousNode) previousNode.after(card);
+                    else col.prepend(card);
+                } else {
+                    if (card.className !== cardClass) card.className = cardClass;
+                    if (card.getAttribute('data-raw') !== htmlContent) {
+                        card.setAttribute('data-raw', htmlContent);
+                        card.innerHTML = htmlContent;
+                    }
+                    if (previousNode && previousNode.nextSibling !== card) {
+                        previousNode.after(card);
+                    } else if (!previousNode && col.firstChild !== card) {
+                        col.prepend(card);
+                    }
+                }
+                previousNode = card;
+            });
+        }
+
+        function renderKanbanOptimized(filtered) {
+            const todos = filtered.filter(t => t.status !== 'done');
+            const dones = filtered.filter(t => t.status === 'done');
+            
+            syncKanbanCol('kanban-todo-col', todos);
+            syncKanbanCol('kanban-done-col', dones);
+
+            document.getElementById('kanban-todo-count').innerText = todos.length;
+            document.getElementById('kanban-done-count').innerText = dones.length;
+        }
+
+        function generateKanbanCardHTML(t) {
+            const clientName = t.clientId === 'ALL' ? '공통' : (clients.find(c => c.id === t.clientId)?.name || 'Unknown');
+            const isDone = t.status === 'done';
+            let priorityColor = t.priority === 'High' ? 'bg-red-500' : t.priority === 'Medium' ? 'bg-orange-400' : 'bg-slate-400';
+            
+            let dueText = t.due ? `<span class="text-xs text-slate-500 flex items-center gap-1 mt-2"><i data-lucide="calendar" class="w-3 h-3"></i> 마감: ${t.due}</span>` : '';
+            const refMailHtml = t.refMail ? `<div class="text-[10px] text-blue-600 mt-2 flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
+            const historyCount = Array.isArray(t.history) ? t.history.length : 0;
+            const historyBadge = historyCount > 0 ? `<span class="text-[10px] text-blue-600 font-bold ml-1">+${historyCount}</span>` : '';
+
+            return `
+                <div class="absolute top-0 left-0 w-1 h-full ${priorityColor} rounded-l-lg"></div>
+                <div class="pl-2 flex justify-between items-start">
+                    <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${clientName}</span>
+                    <div class="flex gap-2">
+                        <button onclick="openHistoryModal('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors flex items-center" title="이력 관리"><i data-lucide="history" class="w-3.5 h-3.5"></i>${historyBadge}</button>
+                        <button onclick="toggleStatus('${t.id}', '${t.status}')" class="text-slate-400 hover:text-${isDone?'orange':'green'}-500 transition-colors" title="${isDone?'대기 상태로 변경':'완료 처리'}"><i data-lucide="${isDone?'rotate-ccw':'check-square'}" class="w-4 h-4"></i></button>
+                        <button onclick="openEditTask('${t.id}')" class="text-slate-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <h5 class="pl-2 font-bold text-sm text-slate-800 mt-2 ${isDone?'line-through':''}">${t.title}</h5>
+                ${t.note ? `<p class="pl-2 text-xs text-slate-500 mt-1 line-clamp-2">${t.note}</p>` : ''}
+                ${refMailHtml}
+                <div class="pl-2">${dueText}</div>
+            `;
+        }
 
         window.setViewMode = (mode) => {
             currentViewMode = mode;
@@ -615,7 +765,6 @@
         function updateStats(filtered) {
             let activeCount = 0; let doneCount = 0; let urgentCount = 0;
             const today = new Date().toISOString().split('T')[0];
-
             filtered.forEach(t => {
                 if (t.status === 'done') doneCount++;
                 else {
@@ -626,148 +775,10 @@
                     }
                 }
             });
-
             document.getElementById('stat-active').innerText = activeCount;
             document.getElementById('stat-done').innerText = doneCount;
             document.getElementById('stat-urgent').innerText = urgentCount;
             document.getElementById('stat-urgent').className = urgentCount > 0 ? 'text-xl font-bold text-red-600' : 'text-xl font-bold text-slate-800';
-        }
-
-        window.renderTasks = () => {
-            const searchQuery = document.getElementById('search-input').value.toLowerCase();
-            let filtered = tasks.filter(t => {
-                const clientMatch = selectedClientId === 'all' || t.clientId === selectedClientId;
-                const statusMatch = currentViewMode === 'kanban' ? true : 
-                                    (filterStatus === 'all' ? true : 
-                                     filterStatus === 'active' ? t.status !== 'done' : 
-                                     t.status === filterStatus);
-                                     
-                const searchMatch = !searchQuery || 
-                                    (t.title && t.title.toLowerCase().includes(searchQuery)) || 
-                                    (t.note && t.note.toLowerCase().includes(searchQuery)) ||
-                                    (t.refMail && t.refMail.toLowerCase().includes(searchQuery));
-                return clientMatch && statusMatch && searchMatch;
-            });
-
-            filtered.sort((a, b) => {
-                let valA = a[sortConfig.key] || ''; let valB = b[sortConfig.key] || '';
-                if(sortConfig.key === 'priority') {
-                    const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
-                    valA = p[valA] || 0; valB = p[valB] || 0;
-                }
-                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
-
-            updateStats(tasks.filter(t => selectedClientId === 'all' || t.clientId === selectedClientId));
-
-            if (currentViewMode === 'list') renderList(filtered);
-            else renderKanban(filtered);
-            
-            lucide.createIcons();
-        };
-
-        function renderList(filtered) {
-            const tbody = document.getElementById('task-table-body');
-            tbody.innerHTML = '';
-            
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">데이터가 없습니다.</td></tr>`;
-                return;
-            }
-
-            filtered.forEach(t => {
-                const clientName = t.clientId === 'ALL' ? '공통' : (clients.find(c => c.id === t.clientId)?.name || 'Unknown');
-                const isDone = t.status === 'done';
-                let trClass = isDone ? 'bg-slate-50/50' : 'hover:bg-slate-50';
-                const titleClass = isDone ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800';
-                const checkColor = isDone ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-blue-500 text-transparent hover:text-blue-200';
-                
-                let priorityClass = t.priority === 'High' ? 'bg-red-50 text-red-700' : t.priority === 'Medium' ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-600';
-
-                let ddayBadge = '';
-                if (!isDone && t.due) {
-                    const daysLeft = Math.ceil((new Date(t.due) - new Date().toISOString().split('T')[0]) / (1000 * 60 * 60 * 24));
-                    if (daysLeft < 0) {
-                        trClass = 'bg-red-50 border-l-4 border-red-500 hover:bg-red-100';
-                        ddayBadge = `<span class="text-red-600 font-bold ml-1 text-xs">(지연 D+${Math.abs(daysLeft)})</span>`;
-                    } else if (daysLeft <= 7) {
-                        trClass = 'bg-orange-50 border-l-4 border-orange-400 hover:bg-orange-100';
-                        ddayBadge = `<span class="text-orange-600 font-bold ml-1 text-xs">(D-${daysLeft})</span>`;
-                    }
-                }
-                
-                const refMailHtml = t.refMail ? `<div class="text-xs text-blue-600 mt-1 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
-                const historyCount = Array.isArray(t.history) ? t.history.length : 0;
-                const historyBadge = historyCount > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">${historyCount}</span>` : '';
-
-                tbody.innerHTML += `
-                    <tr class="${trClass} transition-colors group border-b border-slate-100">
-                        <td class="px-6 py-4 text-center">
-                            <button onclick="toggleStatus('${t.id}', '${t.status}')" class="mx-auto w-5 h-5 rounded border flex items-center justify-center transition-colors ${checkColor}"><i data-lucide="check" class="w-3 h-3"></i></button>
-                        </td>
-                        <td class="px-6 py-4 font-medium text-slate-700">${clientName}</td>
-                        <td class="px-6 py-4">
-                            <div class="font-medium ${titleClass}">${t.title}</div>
-                            ${t.note ? `<div class="text-xs text-slate-500 mt-1">${t.note}</div>` : ''}
-                            ${refMailHtml}
-                        </td>
-                        <td class="px-6 py-4 text-slate-500 font-mono text-xs">${t.startDate || '-'}</td>
-                        <td class="px-6 py-4 text-slate-500 font-mono text-xs">${t.due || '-'}<br>${ddayBadge}</td>
-                        <td class="px-6 py-4"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priorityClass}">${t.priority}</span></td>
-                        <td class="px-6 py-4 text-right">
-                            <button onclick="openHistoryModal('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors mr-3 relative" title="이력 관리"><i data-lucide="history" class="w-4 h-4"></i>${historyBadge}</button>
-                            <button onclick="openEditTask('${t.id}')" class="text-slate-300 hover:text-blue-500 transition-colors mr-2 opacity-0 group-hover:opacity-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                            <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        function renderKanban(filtered) {
-            const todoCol = document.getElementById('kanban-todo-col');
-            const doneCol = document.getElementById('kanban-done-col');
-            todoCol.innerHTML = ''; doneCol.innerHTML = '';
-            
-            let todoCount = 0; let doneCount = 0;
-
-            filtered.forEach(t => {
-                const clientName = t.clientId === 'ALL' ? '공통' : (clients.find(c => c.id === t.clientId)?.name || 'Unknown');
-                const isDone = t.status === 'done';
-                let cardClass = isDone ? 'bg-white opacity-60' : 'bg-white shadow-sm hover:shadow-md';
-                let priorityColor = t.priority === 'High' ? 'bg-red-500' : t.priority === 'Medium' ? 'bg-orange-400' : 'bg-slate-400';
-                
-                let dueText = t.due ? `<span class="text-xs text-slate-500 flex items-center gap-1 mt-2"><i data-lucide="calendar" class="w-3 h-3"></i> 마감: ${t.due}</span>` : '';
-                const refMailHtml = t.refMail ? `<div class="text-[10px] text-blue-600 mt-2 flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded w-max"><i data-lucide="mail" class="w-3 h-3"></i> ${t.refMail}</div>` : '';
-                const historyCount = Array.isArray(t.history) ? t.history.length : 0;
-                const historyBadge = historyCount > 0 ? `<span class="text-[10px] text-blue-600 font-bold ml-1">+${historyCount}</span>` : '';
-
-                const html = `
-                    <div class="${cardClass} border border-slate-200 rounded-lg p-3 transition-shadow relative group">
-                        <div class="absolute top-0 left-0 w-1 h-full ${priorityColor} rounded-l-lg"></div>
-                        <div class="pl-2 flex justify-between items-start">
-                            <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${clientName}</span>
-                            <div class="flex gap-2">
-                                <button onclick="openHistoryModal('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors flex items-center" title="이력 관리"><i data-lucide="history" class="w-3.5 h-3.5"></i>${historyBadge}</button>
-                                <button onclick="toggleStatus('${t.id}', '${t.status}')" class="text-slate-400 hover:text-${isDone?'orange':'green'}-500 transition-colors" title="${isDone?'대기 상태로 변경':'완료 처리'}"><i data-lucide="${isDone?'rotate-ccw':'check-square'}" class="w-4 h-4"></i></button>
-                                <button onclick="openEditTask('${t.id}')" class="text-slate-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                            </div>
-                        </div>
-                        <h5 class="pl-2 font-bold text-sm text-slate-800 mt-2 ${isDone?'line-through':''}">${t.title}</h5>
-                        ${t.note ? `<p class="pl-2 text-xs text-slate-500 mt-1 line-clamp-2">${t.note}</p>` : ''}
-                        ${refMailHtml}
-                        <div class="pl-2">${dueText}</div>
-                    </div>
-                `;
-
-                if(isDone) { doneCol.innerHTML += html; doneCount++; }
-                else { todoCol.innerHTML += html; todoCount++; }
-            });
-
-            document.getElementById('kanban-todo-count').innerText = todoCount;
-            document.getElementById('kanban-done-count').innerText = doneCount;
         }
 
         window.switchTab = (tab) => {
@@ -862,7 +873,6 @@
             }
 
             let html = '';
-            // 역순 렌더링 (최신순)
             const reversedHistory = [...task.history].reverse();
             reversedHistory.forEach(h => {
                 const dateObj = new Date(h.date);
@@ -947,13 +957,9 @@
             btn.disabled = true;
 
             try {
-                await addDoc(collection(db, 'pm_users', currentUser.uid, 'events'), {
-                    title, date, time
-                });
-
+                await addDoc(collection(db, 'pm_users', currentUser.uid, 'events'), { title, date, time });
                 const addToGoogleCalendar = httpsCallable(functions, 'addToGoogleCalendar');
                 await addToGoogleCalendar({ title, date, time });
-                
                 alert("대시보드 및 구글 캘린더에 저장되었습니다.");
                 closeModal('event-modal');
                 document.getElementById('event-title').value = '';
@@ -991,7 +997,6 @@
         function renderRoutines() {
             const list = document.getElementById('routine-list');
             list.innerHTML = '';
-
             const grouped = routines.reduce((acc, r) => {
                 const clientName = r.clientId === 'ALL' ? '전체공통' : (clients.find(c => c.id === r.clientId)?.name || 'Unknown');
                 if(!acc[clientName]) acc[clientName] = [];
@@ -1084,6 +1089,15 @@
             document.getElementById('routine-guide').value = '';
         };
 
+        let bulkParsedTasks = [];
+
+        window.openBulkModal = () => {
+            document.getElementById('bulk-input-text').value = '';
+            document.getElementById('bulk-preview-area').innerHTML = '<div class="h-full flex items-center justify-center text-slate-400 text-sm">목록이 여기에 표시됩니다.</div>';
+            document.getElementById('btn-save-bulk').classList.add('hidden');
+            openModal('bulk-modal');
+        };
+
         window.parseTextWithAI = async () => {
             const text = document.getElementById('bulk-input-text').value;
             if(!text.trim()) return alert("분석할 텍스트를 입력하세요.");
@@ -1111,28 +1125,34 @@
                 bulkParsedTasks.forEach((t, i) => {
                     let options = '<option value="ALL">✨ 공통 (General)</option>';
                     clients.forEach(c => {
-                        options += '<option value="' + c.id + '" ' + (c.id === t.clientId ? 'selected' : '') + '>' + c.name + '</option>';
+                        options += `<option value="${c.id}" ${c.id === t.clientId ? 'selected' : ''}>${c.name}</option>`;
                     });
 
-                    html += '<div class="bg-white p-3 rounded border border-slate-200 flex gap-3 items-start shadow-sm">';
-                    html += '<input type="checkbox" id="chk-' + i + '" checked class="mt-2 w-4 h-4 text-emerald-600 rounded">';
-                    html += '<div class="flex-1 space-y-2">';
-                    html += '<div class="flex gap-2">';
-                    html += '<select id="client-' + i + '" class="border border-slate-300 rounded p-1 text-xs bg-slate-50 w-32">' + options + '</select>';
-                    html += '<input type="text" id="title-' + i + '" value="' + (t.title || '') + '" class="border border-slate-300 rounded p-1 text-xs flex-1">';
-                    html += '</div>';
-                    html += '<div class="flex gap-2">';
-                    html += '<input type="text" id="due-' + i + '" value="' + (t.due || '') + '" placeholder="마감일(YYYY-MM-DD)" class="border border-slate-300 rounded p-1 text-xs w-32">';
-                    html += '<select id="pri-' + i + '" class="border border-slate-300 rounded p-1 text-xs bg-slate-50 w-24"><option value="High" ' + (t.priority === 'High' ? 'selected' : '') + '>High</option><option value="Medium" ' + (t.priority === 'Medium' ? 'selected' : '') + '>Medium</option><option value="Low" ' + (t.priority === 'Low' ? 'selected' : '') + '>Low</option></select>';
-                    html += '<input type="text" id="note-' + i + '" value="' + (t.note || '') + '" placeholder="상세 내용 메모" class="border border-slate-300 rounded p-1 text-xs flex-1">';
-                    html += '</div></div></div>';
+                    html += `<div class="bg-white p-3 rounded border border-slate-200 flex gap-3 items-start shadow-sm">
+                        <input type="checkbox" id="chk-${i}" checked class="mt-2 w-4 h-4 text-emerald-600 rounded">
+                        <div class="flex-1 space-y-2">
+                            <div class="flex gap-2">
+                                <select id="client-${i}" class="border border-slate-300 rounded p-1 text-xs bg-slate-50 w-32">${options}</select>
+                                <input type="text" id="title-${i}" value="${t.title || ''}" class="border border-slate-300 rounded p-1 text-xs flex-1">
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="due-${i}" value="${t.due || ''}" placeholder="마감일(YYYY-MM-DD)" class="border border-slate-300 rounded p-1 text-xs w-32">
+                                <select id="pri-${i}" class="border border-slate-300 rounded p-1 text-xs bg-slate-50 w-24">
+                                    <option value="High" ${t.priority === 'High' ? 'selected' : ''}>High</option>
+                                    <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+                                    <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
+                                </select>
+                                <input type="text" id="note-${i}" value="${t.note || ''}" placeholder="상세 내용 메모" class="border border-slate-300 rounded p-1 text-xs flex-1">
+                            </div>
+                        </div>
+                    </div>`;
                 });
 
                 preview.innerHTML = html;
                 document.getElementById('btn-save-bulk').classList.remove('hidden');
 
             } catch(e) {
-                preview.innerHTML = '<div class="text-red-500 p-4">분석 실패: ' + e.message + '</div>';
+                preview.innerHTML = `<div class="text-red-500 p-4">분석 실패: ${e.message}</div>`;
             } finally {
                 btn.innerHTML = '<i data-lucide="wand-2" class="w-4 h-4"></i> 텍스트 분석 시작';
                 btn.disabled = false;
@@ -1156,9 +1176,7 @@
                         due: document.getElementById('due-' + i).value,
                         priority: document.getElementById('pri-' + i).value,
                         note: document.getElementById('note-' + i).value,
-                        refMail: '',
-                        history: [],
-                        status: 'todo',
+                        refMail: '', history: [], status: 'todo',
                         createdAt: new Date().toISOString()
                     });
                     count++;
@@ -1183,44 +1201,41 @@
 
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> 생성 중...';
             btn.disabled = true;
-            resultDiv.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">Gemini 2.5 Pro가 데이터를 분석 및 구조화하고 있습니다...</p></div>`;
+            resultDiv.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">데이터를 분석 및 구조화하고 있습니다...</p></div>`;
             lucide.createIcons();
 
             try {
                 const generateReport = httpsCallable(functions, 'generateMonthlyReport');
-                const response = await generateReport({ 
-                    userId: currentUser.uid, 
-                    month: month 
-                });
-
+                const response = await generateReport({ userId: currentUser.uid, month: month });
                 const data = response.data.data;
 
                 let htmlHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
                 const groupedArray = Array.isArray(data) ? data : [data];
 
                 groupedArray.forEach(group => {
-                    htmlHTML += '<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">';
-                    htmlHTML += '<div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-2">';
-                    htmlHTML += '<i data-lucide="building-2" class="w-5 h-5 text-purple-600"></i>';
-                    htmlHTML += '<h3 class="text-lg font-bold text-slate-800">' + (group.client_name || '분류 없음') + '</h3>';
-                    htmlHTML += '</div>';
-                    htmlHTML += '<div class="p-5 flex-1 space-y-4">';
+                    htmlHTML += `<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-5 h-5 text-purple-600"></i>
+                            <h3 class="text-lg font-bold text-slate-800">${group.client_name || '분류 없음'}</h3>
+                        </div>
+                        <div class="p-5 flex-1 space-y-4">`;
 
                     const tasks = Array.isArray(group.tasks) ? group.tasks : [];
                     if(tasks.length === 0) {
-                        htmlHTML += '<div class="text-center py-6 text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200">완료된 업무가 없습니다.</div>';
+                        htmlHTML += `<div class="text-center py-6 text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200">완료된 업무가 없습니다.</div>`;
                     } else {
                         tasks.forEach(row => {
-                            htmlHTML += '<div class="bg-slate-50/50 p-4 rounded-lg border border-slate-100">';
-                            htmlHTML += '<h4 class="text-purple-700 font-bold mb-2 flex items-start gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-purple-500 flex-shrink-0"></i> [' + (row.item || '항목 없음') + ']</h4>';
-                            htmlHTML += '<div class="pl-5 space-y-1.5 text-slate-600">';
-                            htmlHTML += '<p><span class="font-semibold text-slate-700">상세내용:</span> ' + (row.details || '') + '</p>';
-                            htmlHTML += '<p><span class="font-semibold text-slate-700">대응방안:</span> ' + (row.action_plan || '') + '</p>';
-                            htmlHTML += '<p class="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-200"><span class="font-semibold">비고:</span> ' + (row.remarks || '-') + '</p>';
-                            htmlHTML += '</div></div>';
+                            htmlHTML += `<div class="bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+                                <h4 class="text-purple-700 font-bold mb-2 flex items-start gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 text-purple-500 flex-shrink-0"></i> [${row.item || '항목 없음'}]</h4>
+                                <div class="pl-5 space-y-1.5 text-slate-600">
+                                    <p><span class="font-semibold text-slate-700">상세내용:</span> ${row.details || ''}</p>
+                                    <p><span class="font-semibold text-slate-700">대응방안:</span> ${row.action_plan || ''}</p>
+                                    <p class="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-200"><span class="font-semibold">비고:</span> ${row.remarks || '-'}</p>
+                                </div>
+                            </div>`;
                         });
                     }
-                    htmlHTML += '</div></div>';
+                    htmlHTML += `</div></div>`;
                 });
                 htmlHTML += '</div>';
 
@@ -1230,7 +1245,7 @@
                 console.error(error);
                 resultDiv.innerHTML = `<div class="bg-red-50 p-6 rounded-lg border border-red-200 text-center"><i data-lucide="alert-triangle" class="w-10 h-10 text-red-500 mx-auto mb-2"></i><p class="text-red-700 font-bold text-lg">리포트 생성 실패</p><p class="text-sm text-red-500 mt-1">${error.message}</p></div>`;
             } finally {
-                btn.innerHTML = '<i data-lucide="file-output" class="w-4 h-4"></i> 보고서 생성';
+                btn.innerHTML = '<i data-lucide="file-output" class="w-4 h-4"></i> 생성';
                 btn.disabled = false;
                 lucide.createIcons();
             }
@@ -1251,7 +1266,7 @@
 
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> 생성 중...';
             btn.disabled = true;
-            resultDiv.innerHTML = '<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">Gemini가 데일리 브리핑 자료를 작성 중입니다...</p></div>';
+            resultDiv.innerHTML = '<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">데일리 브리핑 자료를 작성 중입니다...</p></div>';
             lucide.createIcons();
 
             try {
@@ -1270,17 +1285,17 @@
                 ];
 
                 sections.forEach(sec => {
-                    html += '<div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">';
-                    html += '<h4 class="font-bold flex items-center gap-2 mb-3 ' + sec.color + '"><i data-lucide="' + sec.icon + '" class="w-5 h-5"></i> ' + sec.title + '</h4>';
-                    html += '<ul class="space-y-2 text-sm text-slate-700">';
+                    html += `<div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                        <h4 class="font-bold flex items-center gap-2 mb-3 ${sec.color}"><i data-lucide="${sec.icon}" class="w-5 h-5"></i> ${sec.title}</h4>
+                        <ul class="space-y-2 text-sm text-slate-700">`;
                     if(Array.isArray(sec.data) && sec.data.length > 0 && sec.data[0] !== "해당 없음") {
                         sec.data.forEach(item => {
-                            html += '<li class="flex items-start gap-2"><span class="text-slate-400 mt-0.5">•</span><span>' + item + '</span></li>';
+                            html += `<li class="flex items-start gap-2"><span class="text-slate-400 mt-0.5">•</span><span>${item}</span></li>`;
                         });
                     } else {
-                        html += '<li class="text-slate-400">해당 없음</li>';
+                        html += `<li class="text-slate-400">해당 없음</li>`;
                     }
-                    html += '</ul></div>';
+                    html += `</ul></div>`;
                 });
                 
                 html += '</div>';
@@ -1288,7 +1303,7 @@
 
             } catch (e) {
                 console.error(e);
-                resultDiv.innerHTML = '<div class="bg-red-50 p-4 rounded-lg text-red-600">오류 발생: ' + e.message + '</div>';
+                resultDiv.innerHTML = `<div class="bg-red-50 p-4 rounded-lg text-red-600">오류 발생: ${e.message}</div>`;
             } finally {
                 btn.innerHTML = '<i data-lucide="file-output" class="w-4 h-4"></i> 생성';
                 btn.disabled = false;
