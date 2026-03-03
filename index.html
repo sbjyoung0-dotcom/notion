@@ -91,6 +91,10 @@
                 <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active pb-3 text-sm flex items-center gap-2">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i> 대시보드 (Tasks)
                 </button>
+                <button onclick="switchTab('draft')" id="tab-draft" class="tab-inactive pb-3 text-sm flex items-center gap-2 relative">
+                    <i data-lucide="inbox" class="w-4 h-4"></i> 승인 대기 (Inbox)
+                    <span id="draft-badge" class="hidden absolute -top-1 -right-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
                 <button onclick="switchTab('routine')" id="tab-routine" class="tab-inactive pb-3 text-sm flex items-center gap-2">
                     <i data-lucide="repeat" class="w-4 h-4"></i> 루틴 체크 (Monthly)
                 </button>
@@ -181,6 +185,23 @@
                         </div>
                     </div>
                 </section>
+            </div>
+
+            <div id="view-draft" class="hidden max-w-5xl mx-auto space-y-6">
+                <div class="flex justify-between items-center bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-indigo-100 rounded-lg text-indigo-600"><i data-lucide="inbox" class="w-6 h-6"></i></div>
+                        <div>
+                            <h3 class="text-lg font-bold text-indigo-900">승인 대기 보관함 (Inbox)</h3>
+                            <p class="text-xs text-indigo-700">외부(메일 등)에서 수신된 임시 업무입니다. 확인 후 승인하면 정식 업무로 등록됩니다.</p>
+                        </div>
+                    </div>
+                    <button onclick="createTestDraft()" class="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-2 rounded hover:bg-indigo-50 transition shadow-sm">
+                        + 테스트 데이터 생성
+                    </button>
+                </div>
+                <div id="draft-list" class="grid grid-cols-1 gap-4">
+                    </div>
             </div>
 
             <div id="view-routine" class="hidden max-w-5xl mx-auto space-y-6">
@@ -437,6 +458,7 @@
         let currentUser = null;
         let clients = [];
         let tasks = [];
+        let draftTasks = [];
         let routines = [];
         let events = [];
         let selectedClientId = 'all';
@@ -444,7 +466,6 @@
         let currentViewMode = 'list';
         let sortConfig = { key: 'due', direction: 'asc' };
 
-        const SEED_DATA = { /* 생략 */ };
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('today-date').innerText = todayStr;
         document.getElementById('report-month').value = todayStr.substring(0, 7);
@@ -475,6 +496,17 @@
                     renderHistoryList(openHistoryId);
                 }
             });
+            onSnapshot(collection(db, 'pm_users', uid, 'draft_tasks'), (snapshot) => {
+                draftTasks = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                renderDrafts();
+                const badge = document.getElementById('draft-badge');
+                if (draftTasks.length > 0) {
+                    badge.innerText = draftTasks.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            });
             onSnapshot(collection(db, 'pm_users', uid, 'routines'), (snapshot) => {
                 routines = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 renderRoutines();
@@ -490,6 +522,75 @@
                 }
             });
         }
+
+        window.createTestDraft = async () => {
+            if(!currentUser) return;
+            await addDoc(collection(db, 'pm_users', currentUser.uid, 'draft_tasks'), {
+                clientId: 'ALL',
+                title: '테스트: 외부에서 수신된 임시 업무',
+                note: '이것은 GAS 등 외부 시스템에서 자동 생성된 승인 대기 항목입니다.',
+                priority: 'Medium',
+                due: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString()
+            });
+        };
+
+        function renderDrafts() {
+            const list = document.getElementById('draft-list');
+            list.innerHTML = '';
+            
+            if (draftTasks.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-400 bg-white border border-slate-200 rounded-xl">대기 중인 승인 업무가 없습니다.</div>`;
+                return;
+            }
+
+            draftTasks.forEach(d => {
+                const clientName = d.clientId === 'ALL' ? '공통' : (clients.find(c => c.id === d.clientId)?.name || 'Unknown');
+                list.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded">${clientName}</span>
+                                <span class="text-xs text-slate-400 font-mono">${d.due || '마감일 미정'}</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800">${d.title}</h4>
+                            <p class="text-sm text-slate-500 mt-1">${d.note || ''}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="rejectDraft('${d.id}')" class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg border border-red-100 transition">거절 (삭제)</button>
+                            <button onclick="approveDraft('${d.id}')" class="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition">승인 (등록)</button>
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        window.approveDraft = async (id) => {
+            const draft = draftTasks.find(d => d.id === id);
+            if (!draft) return;
+            
+            await addDoc(collection(db, 'pm_users', currentUser.uid, 'tasks'), {
+                clientId: draft.clientId,
+                title: draft.title,
+                note: draft.note,
+                priority: draft.priority,
+                due: draft.due,
+                startDate: new Date().toISOString().split('T')[0],
+                status: 'todo',
+                history: [],
+                refMail: '',
+                createdAt: new Date().toISOString()
+            });
+
+            await deleteDoc(doc(db, 'pm_users', currentUser.uid, 'draft_tasks', id));
+        };
+
+        window.rejectDraft = async (id) => {
+            if(confirm("이 임시 업무를 삭제하시겠습니까?")) {
+                await deleteDoc(doc(db, 'pm_users', currentUser.uid, 'draft_tasks', id));
+            }
+        };
 
         window.renderTasks = () => {
             const searchQuery = document.getElementById('search-input').value.toLowerCase();
@@ -527,15 +628,18 @@
 
         function renderListOptimized(filtered) {
             const tbody = document.getElementById('task-table-body');
+            
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">데이터가 없습니다.</td></tr>`;
                 return;
             }
+            
             if (tbody.children.length === 1 && tbody.children[0].textContent === '데이터가 없습니다.') {
                 tbody.innerHTML = '';
             }
 
             const currentIds = new Set(filtered.map(t => 'list-row-' + t.id));
+            
             Array.from(tbody.children).forEach(child => {
                 if (!currentIds.has(child.id)) tbody.removeChild(child);
             });
@@ -553,14 +657,17 @@
                     tr.className = trClass;
                     tr.setAttribute('data-raw', htmlContent);
                     tr.innerHTML = htmlContent;
+                    
                     if (previousNode) previousNode.after(tr);
                     else tbody.prepend(tr);
                 } else {
                     if (tr.className !== trClass) tr.className = trClass;
+                    
                     if (tr.getAttribute('data-raw') !== htmlContent) {
                         tr.setAttribute('data-raw', htmlContent);
                         tr.innerHTML = htmlContent;
                     }
+                    
                     if (previousNode && previousNode.nextSibling !== tr) {
                         previousNode.after(tr);
                     } else if (!previousNode && tbody.firstChild !== tr) {
@@ -746,10 +853,15 @@
 
         window.setSelectedClient = (id) => {
             selectedClientId = id;
-            renderClients(); renderTasks(); renderRoutines();
+            renderClients();
+            renderTasks();
+            renderRoutines();
             const client = clients.find(c => c.id === id);
-            if(id === 'all') document.getElementById('header-title').innerText = "전체 현황 대시보드";
-            else if(client) document.getElementById('header-title').innerText = client.name;
+            if(id === 'all') {
+                document.getElementById('header-title').innerText = "전체 현황 대시보드";
+            } else if(client) {
+                document.getElementById('header-title').innerText = client.name;
+            }
         };
 
         function updateStats(filtered) {
@@ -774,9 +886,18 @@
         window.switchTab = (tab) => {
             document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
             document.getElementById('view-routine').classList.toggle('hidden', tab !== 'routine');
-            document.getElementById('tab-dashboard').className = tab === 'dashboard' ? 'tab-active pb-3 text-sm flex items-center gap-2' : 'tab-inactive pb-3 text-sm flex items-center gap-2';
-            document.getElementById('tab-routine').className = tab === 'routine' ? 'tab-active pb-3 text-sm flex items-center gap-2' : 'tab-inactive pb-3 text-sm flex items-center gap-2';
-            document.getElementById('add-task-btn').classList.toggle('hidden', tab === 'routine');
+            document.getElementById('view-draft').classList.toggle('hidden', tab !== 'draft');
+            
+            // 탭 스타일 초기화
+            ['dashboard', 'draft', 'routine'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                btn.className = (t === tab) 
+                    ? 'tab-active pb-3 text-sm flex items-center gap-2 relative' 
+                    : 'tab-inactive pb-3 text-sm flex items-center gap-2 relative';
+            });
+
+            // 버튼 표시 제어
+            document.getElementById('add-task-btn').classList.toggle('hidden', tab !== 'dashboard');
             document.getElementById('add-routine-btn').classList.toggle('hidden', tab !== 'routine');
         };
         
@@ -861,6 +982,7 @@
                 container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">기록된 진행 이력이 없습니다.<br>아래에서 첫 이력을 남겨보세요.</div>`;
                 return;
             }
+
             let html = '';
             const reversedHistory = [...task.history].reverse();
             reversedHistory.forEach(h => {
@@ -884,12 +1006,20 @@
             const textInput = document.getElementById('history-input-text');
             const text = textInput.value.trim();
             if(!text) return;
+
+            const newLog = {
+                date: new Date().toISOString(),
+                text: text
+            };
+
             try {
                 await updateDoc(doc(db, 'pm_users', currentUser.uid, 'tasks', id), {
-                    history: arrayUnion({ date: new Date().toISOString(), text: text })
+                    history: arrayUnion(newLog)
                 });
                 textInput.value = '';
-            } catch(e) { alert("기록 추가 실패: " + e.message); }
+            } catch(e) {
+                alert("기록 추가 실패: " + e.message);
+            }
         };
 
         function renderClients() {
@@ -950,7 +1080,9 @@
         window.deleteEvent = async (id) => {
             const ev = events.find(e => e.id === id);
             if(!ev) return;
+            
             const msg = ev.gCalEventId ? "대시보드와 구글 캘린더에서 일정을 완전히 삭제하시겠습니까?" : "일정을 삭제하시겠습니까? (과거 일정은 구글 캘린더에서 직접 지워야 합니다)";
+            
             if(confirm(msg)) {
                 try {
                     if(ev.gCalEventId) {
@@ -958,7 +1090,9 @@
                         await deleteFromGoogleCalendar({ eventId: ev.gCalEventId });
                     }
                     await deleteDoc(doc(db, 'pm_users', currentUser.uid, 'events', id));
-                } catch(e) { alert("삭제 실패: " + e.message); }
+                } catch(e) {
+                    alert("삭제 실패: " + e.message);
+                }
             }
         };
 
@@ -1304,9 +1438,16 @@
             resultDiv.innerHTML = '<div class="flex flex-col items-center justify-center h-full gap-4"><div class="loader"></div><p class="font-medium text-slate-500">데일리 브리핑 자료를 작성 중입니다...</p></div>';
             lucide.createIcons();
 
+            // [추가된 로직] 현재 로드된 clients 배열을 {id: name} 형태의 맵으로 변환
+            const clientMap = clients.reduce((acc, c) => {
+                acc[c.id] = c.name;
+                return acc;
+            }, {});
+
             try {
                 const generateDaily = httpsCallable(functions, 'generateDailyReport');
-                const response = await generateDaily({ userId: currentUser.uid, date: date });
+                // clientMap을 함께 전송
+                const response = await generateDaily({ userId: currentUser.uid, date: date, clientMap: clientMap });
                 const data = response.data.data;
 
                 let html = '<div class="space-y-4">';
