@@ -1322,8 +1322,7 @@
             const fn = httpsCallable(functions, 'generateMonthlySummaryText');
             const res = await fn({ month });
             const text = (res.data.summary || '결과가 없습니다.')
-                .replace(/
-/g, '<br>')
+                .replace(/\n/g, '<br>')
                 .replace(/#{1,3} (.+)/g, '<h3 class="text-base font-bold text-slate-800 mt-4 mb-2">$1</h3>')
                 .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             result.innerHTML = `<div class="prose prose-sm max-w-none" id="report-text-content">${text}</div>
@@ -1364,8 +1363,7 @@
             const fn = httpsCallable(functions, 'generateDailySummaryText');
             const res = await fn({ date });
             const text = (res.data.summary || '결과가 없습니다.')
-                .replace(/
-/g, '<br>')
+                .replace(/\n/g, '<br>')
                 .replace(/#{1,3} (.+)/g, '<h3 class="text-base font-bold text-slate-800 mt-4 mb-2">$1</h3>')
                 .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             result.innerHTML = `<div class="prose prose-sm max-w-none" id="daily-text-content">${text}</div>
