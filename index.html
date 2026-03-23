@@ -1164,6 +1164,11 @@
         }
         const upcoming = events
             .filter(e => e.date)
+            .filter(e => {                          // ← 이 filter 추가
+                const d = new Date(e.date);
+                d.setHours(23, 59, 59, 0);
+                return d >= new Date();             // 오늘 이후 일정만
+            })
             .sort((a, b) => a.date > b.date ? 1 : -1)
             .slice(0, 5);
         if (upcoming.length === 0) {
