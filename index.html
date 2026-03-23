@@ -572,6 +572,10 @@
             routines = snapshot.docs.map(d => Object.assign({ id: d.id }, d.data()));
             renderRoutines();
         });
+        onSnapshot(collection(db, 'users', uid, 'events'), (snapshot) => {
+            events = snapshot.docs.map(d => Object.assign({ id: d.id }, d.data()));
+            renderEvents();
+        });
         onSnapshot(doc(db, 'users', uid, 'memos', 'quick'), (docSnap) => {
             const memoArea = document.getElementById('quick-memo');
             if (docSnap.exists() && document.activeElement !== memoArea) {
@@ -1149,34 +1153,42 @@
         await batch.commit();
     };
 
-    // ───────────────────────────────────────────
+    //     // ───────────────────────────────────────────
     // 이벤트(일정) 렌더링
     // ───────────────────────────────────────────
     function renderEvents() {
         const container = document.getElementById('event-list');
-        const upcoming = tasks
-            .filter(t => t.due && t.status !== 'done')
-            .sort((a, b) => a.due > b.due ? 1 : -1)
-            .slice(0, 5);
-        if (upcoming.length === 0) {
-            container.innerHTML = '<p class="text-xs text-slate-400 px-3">예정된 마감일이 없습니다.</p>';
+        if (events.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-400 px-3">등록된 일정이 없습니다.</p>';
             return;
         }
-        container.innerHTML = upcoming.map(t => {
+        const upcoming = events
+            .filter(e => e.date)
+            .sort((a, b) => a.date > b.date ? 1 : -1)
+            .slice(0, 5);
+        if (upcoming.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-400 px-3">예정된 일정이 없습니다.</p>';
+            return;
+        }
+        container.innerHTML = upcoming.map(e => {
             const today = new Date(); today.setHours(0,0,0,0);
-            const d = new Date(t.due); d.setHours(0,0,0,0);
+            const d = new Date(e.date); d.setHours(0,0,0,0);
             const diff = Math.round((d - today) / 86400000);
-            const urgentClass = diff < 0 ? 'border-red-300 bg-red-50' : diff <= 3 ? 'border-orange-300 bg-orange-50' : 'border-slate-200 bg-white';
-            const diffText = diff < 0 ? `D+${Math.abs(diff)}` : diff === 0 ? 'D-DAY' : `D-${diff}`;
-            const clientColor = getClientColor(t.clientId);
+            const urgentClass = diff < 0
+                ? 'border-red-300 bg-red-50'
+                : diff <= 3
+                    ? 'border-orange-300 bg-orange-50'
+                    : 'border-slate-200 bg-white';
+            const diffText = diff < 0
+                ? `D+${Math.abs(diff)}`
+                : diff === 0 ? 'D-DAY' : `D-${diff}`;
             return `
             <div class="p-2 rounded-lg border ${urgentClass} text-xs">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="font-semibold px-1.5 py-0.5 rounded-full text-[10px] ${clientColor}">${getClientName(t.clientId)}</span>
-                    <span class="font-bold text-slate-600">${diffText}</span>
+                    <span class="font-medium text-slate-700 truncate flex-1 mr-2">${e.title || ''}</span>
+                    <span class="font-bold text-slate-600 flex-shrink-0">${diffText}</span>
                 </div>
-                <p class="font-medium text-slate-700 truncate">${t.title || ''}</p>
-                <p class="text-slate-400 mt-0.5">${t.due}</p>
+                <p class="text-slate-400">${e.date}${e.time ? ' ' + e.time : ''}</p>
             </div>`;
         }).join('');
     }
@@ -1203,7 +1215,6 @@
         closeModal('event-modal');
     };
 
-    // ───────────────────────────────────────────
     // ✅ [수정 2,3] parseTextWithAI — rawText 파라미터 + res.data.parsed 사용
     // ───────────────────────────────────────────
     window.openBulkModal = () => {
@@ -1433,26 +1444,27 @@
     // ───────────────────────────────────────────
     // 탭 전환
     // ───────────────────────────────────────────
+    // ───────────────────────────────────────────
+    // 탭 전환
+    // ───────────────────────────────────────────
     window.switchTab = (tabId) => {
-        const tabs = ['tab-tasks', 'tab-draft', 'tab-routines', 'tab-settings'];
-        const panels = ['panel-tasks', 'panel-draft', 'panel-routines', 'panel-settings'];
+        const tabs = ['dashboard', 'draft', 'routine'];
 
-        tabs.forEach((t, i) => {
-            const tabEl = document.getElementById(t);
-            const panelEl = document.getElementById(panels[i]);
+        tabs.forEach(t => {
+            const tabEl = document.getElementById('tab-' + t);
+            const panelEl = document.getElementById('view-' + t);
             const isActive = t === tabId;
             if (tabEl) {
                 tabEl.className = isActive
-                    ? 'px-4 py-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 whitespace-nowrap'
-                    : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent whitespace-nowrap transition-colors';
+                    ? 'tab-active pb-3 text-sm flex items-center gap-2'
+                    : 'tab-inactive pb-3 text-sm flex items-center gap-2';
             }
             if (panelEl) panelEl.classList.toggle('hidden', !isActive);
         });
 
-        // 설정 탭 진입 시 고객사 목록 렌더링
-        if (tabId === 'tab-settings') renderClientSettings();
+        // 루틴 탭 진입 시 루틴 추가 버튼 표시
+        document.getElementById('add-routine-btn').classList.toggle('hidden', tabId !== 'routine');
     };
-
     // ───────────────────────────────────────────
     // 검색
     // ───────────────────────────────────────────
