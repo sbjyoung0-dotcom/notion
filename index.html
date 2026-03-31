@@ -1459,7 +1459,7 @@ window.runBulkParse = async function () {
         </div>`;
 
     try {
-        const res = await fnParseTasksAI({ Text: input, clients });
+        const res = await fnParseTasksAI({ text: input, clients });
         bulkParsedTasks = res.data?.tasks || [];
 
         if (!bulkParsedTasks.length) {
