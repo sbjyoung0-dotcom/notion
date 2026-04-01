@@ -571,7 +571,7 @@ let searchQuery      = '';
 let bulkParsedTasks  = [];
 let memoTimer        = null;
 let pollTimer        = null;
-
+let inboxMails       = [];
 // ── Auth ────────────────────────────────────────────────────
 onAuthStateChanged(auth, user => {
     if (user) {
@@ -653,12 +653,12 @@ async function loadAllData() {
         const allTasks = data.tasks || [];
 
         // taskType 기준 분류
-        tasks      = allTasks.filter(t => !t.taskType || t.taskType === 'task');
-        routines   = allTasks.filter(t => t.taskType === 'routine');
-        events     = allTasks.filter(t => t.taskType === 'event');
-        draftTasks = allTasks.filter(t => t.taskType === 'draft' || t.status === 'pending');
-
-        clients = data.clients || [];
+        tasks      = data.tasks    || [];   // tasks 컬렉션 (승인된 것)
+        draftTasks = data.draft    || [];
+        clients    = data.clients  || [];
+        events     = data.events   || [];
+        routines   = data.routines || [];
+        inboxMails = data.inbox    || [];
 
         // 메모
         const memoEl = document.getElementById('quick-memo');
