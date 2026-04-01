@@ -1822,7 +1822,6 @@ function showToast(msg, type = 'success') {
     const icon  = document.getElementById('toast-icon');
     const msgEl = document.getElementById('toast-msg');
 
-    // 타입별 색상
     const colorMap = {
         success: 'bg-emerald-600',
         error:   'bg-red-500',
@@ -1834,13 +1833,17 @@ function showToast(msg, type = 'success') {
         warn:    'alert-triangle'
     };
 
-    // 기존 색상 클래스 제거 후 적용
-    toast.className = `fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium text-white transition-all duration-300 flex items-center gap-2 max-w-sm ${colorMap[type] || colorMap.success}`;
+    toast.className = [
+        'fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-xl',
+        'text-sm font-medium text-white transition-all duration-300',
+        'flex items-center gap-2 max-w-sm',
+        colorMap[type] || colorMap.success
+    ].join(' ');
+
     icon.setAttribute('data-lucide', iconMap[type] || 'check-circle');
     msgEl.textContent = msg;
 
     toast.classList.remove('hidden', 'opacity-0');
-    toast.classList.add('opacity-100');
     lucide.createIcons();
 
     clearTimeout(window._toastTimer);
@@ -1848,7 +1851,6 @@ function showToast(msg, type = 'success') {
         toast.classList.add('hidden');
     }, 3500);
 }
-
 // ── 연결 상태 표시 ───────────────────────────────────────────
 function setConnectionStatus(connected) {
     const dot  = document.getElementById('connection-dot');
