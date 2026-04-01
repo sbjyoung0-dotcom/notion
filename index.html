@@ -1314,6 +1314,18 @@ function renderEvents() {
     lucide.createIcons();
 }
 
+// ── Draft 날짜 안전 파싱 헬퍼 ────────────────────────────────
+function safeFormatDate(val) {
+    if (!val) return null;
+    let d;
+    if (val?.seconds !== undefined) {
+        d = new Date(val.seconds * 1000);  // Firestore Timestamp 객체
+    } else {
+        d = new Date(val);                 // 문자열 or 숫자(ms)
+    }
+    return isNaN(d.getTime()) ? null : d.toLocaleDateString('ko-KR');
+}
+
 // ── Draft (승인 대기) ────────────────────────────────────────
 function renderDraftList() {
     const container = document.getElementById('draft-list');
@@ -1340,8 +1352,9 @@ function renderDraftList() {
                     <h4 class="font-bold text-slate-800 mb-1">${d.title || '(제목 없음)'}</h4>
                     ${d.note ? `<p class="text-sm text-slate-500 mb-2 line-clamp-3">${d.note}</p>` : ''}
                     <div class="flex gap-4 text-xs text-slate-400">
-                        ${d.due       ? `<span>📅 마감: ${d.due}</span>` : ''}
-                        ${d.createdAt ? `<span>📥 수신: ${new Date(d.createdAt.seconds ? d.createdAt.seconds*1000 : d.createdAt).toLocaleDateString('ko-KR')}</span>` : ''}
+                        ${d.due                       ? `<span>📅 마감: ${d.due}</span>` : ''}
+                        ${safeFormatDate(d.createdAt) ? `<span>📥 수신: ${safeFormatDate(d.createdAt)}</span>` : ''}
+                        ${safeFormatDate(d.receivedAt) ? `<span>📥 수신: ${safeFormatDate(d.receivedAt)}</span>` : ''}
                     </div>
                 </div>
                 <div class="flex flex-col gap-2 flex-shrink-0">
@@ -1397,7 +1410,6 @@ window.createTestDraft = async function () {
         showToast('생성 실패: ' + e.message, 'error');
     }
 };
-
 // ── Gmail 연동 ───────────────────────────────────────────────
 window.syncGmail = async function () {
     const btn      = document.getElementById('btn-sync-gmail');
