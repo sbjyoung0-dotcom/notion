@@ -1048,33 +1048,39 @@
         };
 
         window.saveTask = async function() {
-            const id       = document.getElementById('modal-task-id').value;
-            const title    = document.getElementById('modal-title').value.trim();
-            if (!title) { showToast('업무명을 입력하세요.', 'error'); return; }
-            const payload  = {
-                id:        id || undefined,
-                clientId:  document.getElementById('modal-client').value,
-                title,
-                note:      document.getElementById('modal-note').value.trim(),
-                refDoc:    document.getElementById('modal-ref-doc').value.trim(),
-                due:       document.getElementById('modal-due').value,
-                startDate: document.getElementById('modal-start-date').value,
-                priority:  document.getElementById('modal-priority').value,
-                status:    'active'
-            };
-            const btn = document.getElementById('modal-save-btn');
-            btn.disabled = true; btn.textContent = '저장 중...';
-            try {
-                await fnSaveTask(payload);
-                closeModal('task-modal');
-                showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!');
-                await loadAllData();
-            } catch(e) {
-                showToast('저장 실패: ' + e.message, 'error');
-            } finally {
-                btn.disabled = false; btn.textContent = '저장하기';
-            }
-        };
+    const id       = document.getElementById('modal-task-id').value;
+    const title    = document.getElementById('modal-title').value.trim();
+    if (!title) { showToast('업무명을 입력하세요.', 'error'); return; }
+
+    // ✅ clientName 추가
+    const clientId   = document.getElementById('modal-client').value;
+    const clientName = clients.find(c => c.id === clientId)?.name || '';
+
+    const payload  = {
+        id:        id || undefined,
+        clientId,
+        clientName,  // ✅ 추가된 줄
+        title,
+        note:      document.getElementById('modal-note').value.trim(),
+        refDoc:    document.getElementById('modal-ref-doc').value.trim(),
+        due:       document.getElementById('modal-due').value,
+        startDate: document.getElementById('modal-start-date').value,
+        priority:  document.getElementById('modal-priority').value,
+        status:    'active'
+    };
+    const btn = document.getElementById('modal-save-btn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+        await fnSaveTask(payload);
+        closeModal('task-modal');
+        showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!');
+        await loadAllData();
+    } catch(e) {
+        showToast('저장 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = '저장하기';
+    }
+};
 
         window.deleteTask = async function(id) {
             if (!confirm('이 업무를 삭제하시겠습니까?')) return;
@@ -1412,7 +1418,11 @@
                                 : '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700">미분석</span>'}
                             ${m.taskCreated ? '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-700">Draft생성</span>' : ''}
                         </div>
-                        <span class="text-xs text-slate-400 flex-shrink-0">${formatDate(m.receivedAt || m.createdAt)}</span>
+                        <span class="text-xs text-slate-400 flex-shrink-0">
+				${m.internalDate
+					? new Date(Number(m.internalDate)).toLocaleDateString('ko-KR')
+					: formatDate(m.receivedAt || m.createdAt)}
+			</span>
                     </div>
                     <p class="font-semibold text-slate-800 text-sm mb-1">${m.subject || '(제목 없음)'}</p>
                     <p class="text-xs text-slate-500 mb-1">From: ${m.from || '-'}</p>
@@ -1464,103 +1474,117 @@
         };
 
         window.syncGmail = async function() {
-            const btn      = document.getElementById('btn-sync-gmail');
-            const progress = document.getElementById('sync-progress');
-            const bar      = document.getElementById('sync-progress-bar');
-            const text     = document.getElementById('sync-progress-text');
-            const detail   = document.getElementById('sync-progress-detail');
+    const btn      = document.getElementById('btn-sync-gmail');
+    const progress = document.getElementById('sync-progress');
+    const bar      = document.getElementById('sync-progress-bar');
+    const text     = document.getElementById('sync-progress-text');
+    const detail   = document.getElementById('sync-progress-detail');
 
-            btn.disabled = true;
-            progress.classList.remove('hidden');
+    btn.disabled = true;
+    progress.classList.remove('hidden');
 
-            try {
-                text.textContent = '📥 Gmail 수집 중...';
-                bar.style.width  = '30%';
-                const ingestRes  = await fnIngestGmail();
-                const ingestData = ingestRes.data || {};
-                detail.textContent = `${ingestData.count || 0}개 메일 수집 완료`;
+    try {
+        text.textContent = '📥 Gmail 수집 중...';
+        bar.style.width  = '30%';
+        const ingestRes  = await fnIngestGmail();
+        const ingestData = ingestRes.data || {};
+        detail.textContent = `${ingestData.count || 0}개 메일 수집 완료`;
 
-                text.textContent = '🤖 AI 분석 중...';
-                bar.style.width  = '70%';
-                const analyzeRes  = await fnAnalyzeMails();
-                const analyzeData = analyzeRes.data || {};
-                detail.textContent = `${analyzeData.analyzed || 0}개 메일 분석 완료`;
+        text.textContent = '🤖 AI 분석 중...';
+        bar.style.width  = '70%';
+        const analyzeRes  = await fnAnalyzeMails();
+        const analyzeData = analyzeRes.data || {};
+        detail.textContent = `${analyzeData.analyzed || 0}개 메일 분석 완료`;
 
-                bar.style.width  = '100%';
-                text.textContent = '✅ 동기화 완료!';
-                showToast(`✅ 수집 ${ingestData.count || 0}개 / 분석 ${analyzeData.analyzed || 0}개 완료`);
-                await loadAllData();
-            } catch(e) {
-                showToast('동기화 실패: ' + e.message, 'error');
-                text.textContent = '❌ 동기화 실패';
-            } finally {
-                btn.disabled = false;
-                setTimeout(() => {
-                    progress.classList.add('hidden');
-                    bar.style.width = '0%';
-                }, 2000);
-            }
-        };
+        bar.style.width  = '100%';
+        text.textContent = '✅ 동기화 완료!';
+        showToast(`✅ 수집 ${ingestData.count || 0}개 / 분석 ${analyzeData.analyzed || 0}개 완료`);
+        await loadAllData();
+        renderInboxList();  // ✅ 추가 — Inbox 화면 갱신
+    } catch(e) {
+        showToast('동기화 실패: ' + e.message, 'error');
+        text.textContent = '❌ 동기화 실패';
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+            progress.classList.add('hidden');
+            bar.style.width = '0%';
+        }, 2000);
+    }
+};
 
-        // ── 월간 리포트 ──────────────────────────────────────────────
-        window.createReport = async function() {
-            const clientId = document.getElementById('report-client').value;
-            const month    = document.getElementById('report-month').value;
-            const output   = document.getElementById('report-output');
-            const btn      = document.getElementById('btn-create-report');
-            if (!month) { showToast('연월을 선택하세요.', 'error'); return; }
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> 생성 중...';
-            output.textContent = '⏳ AI가 리포트를 생성 중입니다...';
-            try {
-                const res  = await fnMonthlySummary({ clientId, month });
-                output.textContent = res.data?.text || '리포트 내용을 생성하지 못했습니다.';
-            } catch(e) {
-                output.textContent = '생성 실패: ' + e.message;
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4"></i> AI 생성';
-                lucide.createIcons();
-            }
-        };
+// ── 월간 리포트 ──────────────────────────────────────────────
+window.createReport = async function() {
+    const clientId = document.getElementById('report-client').value;
+    const rawMonth = document.getElementById('report-month').value;
+    const output   = document.getElementById('report-output');
+    const btn      = document.getElementById('btn-create-report');
 
-        window.copyReport = function() {
-            const text = document.getElementById('report-output').textContent;
-            navigator.clipboard.writeText(text).then(() => showToast('✅ 클립보드에 복사되었습니다.'));
-        };
+    if (!rawMonth) { showToast('연월을 선택하세요.', 'error'); return; }
 
-        // ── 데일리 보고 ──────────────────────────────────────────────
-        window.openDailyModal = function() {
-            document.getElementById('daily-date').value = new Date().toISOString().split('T')[0];
-            openModal('daily-modal');
-        };
+    // ✅ YYYY-MM 형식으로 정제
+    let month = rawMonth
+        .replace(/년\s*/g, '-')
+        .replace(/월/g, '')
+        .trim();
 
-        window.createDailyReport = async function() {
-            const clientId = document.getElementById('daily-client').value;
-            const date     = document.getElementById('daily-date').value;
-            const output   = document.getElementById('daily-output');
-            const btn      = document.getElementById('btn-create-daily');
-            if (!date) { showToast('기준일을 선택하세요.', 'error'); return; }
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> 생성 중...';
-            output.textContent = '⏳ AI가 데일리 보고를 생성 중입니다...';
-            try {
-                const res  = await fnDailySummary({ clientId, date });
-                output.textContent = res.data?.text || '데일리 보고를 생성하지 못했습니다.';
-            } catch(e) {
-                output.textContent = '생성 실패: ' + e.message;
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4"></i> AI 생성';
-                lucide.createIcons();
-            }
-        };
+    // ✅ 그래도 형식 안 맞으면 강제 변환
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+        const now = new Date();
+        month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
 
-        window.copyDaily = function() {
-            const text = document.getElementById('daily-output').textContent;
-            navigator.clipboard.writeText(text).then(() => showToast('✅ 클립보드에 복사되었습니다.'));
-        };
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> 생성 중...';
+    output.textContent = '⏳ AI가 리포트를 생성 중입니다...';
+    try {
+        const res  = await fnMonthlySummary({ clientId, month });
+        output.textContent = res.data?.text || '리포트 내용을 생성하지 못했습니다.';
+    } catch(e) {
+        output.textContent = '생성 실패: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4"></i> AI 생성';
+        lucide.createIcons();
+    }
+};
 
+window.copyReport = function() {
+    const text = document.getElementById('report-output').textContent;
+    navigator.clipboard.writeText(text).then(() => showToast('✅ 클립보드에 복사되었습니다.'));
+};
+
+// ── 데일리 보고 ──────────────────────────────────────────────
+window.openDailyModal = function() {
+    document.getElementById('daily-date').value = new Date().toISOString().split('T')[0];
+    openModal('daily-modal');
+};
+
+window.createDailyReport = async function() {
+    const clientId = document.getElementById('daily-client').value;
+    const date     = document.getElementById('daily-date').value;
+    const output   = document.getElementById('daily-output');
+    const btn      = document.getElementById('btn-create-daily');
+    if (!date) { showToast('기준일을 선택하세요.', 'error'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> 생성 중...';
+    output.textContent = '⏳ AI가 데일리 보고를 생성 중입니다...';
+    try {
+        const res  = await fnDailySummary({ clientId, date });
+        output.textContent = res.data?.text || '데일리 보고를 생성하지 못했습니다.';
+    } catch(e) {
+        output.textContent = '생성 실패: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4"></i> AI 생성';
+        lucide.createIcons();
+    }
+};
+
+window.copyDaily = function() {
+    const text = document.getElementById('daily-output').textContent;
+    navigator.clipboard.writeText(text).then(() => showToast('✅ 클립보드에 복사되었습니다.'));
+};
         // ── AI 일괄 파싱 ─────────────────────────────────────────────
         window.openBulkModal = function() {
             document.getElementById('bulk-input').value = '';
