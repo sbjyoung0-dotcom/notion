@@ -1,38 +1,31 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PM 대시보드</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Multi-Client HQ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* 스크롤바 */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+        .hidden { display: none !important; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-
-        /* 로더 스피너 */
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .tab-active   { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
+        .tab-inactive:hover { color: #334155; border-bottom: 2px solid #cbd5e1; }
         .loader {
-            display: inline-block;
-            width: 16px; height: 16px;
-            border: 2px solid #e2e8f0;
-            border-top-color: #6366f1;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
             border-radius: 50%;
-            animation: spin 0.7s linear infinite;
+            width: 16px; height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* 칸반 컬럼 */
-        .kanban-col { min-height: 120px; }
-
-        /* line-clamp */
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -41,728 +34,708 @@
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen font-sans">
+<body class="flex h-screen overflow-hidden">
 
-<!-- ══════════════════════════════════════════════════════
-     로그인 화면
-════════════════════════════════════════════════════════ -->
-<div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100">
-    <div class="bg-white rounded-2xl shadow-xl p-10 w-full max-w-sm">
-        <div class="text-center mb-8">
-            <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="layout-dashboard" class="w-7 h-7 text-white"></i>
-            </div>
-            <h1 class="text-2xl font-extrabold text-slate-800">PM 대시보드</h1>
-            <p class="text-sm text-slate-400 mt-1">업무를 스마트하게 관리하세요</p>
-        </div>
+<div id="login-screen" class="fixed inset-0 bg-slate-100 flex items-center justify-center z-[200]">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
+        <h1 class="text-2xl font-bold text-slate-800 mb-1 flex items-center gap-2">
+            <i data-lucide="briefcase" class="text-blue-600"></i> PM HQ
+        </h1>
+        <p class="text-sm text-slate-400 mb-6">로그인하여 시작하세요</p>
         <div class="space-y-3">
-            <input id="login-email" type="email" placeholder="이메일"
-                class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-            <input id="login-password" type="password" placeholder="비밀번호"
-                class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                onkeydown="if(event.key==='Enter') loginUser()" />
-            <button onclick="loginUser()"
-                class="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-bold hover:bg-indigo-700 transition">
+            <input type="email" id="auth-email" placeholder="이메일"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <input type="password" id="auth-password" placeholder="비밀번호"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                onkeypress="if(event.key==='Enter') loginUser()">
+            <button onclick="loginUser()" id="btn-login"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition text-sm">
                 로그인
             </button>
-            <button onclick="registerUser()"
-                class="w-full bg-slate-100 text-slate-600 rounded-xl py-3 text-sm font-semibold hover:bg-slate-200 transition">
+            <button onclick="registerUser()" id="btn-register"
+                class="w-full bg-slate-100 text-slate-600 py-2 rounded-lg font-medium hover:bg-slate-200 transition text-sm">
                 회원가입
             </button>
+            <p id="auth-error" class="text-xs text-red-500 text-center hidden"></p>
         </div>
-        <p id="login-error" class="text-red-500 text-xs text-center mt-3 hidden"></p>
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     앱 메인 화면
-════════════════════════════════════════════════════════ -->
-<div id="app-screen" class="hidden min-h-screen flex flex-col">
+<div id="app-screen" class="hidden flex h-screen w-full overflow-hidden">
 
-    <!-- 상단 헤더 -->
-    <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <i data-lucide="layout-dashboard" class="w-4 h-4 text-white"></i>
-            </div>
-            <div>
-                <h1 class="font-extrabold text-slate-800 text-base leading-tight">PM 대시보드</h1>
-                <p id="today-date" class="text-xs text-slate-400"></p>
-            </div>
-        </div>
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-                <div id="connection-status"
-                    class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-xs font-bold text-white">
-                    OFF
-                </div>
-                <span id="connection-text" class="text-xs text-slate-500 hidden sm:block"></span>
-            </div>
-            <button onclick="openDailyModal()"
-                class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-semibold hover:bg-amber-100 transition">
-                <i data-lucide="sun" class="w-3 h-3"></i>
-                <span class="hidden sm:inline">데일리</span>
-            </button>
-            <button onclick="logoutUser()"
-                class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
-                <i data-lucide="log-out" class="w-3 h-3"></i>
-                <span class="hidden sm:inline">로그아웃</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- 탭 네비게이션 -->
-    <nav class="bg-white border-b border-slate-200 px-4 flex gap-1 overflow-x-auto sticky top-[57px] z-30">
-        <button onclick="switchTab('dashboard')" id="tab-dashboard"
-            class="tab-btn px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-1.5">
-            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> 대시보드
-        </button>
-        <button onclick="switchTab('tasks')" id="tab-tasks"
-            class="tab-btn px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-1.5">
-            <i data-lucide="check-square" class="w-3.5 h-3.5"></i> Tasks
-        </button>
-        <button onclick="switchTab('inbox')" id="tab-inbox"
-            class="tab-btn px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-1.5">
-            <i data-lucide="mail" class="w-3.5 h-3.5"></i> Inbox
-        </button>
-        <button onclick="switchTab('routine')" id="tab-routine"
-            class="tab-btn px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-1.5">
-            <i data-lucide="repeat" class="w-3.5 h-3.5"></i> 루틴
-        </button>
-        <button onclick="switchTab('report')" id="tab-report"
-            class="tab-btn px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-1.5">
-            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> 리포트
-        </button>
-        <button onclick="switchTab('settings')" id="tab-settings"
-            class="tab-btn px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-1.5">
-            <i data-lucide="settings" class="w-3.5 h-3.5"></i> 설정
-        </button>
-    </nav>
-
-    <!-- 콘텐츠 영역 -->
-    <main class="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
-
-        <!-- ── 대시보드 탭 ── -->
-        <div id="pane-dashboard" class="tab-pane hidden">
-            <!-- 통계 카드 -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <p class="text-xs text-slate-400 font-medium mb-1">전체 업무</p>
-                    <p id="stat-total" class="text-3xl font-extrabold text-slate-800">0</p>
-                </div>
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <p class="text-xs text-slate-400 font-medium mb-1">진행 중</p>
-                    <p id="stat-ongoing" class="text-3xl font-extrabold text-blue-600">0</p>
-                </div>
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <p class="text-xs text-slate-400 font-medium mb-1">완료</p>
-                    <p id="stat-done" class="text-3xl font-extrabold text-green-600">0</p>
-                </div>
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <p class="text-xs text-slate-400 font-medium mb-1">마감 임박 (7일)</p>
-                    <p id="stat-urgent" class="text-3xl font-extrabold text-red-500">0</p>
-                </div>
-            </div>
-
-            <!-- 진행률 바 -->
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
-                <div class="flex justify-between items-center mb-2">
-                    <p class="text-sm font-bold text-slate-700">전체 완료율</p>
-                    <p id="stat-pct" class="text-sm font-bold text-indigo-600">0%</p>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-2.5">
-                    <div id="stat-bar" class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- 하단 2-col -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 마감 임박 업무 -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <h3 class="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
-                        <i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>
-                        마감 임박 업무
-                    </h3>
-                    <div id="urgent-list" class="space-y-2"></div>
-                </div>
-                <!-- 예정 일정 -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-bold text-slate-700 text-sm flex items-center gap-2">
-                            <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
-                            예정 일정
-                        </h3>
-                        <button onclick="openAddEventModal()"
-                            class="text-xs text-indigo-600 font-semibold hover:underline">+ 추가</button>
-                    </div>
-                    <div id="event-list" class="space-y-1"></div>
-                </div>
-            </div>
-
-            <!-- 빠른 메모 -->
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mt-6">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-slate-700 text-sm flex items-center gap-2">
-                        <i data-lucide="sticky-note" class="w-4 h-4 text-amber-500"></i>
-                        빠른 메모
-                    </h3>
-                    <span id="memo-status" class="text-xs text-slate-400"></span>
-                </div>
-                <textarea id="quick-memo" oninput="onMemoInput()"
-                    placeholder="자유롭게 메모하세요 (자동 저장)"
-                    class="w-full h-28 border border-slate-200 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700"></textarea>
-            </div>
+    <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col z-20">
+        <div class="p-5 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="briefcase" class="text-blue-600"></i> PM HQ
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Multi-Client Management</p>
         </div>
 
-        <!-- ── Tasks 탭 ── -->
-        <div id="pane-tasks" class="tab-pane hidden">
-            <!-- 고객사 필터 -->
-            <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-                <div id="client-nav" class="flex items-center gap-2 flex-nowrap"></div>
-                <button onclick="openAddTaskModal()"
-                    class="flex-shrink-0 ml-auto flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-sm">
-                    <i data-lucide="plus" class="w-4 h-4"></i> 업무 추가
-                </button>
-                <button onclick="openBulkModal()"
-                    class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-sm font-semibold hover:bg-purple-100 transition">
-                    <i data-lucide="zap" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">AI 파싱</span>
+        <div class="flex-1 overflow-y-auto py-4">
+
+            <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase">Clients</div>
+            <nav id="client-nav" class="space-y-0.5 px-2"></nav>
+
+            <div class="mt-6 px-4 mb-2 flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-400 uppercase">Upcoming Events</span>
+                <button onclick="openAddEventModal()" class="text-slate-400 hover:text-blue-600 transition-colors">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
                 </button>
             </div>
+            <div id="event-list" class="px-2 space-y-2"></div>
 
-            <!-- 검색 + 정렬 + 뷰 -->
-            <div class="flex flex-wrap gap-2 mb-4">
-                <input id="search-input" type="text" placeholder="업무 검색..." oninput="onSearchInput()"
-                    class="flex-1 min-w-[160px] border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                <select id="filter-status" onchange="setFilter(this.value)"
-                    class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                    <option value="all">전체</option>
-                    <option value="ongoing">진행 중</option>
-                    <option value="done">완료</option>
-                    <option value="urgent">마감 임박</option>
-                </select>
-                <select id="sort-select" onchange="sortBy(this.value)"
-                    class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                    <option value="due">마감일순</option>
-                    <option value="priority">우선순위순</option>
-                    <option value="client">고객사순</option>
-                    <option value="created">등록일순</option>
-                </select>
-                <div class="flex border border-slate-200 rounded-xl overflow-hidden">
-                    <button onclick="setViewMode('list')" id="view-list"
-                        class="px-3 py-2 text-sm bg-indigo-600 text-white">
-                        <i data-lucide="list" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="setViewMode('kanban')" id="view-kanban"
-                        class="px-3 py-2 text-sm bg-white text-slate-500 hover:bg-slate-50">
-                        <i data-lucide="columns" class="w-4 h-4"></i>
-                    </button>
-                </div>
+            <div class="mt-6 px-4 mb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase">고객사 관리</span>
             </div>
-
-            <!-- 리스트 뷰 -->
-            <div id="task-list" class="space-y-3"></div>
-            <!-- 칸반 뷰 -->
-            <div id="kanban-view" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            <div class="px-2 space-y-2">
+                <input type="text" id="new-client-name" placeholder="고객사명 (예: 카카오)"
+                    class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <input type="text" id="new-client-id" placeholder="ID (예: c_kakao)"
+                    class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <button onclick="addClient()"
+                    class="w-full text-xs bg-blue-50 text-blue-600 border border-blue-100 py-1.5 rounded hover:bg-blue-100 transition font-medium">
+                    + 고객사 추가
+                </button>
+                <div id="client-settings-list" class="space-y-1 mt-1"></div>
+            </div>
         </div>
 
-        <!-- ── Inbox 탭 ── -->
-        <div id="pane-inbox" class="tab-pane hidden">
-            <div class="flex flex-wrap items-center gap-3 mb-5">
-                <h2 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                    <i data-lucide="mail" class="w-5 h-5 text-indigo-500"></i>
-                    Gmail Inbox
-                </h2>
-                <div class="ml-auto flex items-center gap-2 flex-wrap">
-                    <button onclick="syncGmail()" id="btn-sync-gmail"
-                        class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-sm">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Gmail 동기화
-                    </button>
-                    <button onclick="handleIngestGmail(this)"
-                        class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-200 transition">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">수집만</span>
-                    </button>
-                    <button onclick="handleAnalyzeMails(this)"
-                        class="flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-sm font-semibold hover:bg-purple-100 transition">
-                        <i data-lucide="cpu" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">AI 분석만</span>
-                    </button>
+        <div class="p-4 border-t border-slate-100 bg-slate-50">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span id="connection-dot" class="w-2 h-2 rounded-full bg-gray-400"></span>
+                    <span id="connection-status-text" class="text-xs text-gray-400 font-medium">연결 중...</span>
                 </div>
+                <div class="flex-1 min-w-0">
+                    <p id="connection-text" class="text-sm font-bold text-slate-700 truncate"></p>
+                    <p class="text-xs text-slate-500" id="today-date"></p>
+                </div>
+                <button onclick="logoutUser()" title="로그아웃"
+                    class="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
             </div>
-
-            <!-- 동기화 프로그레스 바 -->
-            <div id="sync-progress" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <span id="sync-progress-text" class="text-sm font-semibold text-slate-700"></span>
-                    <span id="sync-progress-detail" class="text-xs text-slate-400"></span>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-2">
-                    <div id="sync-progress-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Inbox 카드 목록 -->
-            <div id="inbox-list" class="space-y-4"></div>
+            <button id="btn-force-seed" onclick="forceSeed()"
+                class="w-full text-xs bg-red-50 text-red-600 border border-red-100 py-2 rounded hover:bg-red-100 transition flex items-center justify-center gap-1 font-medium">
+                <i data-lucide="trash-2" class="w-3 h-3"></i> 전체 초기화 & 재설치
+            </button>
         </div>
+    </aside>
 
-        <!-- ── 루틴 탭 ── -->
-        <div id="pane-routine" class="tab-pane hidden">
-            <div class="flex items-center justify-between mb-5">
-                <h2 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                    <i data-lucide="repeat" class="w-5 h-5 text-indigo-500"></i>
-                    루틴 관리
-                </h2>
-                <div class="flex gap-2">
-                    <button onclick="resetRoutines()"
-                        class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-200 transition">
-                        <i data-lucide="refresh-ccw" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">월 초기화</span>
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50">
+
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+            <div class="px-8 py-5 flex justify-between items-center">
+                <div>
+                    <h2 id="header-title" class="text-2xl font-bold text-slate-800">전체 현황 대시보드</h2>
+                    <p id="header-desc" class="text-sm text-slate-500 mt-1">
+                        모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.
+                    </p>
+                </div>
+                <div class="flex gap-2 flex-wrap justify-end">
+                    <button onclick="openDailyModal()"
+                        class="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition shadow-sm">
+                        <i data-lucide="sun" class="w-4 h-4"></i> 데일리 보고
                     </button>
-                    <button onclick="openModal('routine-modal')"
-                        class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-sm">
+                    <button onclick="openModal('report-modal')"
+                        class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition shadow-sm">
+                        <i data-lucide="file-output" class="w-4 h-4"></i> 월간 리포트
+                    </button>
+                    <button onclick="openBulkModal()"
+                        class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition shadow-sm">
+                        <i data-lucide="bot" class="w-4 h-4"></i> AI 일괄 파싱
+                    </button>
+                    <button id="add-task-btn" onclick="openAddTaskModal()"
+                        class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> 새 업무
+                    </button>
+                    <button id="add-routine-btn"
+                        class="hidden flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm"
+                        onclick="openModal('routine-modal')">
                         <i data-lucide="plus" class="w-4 h-4"></i> 루틴 추가
                     </button>
                 </div>
             </div>
-            <div id="routine-list" class="space-y-3"></div>
-        </div>
 
-        <!-- ── 리포트 탭 ── -->
-        <div id="pane-report" class="tab-pane hidden">
-            <h2 class="font-extrabold text-slate-800 text-lg mb-5 flex items-center gap-2">
-                <i data-lucide="file-text" class="w-5 h-5 text-indigo-500"></i>
-                월간 리포트
-            </h2>
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-4">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">고객사</label>
-                        <select id="report-client"
-                            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                            <option value="all">전체</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">월 선택</label>
-                        <input id="report-month" type="month"
-                            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    </div>
-                    <div class="flex items-end gap-2">
-                        <button onclick="createReport()"
-                            class="flex-1 bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-indigo-700 transition">
-                            리포트 생성
-                        </button>
-                        <button onclick="copyReport()"
-                            class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition">
-                            복사
-                        </button>
-                    </div>
-                </div>
-                <pre id="report-output"
-                    class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 whitespace-pre-wrap min-h-[200px] font-mono leading-relaxed"></pre>
-            </div>
-        </div>
-
-        <!-- ── 설정 탭 ── -->
-        <div id="pane-settings" class="tab-pane hidden">
-            <h2 class="font-extrabold text-slate-800 text-lg mb-5 flex items-center gap-2">
-                <i data-lucide="settings" class="w-5 h-5 text-indigo-500"></i>
-                설정
-            </h2>
-            <!-- 고객사 관리 -->
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-4">
-                <h3 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
-                    <i data-lucide="building-2" class="w-4 h-4 text-indigo-500"></i>
-                    고객사 관리
-                </h3>
-                <div class="flex gap-2 mb-4">
-                    <input id="new-client-id" type="text" placeholder="ID (영문, 예: c_abc)"
-                        class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <input id="new-client-name" type="text" placeholder="고객사명"
-                        class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <button onclick="addClient()"
-                        class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition">
-                        추가
-                    </button>
-                </div>
-                <div id="client-settings-list" class="space-y-2"></div>
-            </div>
-            <!-- 위험 구역 -->
-            <div class="bg-red-50 rounded-xl border border-red-200 p-6">
-                <h3 class="font-bold text-red-700 text-sm mb-3 flex items-center gap-2">
-                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-                    위험 구역
-                </h3>
-                <p class="text-xs text-red-500 mb-4">아래 작업은 되돌릴 수 없습니다. 신중하게 실행하세요.</p>
-                <button onclick="forceSeed()"
-                    class="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition">
-                    🔄 전체 데이터 초기화
+            <div class="px-8 flex gap-6">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" data-tab="dashboard"
+                    class="tab-btn tab-active pb-3 text-sm flex items-center gap-2 text-blue-600 font-semibold">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> 대시보드 (Tasks)
+                </button>
+                <button onclick="switchTab('inbox')" id="tab-inbox" data-tab="inbox"
+                    class="tab-btn tab-inactive pb-3 text-sm flex items-center gap-2 relative text-slate-500">
+                    <i data-lucide="mail" class="w-4 h-4"></i> Gmail Inbox
+                    <span id="inbox-badge"
+                        class="hidden absolute -top-1 -right-2 bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="switchTab('routine')" id="tab-routine" data-tab="routine"
+                    class="tab-btn tab-inactive pb-3 text-sm flex items-center gap-2 text-slate-500">
+                    <i data-lucide="repeat" class="w-4 h-4"></i> 루틴 체크 (Monthly)
                 </button>
             </div>
-        </div>
+        </header>
 
-    </main>
-</div>
+        <div class="flex-1 overflow-y-auto p-8">
 
-<!-- ══════════════════════════════════════════════════════
-     모달 영역
-════════════════════════════════════════════════════════ -->
+            <div id="view-dashboard" class="tab-panel max-w-6xl mx-auto space-y-8">
 
-<!-- 업무 추가/수정 모달 -->
-<div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between p-6 border-b border-slate-100">
-            <h2 id="task-modal-title" class="font-extrabold text-slate-800 text-base">업무 추가</h2>
-            <button onclick="closeModal('task-modal')" class="text-slate-400 hover:text-slate-600">
-                <i data-lucide="x" class="w-5 h-5"></i>
+                <div id="stats-widget" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
+                        <div class="p-3 bg-blue-50 rounded-lg text-blue-600">
+                            <i data-lucide="file-text" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">진행 중인 업무</p>
+                            <p id="stat-active" class="text-xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
+                        <div class="p-3 bg-green-50 rounded-lg text-green-600">
+                            <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">완료된 업무</p>
+                            <p id="stat-done" class="text-xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
+                        <div class="p-3 bg-orange-50 rounded-lg text-orange-600">
+                            <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">마감 지연 및 임박 (D-7)</p>
+                            <p id="stat-urgent" class="text-xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <section class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-bold text-yellow-800 flex items-center gap-2">
+                            <i data-lucide="sticky-note" class="w-4 h-4"></i> Quick Memo (자동 저장)
+                        </h3>
+                        <span id="memo-status" class="text-xs text-yellow-600 font-medium"></span>
+                    </div>
+                    <textarea id="quick-memo" rows="2"
+                        class="w-full bg-yellow-100/50 border-none rounded-lg text-sm text-slate-700
+                               placeholder-yellow-400/70 resize-none focus:ring-2 focus:ring-yellow-400 p-2"
+                        placeholder="급한 업무나 잊지 말아야 할 내용을 자유롭게 적으세요..."></textarea>
+                </section>
+
+                <section>
+                    <div class="flex justify-between items-end mb-4 flex-wrap gap-3">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="check-square" class="w-5 h-5 text-slate-400"></i> 업무 목록
+                        </h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <div class="flex items-center gap-1 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+                                <button onclick="setViewMode('list')" id="btn-view-list"
+                                    class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-slate-100 text-slate-800 flex items-center gap-1">
+                                    <i data-lucide="list" class="w-3 h-3"></i> 리스트
+                                </button>
+                                <button onclick="setViewMode('kanban')" id="btn-view-kanban"
+                                    class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-slate-500 hover:bg-slate-50 hover:text-slate-700 flex items-center gap-1">
+                                    <i data-lucide="layout-template" class="w-3 h-3"></i> 보드
+                                </button>
+                            </div>
+                            <div class="w-px h-6 bg-slate-200"></div>
+                            <input type="text" id="search-input"
+                                placeholder="업무명 또는 내용 검색..."
+                                class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56 shadow-sm">
+                            <div class="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+                                <button onclick="setFilter('active')" class="filter-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-slate-100 text-slate-800" data-filter="active">진행중</button>
+                                <button onclick="setFilter('all')"    class="filter-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-slate-500 hover:text-slate-700" data-filter="all">전체</button>
+                                <button onclick="setFilter('done')"   class="filter-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-slate-500 hover:text-slate-700" data-filter="done">완료됨</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="view-list-container"
+                        class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <table class="w-full text-sm text-left table-fixed">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase font-semibold">
+                                <tr>
+                                    <th class="px-6 py-4 w-16 text-center">상태</th>
+                                    <th class="px-6 py-4 w-32 cursor-pointer hover:bg-slate-100 transition" onclick="sortBy('clientId')">고객사 ↕</th>
+                                    <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 transition" onclick="sortBy('title')">업무명 / 내용 ↕</th>
+                                    <th class="px-6 py-4 w-28 cursor-pointer hover:bg-slate-100 transition" onclick="sortBy('startDate')">시작일 ↕</th>
+                                    <th class="px-6 py-4 w-32 cursor-pointer hover:bg-slate-100 transition" onclick="sortBy('due')">마감일 ↕</th>
+                                    <th class="px-6 py-4 w-24 cursor-pointer hover:bg-slate-100 transition" onclick="sortBy('priority')">우선순위 ↕</th>
+                                    <th class="px-6 py-4 w-32 text-right">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="task-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="view-kanban-container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <div class="bg-slate-100/50 rounded-xl border border-slate-200 p-4 flex flex-col gap-3 min-h-[500px]">
+                            <h4 class="font-bold text-slate-700 flex items-center justify-between mb-2">
+                                <span class="flex items-center gap-2">
+                                    <i data-lucide="circle-dashed" class="w-4 h-4 text-blue-500"></i> 진행 중
+                                </span>
+                                <span id="kanban-todo-count" class="text-xs bg-slate-200 px-2 py-0.5 rounded-full text-slate-600">0</span>
+                            </h4>
+                            <div id="kanban-todo-col" class="space-y-3 flex-1 overflow-y-auto max-h-[700px] pr-1"></div>
+                        </div>
+                        <div class="bg-slate-100/50 rounded-xl border border-slate-200 p-4 flex flex-col gap-3 min-h-[500px]">
+                            <h4 class="font-bold text-slate-700 flex items-center justify-between mb-2">
+                                <span class="flex items-center gap-2">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500"></i> 완료됨
+                                </span>
+                                <span id="kanban-done-count" class="text-xs bg-slate-200 px-2 py-0.5 rounded-full text-slate-600">0</span>
+                            </h4>
+                            <div id="kanban-done-col" class="space-y-3 flex-1 overflow-y-auto max-h-[700px] pr-1"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="view-inbox" class="tab-panel hidden max-w-5xl mx-auto space-y-6">
+                <div class="flex justify-between items-center bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-100 rounded-lg text-blue-600">
+                            <i data-lucide="mail" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-blue-900">Gmail Inbox</h3>
+                            <p class="text-xs text-blue-700">Gmail에서 수집된 메일 목록입니다. AI 분석 후 승인하면 Tasks로 이동합니다.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="handleIngestGmail(this)" id="btn-ingest-gmail"
+                            class="flex items-center gap-1.5 text-xs bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition shadow-sm">
+                            <i data-lucide="download" class="w-3 h-3"></i> Gmail 수집
+                        </button>
+                        <button onclick="handleAnalyzeMails(this)" id="btn-analyze-mails"
+                            class="flex items-center gap-1.5 text-xs bg-purple-600 text-white px-3 py-2 rounded hover:bg-purple-700 transition shadow-sm">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i> AI 분석
+                        </button>
+                        <button onclick="syncGmail()" id="btn-sync-gmail"
+                            class="flex items-center gap-1.5 text-xs bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition shadow-sm">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> 수집 + AI 분석
+                        </button>
+                    </div>
+                </div>
+                <div id="sync-progress" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="loader"></div>
+                        <p id="sync-progress-text" class="text-sm font-medium text-blue-800">처리 중...</p>
+                    </div>
+                    <div class="w-full bg-blue-100 rounded-full h-2">
+                        <div id="sync-progress-bar"
+                            class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width:0%"></div>
+                    </div>
+                    <p id="sync-progress-detail" class="text-xs text-blue-600 mt-2"></p>
+                </div>
+                <div id="inbox-list" class="space-y-3"></div>
+            </div>
+
+            <div id="view-routine" class="tab-panel hidden max-w-5xl mx-auto space-y-6">
+                <div class="flex justify-between items-center bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-100 rounded-lg text-blue-600">
+                            <i data-lucide="calendar-clock" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-blue-900">월간 루틴 체크리스트</h3>
+                            <p class="text-xs text-blue-700">매월 반복되는 계약/보고서 업무입니다. 주의사항을 꼭 확인하세요.</p>
+                        </div>
+                    </div>
+                    <button onclick="resetRoutines()"
+                        class="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition shadow-sm">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 새 달 시작 (초기화)
+                    </button>
+                </div>
+                <div id="routine-list" class="space-y-4"></div>
+            </div>
+
+        </div></main>
+</div><div id="task-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold" id="task-modal-title">새 업무 추가</h3>
+            <button onclick="closeModal('task-modal')">
+                <i data-lucide="x" class="text-gray-400 hover:text-gray-600"></i>
             </button>
         </div>
-        <div class="p-6 space-y-4">
-            <input type="hidden" id="task-edit-id" />
+        <input type="hidden" id="modal-task-id">
+        <div class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">고객사</label>
-                <select id="task-client"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"></select>
+                <label class="block text-xs font-bold text-gray-500 mb-1">고객사</label>
+                <select id="modal-client"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"></select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">
-                    업무명 <span class="text-red-400">*</span>
-                </label>
-                <input id="task-title" type="text" placeholder="업무명을 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <label class="block text-xs font-bold text-gray-500 mb-1">업무명</label>
+                <input type="text" id="modal-title"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="예: 12월 월간보고서 송부">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">원본 레퍼런스 (검색용)</label>
+                <input type="text" id="modal-ref-doc"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">상세 내용 (메모)</label>
+                <textarea id="modal-note" rows="2"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">시작일</label>
-                    <input id="task-start" type="date"
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <label class="block text-xs font-bold text-gray-500 mb-1">시작일</label>
+                    <input type="date" id="modal-start-date"
+                        class="w-full border border-gray-300 rounded-lg p-2 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">마감일</label>
-                    <input id="task-due" type="date"
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">우선순위</label>
-                    <select id="task-priority"
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                        <option value="high">높음</option>
-                        <option value="mid" selected>보통</option>
-                        <option value="low">낮음</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">상태</label>
-                    <select id="task-status"
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                        <option value="ongoing" selected>진행 중</option>
-                        <option value="done">완료</option>
-                        <option value="hold">보류</option>
-                    </select>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">마감일</label>
+                    <input type="date" id="modal-due"
+                        class="w-full border border-gray-300 rounded-lg p-2 text-sm">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">메모</label>
-                <textarea id="task-memo" rows="3" placeholder="업무 관련 메모를 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+                <label class="block text-xs font-bold text-gray-500 mb-1">우선순위</label>
+                <select id="modal-priority"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="High">High</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Low">Low</option>
+                </select>
             </div>
-        </div>
-        <div class="flex gap-3 px-6 pb-6">
-            <button onclick="closeModal('task-modal')"
-                class="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition">
-                취소
-            </button>
-            <button onclick="saveTask()"
-                class="flex-1 bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-indigo-700 transition">
-                저장
+            <button onclick="saveTask()" id="modal-save-btn"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition">
+                저장하기
             </button>
         </div>
     </div>
 </div>
 
-<!-- 이벤트 추가 모달 -->
-<div id="event-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div class="flex items-center justify-between p-6 border-b border-slate-100">
-            <h2 class="font-extrabold text-slate-800 text-base">일정 추가</h2>
-            <button onclick="closeModal('event-modal')" class="text-slate-400 hover:text-slate-600">
-                <i data-lucide="x" class="w-5 h-5"></i>
+<div id="history-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-xl p-6 h-[80vh] flex flex-col">
+        <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-3 flex-shrink-0">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
+                    <i data-lucide="history" class="text-blue-600 w-5 h-5"></i> 진행 이력 관리
+                </h3>
+                <p id="history-task-title" class="text-sm font-medium text-slate-600"></p>
+            </div>
+            <button onclick="closeModal('history-modal')" class="text-gray-400 hover:text-slate-600 p-1">
+                <i data-lucide="x"></i>
             </button>
         </div>
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">
-                    일정명 <span class="text-red-400">*</span>
-                </label>
-                <input id="event-title" type="text" placeholder="일정명을 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">날짜</label>
-                    <input id="event-date" type="date"
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">시간 (선택)</label>
-                    <input id="event-time" type="time"
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">메모 (선택)</label>
-                <input id="event-memo" type="text" placeholder="간단한 메모"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            </div>
-        </div>
-        <div class="flex gap-3 px-6 pb-6">
-            <button onclick="closeModal('event-modal')"
-                class="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition">
-                취소
-            </button>
-            <button onclick="saveEvent()"
-                class="flex-1 bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-indigo-700 transition">
-                저장
+        <input type="hidden" id="history-target-task-id">
+        <div class="flex-1 overflow-y-auto pr-2 space-y-4 mb-4" id="history-list-container"></div>
+        <div class="border-t border-slate-200 pt-4 flex-shrink-0 bg-slate-50 p-3 rounded-lg flex gap-2">
+            <input type="text" id="history-input-text"
+                class="flex-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="진행 상황이나 특이사항 추가..."
+                onkeypress="if(event.key==='Enter') addHistory()">
+            <button onclick="addHistory()"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm whitespace-nowrap">
+                기록
             </button>
         </div>
     </div>
 </div>
 
-<!-- 루틴 추가 모달 -->
-<div id="routine-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div class="flex items-center justify-between p-6 border-b border-slate-100">
-            <h2 class="font-extrabold text-slate-800 text-base">루틴 추가</h2>
-            <button onclick="closeModal('routine-modal')" class="text-slate-400 hover:text-slate-600">
-                <i data-lucide="x" class="w-5 h-5"></i>
+<div id="routine-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-indigo-900">새 루틴 추가</h3>
+            <button onclick="closeModal('routine-modal')">
+                <i data-lucide="x" class="text-gray-400 hover:text-gray-600"></i>
             </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">
-                    루틴명 <span class="text-red-400">*</span>
-                </label>
-                <input id="routine-title" type="text" placeholder="루틴명을 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <label class="block text-xs font-bold text-gray-500 mb-1">고객사</label>
+                <select id="routine-client"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">주기</label>
-                <select id="routine-cycle"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                    <option value="daily">매일</option>
-                    <option value="weekly">매주</option>
-                    <option value="monthly" selected>매월</option>
+                <label class="block text-xs font-bold text-gray-500 mb-1">구분</label>
+                <select id="routine-type"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="Report">월간 보고 (Report)</option>
+                    <option value="Contract">계약 관리 (Contract)</option>
+                    <option value="System">시스템 점검 (System)</option>
+                    <option value="Other">기타 (Other)</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">메모 (선택)</label>
-                <input id="routine-memo" type="text" placeholder="간단한 메모"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <label class="block text-xs font-bold text-gray-500 mb-1">루틴명</label>
+                <input type="text" id="routine-title"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="예: 월간보고서 제출">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">주의사항</label>
+                <textarea id="routine-caution" rows="2"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                    placeholder="예: 매월 25일까지 제출, 담당자 확인 필요"></textarea>
+            </div>
+            <button onclick="saveRoutine()"
+                class="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-indigo-700 transition">
+                루틴 저장
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="report-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h3 class="text-lg font-bold text-purple-900 flex items-center gap-2">
+                <i data-lucide="file-output" class="w-5 h-5"></i> 월간 리포트 생성
+            </h3>
+            <button onclick="closeModal('report-modal')" class="text-gray-400 hover:text-slate-600">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="flex gap-3 mb-4 flex-shrink-0">
+            <div class="flex-1">
+                <label class="block text-xs font-bold text-gray-500 mb-1">대상 고객사</label>
+                <select id="report-client"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none">
+                    <option value="all">전체 고객사</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">연월 (YYYY-MM)</label>
+                <input type="month" id="report-month"
+                    class="border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+            </div>
+            <div class="flex items-end">
+                <button onclick="createReport()" id="btn-create-report"
+                    class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition shadow-sm">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> AI 생성
+                </button>
             </div>
         </div>
-        <div class="flex gap-3 px-6 pb-6">
-            <button onclick="closeModal('routine-modal')"
-                class="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition">
+        <div id="report-output"
+            class="flex-1 overflow-y-auto bg-slate-50 rounded-xl border border-slate-200 p-4 text-sm text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">
+            고객사와 연월을 선택 후 "AI 생성" 버튼을 클릭하세요.
+        </div>
+        <div class="flex justify-end mt-3 flex-shrink-0">
+            <button onclick="copyReport()"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+                <i data-lucide="copy" class="w-4 h-4"></i> 클립보드 복사
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="daily-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h3 class="text-lg font-bold text-rose-900 flex items-center gap-2">
+                <i data-lucide="sun" class="w-5 h-5"></i> 데일리 업무 보고 생성
+            </h3>
+            <button onclick="closeModal('daily-modal')" class="text-gray-400 hover:text-slate-600">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="flex gap-3 mb-4 flex-shrink-0">
+            <div class="flex-1">
+                <label class="block text-xs font-bold text-gray-500 mb-1">대상 고객사</label>
+                <select id="daily-client"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-rose-400 outline-none">
+                    <option value="all">전체 고객사</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">기준일</label>
+                <input type="date" id="daily-date"
+                    class="border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none">
+            </div>
+            <div class="flex items-end">
+                <button onclick="createDailyReport()" id="btn-create-daily"
+                    class="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition shadow-sm">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> AI 생성
+                </button>
+            </div>
+        </div>
+        <div id="daily-output"
+            class="flex-1 overflow-y-auto bg-slate-50 rounded-xl border border-slate-200 p-4 text-sm text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">
+            고객사와 기준일을 선택 후 "AI 생성" 버튼을 클릭하세요.
+        </div>
+        <div class="flex justify-end mt-3 flex-shrink-0">
+            <button onclick="copyDaily()"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+                <i data-lucide="copy" class="w-4 h-4"></i> 클립보드 복사
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="bulk-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h3 class="text-lg font-bold text-emerald-900 flex items-center gap-2">
+                <i data-lucide="bot" class="w-5 h-5"></i> AI 일괄 업무 파싱
+            </h3>
+            <button onclick="closeModal('bulk-modal')" class="text-gray-400 hover:text-slate-600">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="flex-shrink-0 mb-3">
+            <label class="block text-xs font-bold text-gray-500 mb-1">업무 텍스트 입력</label>
+            <textarea id="bulk-input" rows="6"
+                class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none font-mono"
+                placeholder="예)&#10;카카오 - 12월 정산 보고서 작성 필요, 마감 12/25&#10;네이버 검색 API 연동 이슈 확인, High priority"></textarea>
+            <div class="flex justify-between items-center mt-2">
+                <p class="text-xs text-slate-400">자유 형식으로 입력하면 AI가 자동으로 파싱합니다.</p>
+                <button onclick="runBulkParse()" id="btn-bulk-parse"
+                    class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition shadow-sm">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> AI 파싱 실행
+                </button>
+            </div>
+        </div>
+        <div id="bulk-result" class="flex-1 overflow-y-auto space-y-3 min-h-[80px]"></div>
+        <div id="bulk-confirm-area"
+            class="hidden flex-shrink-0 border-t border-slate-200 pt-3 mt-3 flex justify-end gap-2">
+            <button onclick="closeModal('bulk-modal')"
+                class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
                 취소
             </button>
-            <button onclick="saveRoutine()"
-                class="flex-1 bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-indigo-700 transition">
-                저장
+            <button onclick="confirmBulkTasks()"
+                class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition shadow-sm">
+                <i data-lucide="check" class="w-4 h-4"></i> 전체 승인 및 저장
             </button>
         </div>
     </div>
 </div>
 
-<!-- AI 텍스트 파싱 모달 -->
-<div id="bulk-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between p-6 border-b border-slate-100">
-            <h2 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                <i data-lucide="zap" class="w-5 h-5 text-purple-500"></i>
-                AI 텍스트 파싱
-            </h2>
-            <button onclick="closeModal('bulk-modal')" class="text-slate-400 hover:text-slate-600">
-                <i data-lucide="x" class="w-5 h-5"></i>
+<div id="add-event-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="calendar-plus" class="w-5 h-5 text-blue-600"></i> 일정 추가
+            </h3>
+            <button onclick="closeModal('add-event-modal')" class="text-gray-400 hover:text-slate-600">
+                <i data-lucide="x"></i>
             </button>
         </div>
-        <div class="p-6 space-y-4">
-            <p class="text-xs text-slate-500">회의록, 이메일, 메모 등 텍스트를 붙여넣으면 AI가 업무를 자동 추출합니다.</p>
-            <textarea id="bulk-input" rows="8"
-                placeholder="여기에 텍스트를 붙여넣으세요..."
-                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 font-mono"></textarea>
+        <div class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">기본 고객사</label>
-                <select id="bulk-client"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"></select>
-            </div>
-            <button onclick="runBulkParse()"
-                class="w-full bg-purple-600 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-purple-700 transition flex items-center justify-center gap-2">
-                <i data-lucide="cpu" class="w-4 h-4"></i>
-                AI 파싱 실행
-            </button>
-            <!-- 파싱 결과 -->
-            <div id="bulk-result" class="hidden space-y-3">
-                <div class="flex items-center justify-between">
-                    <p class="text-xs font-bold text-slate-600">추출된 업무 목록</p>
-                    <button onclick="saveBulkTask()"
-                        class="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition">
-                        전체 저장
-                    </button>
-                </div>
-                <div id="bulk-task-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 데일리 리포트 모달 -->
-<div id="daily-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between p-6 border-b border-slate-100">
-            <h2 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                <i data-lucide="sun" class="w-5 h-5 text-amber-500"></i>
-                데일리 리포트
-            </h2>
-            <button onclick="closeModal('daily-modal')" class="text-slate-400 hover:text-slate-600">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">오늘 한 일</label>
-                <textarea id="daily-done" rows="4"
-                    placeholder="오늘 완료한 업무를 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"></textarea>
+                <label class="block text-xs font-bold text-gray-500 mb-1">일정명</label>
+                <input type="text" id="event-title-input"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="예: 카카오 킥오프 미팅">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">내일 할 일</label>
-                <textarea id="daily-todo" rows="4"
-                    placeholder="내일 예정된 업무를 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"></textarea>
+                <label class="block text-xs font-bold text-gray-500 mb-1">날짜</label>
+                <input type="date" id="event-date-input"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">특이사항 (선택)</label>
-                <textarea id="daily-note" rows="2"
-                    placeholder="공유할 특이사항이 있으면 입력하세요"
-                    class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"></textarea>
+                <label class="block text-xs font-bold text-gray-500 mb-1">고객사 (선택)</label>
+                <select id="event-client-input"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">고객사 선택 안함</option>
+                </select>
             </div>
-            <!-- 미리보기 -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5">미리보기</label>
-                <pre id="daily-preview"
-                    class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed min-h-[100px]"></pre>
-            </div>
-        </div>
-        <div class="flex gap-3 px-6 pb-6">
-            <button onclick="closeModal('daily-modal')"
-                class="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition">
-                닫기
-            </button>
-            <button onclick="copyDailyReport()"
-                class="flex-1 bg-amber-500 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-amber-600 transition flex items-center justify-center gap-2">
-                <i data-lucide="copy" class="w-4 h-4"></i>
-                클립보드 복사
+            <button onclick="saveEvent()"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition">
+                일정 저장
             </button>
         </div>
     </div>
 </div>
 
-<!-- 토스트 알림 -->
-<div id="toast" class="hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-[999]
-    px-5 py-3 rounded-xl shadow-xl text-sm font-semibold text-white
-    transition-all duration-300 flex items-center gap-2 min-w-[200px] justify-center bg-slate-800">
-    <i data-lucide="check-circle" class="w-4 h-4"></i>
+<div id="toast"
+    class="hidden fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium text-white
+           transition-all duration-300 flex items-center gap-2 max-w-sm bg-slate-800">
+    <i data-lucide="check-circle" class="w-4 h-4 flex-shrink-0" id="toast-icon"></i>
     <span id="toast-msg"></span>
 </div>
+
 <script type="module">
-// ══════════════════════════════════════════════════════════
-// Firebase 초기화
-// ══════════════════════════════════════════════════════════
-import { initializeApp }          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
          signOut, onAuthStateChanged }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDocs, getDoc,
-         addDoc, setDoc, updateDoc, deleteDoc,
-         query, orderBy, serverTimestamp, Timestamp }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+    from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
+// ── Firebase 초기화 ──────────────────────────────────────
 const firebaseConfig = {
-    apiKey:            'AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ',
-    authDomain:        'notion-21aad.firebaseapp.com',
-    projectId:         'notion-21aad',
-    storageBucket:     'notion-21aad.firebasestorage.app',
-    messagingSenderId: '573285599188',
-    appId:             '1:573285599188:web:6fd7721b8d9805a2037841',
+    apiKey:            "AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ",
+    authDomain:        "notion-21aad.firebaseapp.com",
+    projectId:         "notion-21aad",
+    storageBucket:     "notion-21aad.firebasestorage.app",
+    messagingSenderId: "573285599188",
+    appId:             "1:573285599188:web:6fd7721b8d9805a2037841"
 };
-
 const app       = initializeApp(firebaseConfig);
 const auth      = getAuth(app);
-const db        = getFirestore(app);
 const functions = getFunctions(app, 'asia-northeast3');
 
-// ══════════════════════════════════════════════════════════
-// Functions 래퍼
-// ══════════════════════════════════════════════════════════
-const fnGetInbox      = httpsCallable(functions, 'getInbox');
-const fnIngestGmail   = httpsCallable(functions, 'ingestGmailToInbox');
-const fnAnalyzeMails  = httpsCallable(functions, 'analyzeInboxMails');
-const fnApproveInbox  = httpsCallable(functions, 'approveInbox');
-const fnRejectInbox   = httpsCallable(functions, 'rejectInbox');
-const fnBulkParse     = httpsCallable(functions, 'bulkParseText');
+// ── Functions 래퍼 ───────────────────────────────────────
+const fnGetAllData     = httpsCallable(functions, 'getAllData');
+const fnSaveTask       = httpsCallable(functions, 'saveTask');
+const fnDeleteTask     = httpsCallable(functions, 'deleteTask');
+const fnUpdateStatus   = httpsCallable(functions, 'updateTaskStatus');
+const fnApproveDraft   = httpsCallable(functions, 'approveDraft');
+const fnSaveClient     = httpsCallable(functions, 'saveClient');
+const fnDeleteClient   = httpsCallable(functions, 'deleteClient');
+const fnSaveMemo       = httpsCallable(functions, 'saveMemo');
+const fnIngestGmail    = httpsCallable(functions, 'ingestGmailToInbox');
+const fnAnalyzeMails   = httpsCallable(functions, 'analyzeInboxMails');
+const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
+const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
+const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 
-// ══════════════════════════════════════════════════════════
-// 전역 상태
-// ══════════════════════════════════════════════════════════
-let currentUser  = null;
-let allTasks     = [];
-let allDrafts    = [];
-let allInbox     = [];
-let allRoutines  = [];
-let allEvents    = [];
-let currentFilter= 'all';
-let currentSort  = 'due';
-let currentView  = 'list';
-let activeClient = 'all';
-let _memoTimer   = null;
-let _bulkParsed  = [];
-
-const CLIENT_MAP = {
-    c_kakao:   '카카오스타일',
-    c_skyhigh: '스카이하이',
-    c_xexy:    '젝시믹스',
-    c_klean:   '깨끗한나라',
-    c_sunwoo:  '선우',
-    c_mizmedi: '미즈메디',
-    c_helinox: '헬리녹스',
-    internal:  '내부',
-};
+// ── 전역 상태 ────────────────────────────────────────────
+let clients             = [];
+let tasks               = [];
+let events              = [];
+let routines            = [];
+let inboxMails          = [];
+let currentClientFilter = 'all';
+let currentFilter       = 'active';
+let currentViewMode     = 'list';
+let sortConfig          = { key: 'due', dir: 'asc' };
+let searchQuery         = '';
+let bulkParsedTasks     = [];
+let memoTimer           = null;
+let pollTimer           = null;
 
 // ══════════════════════════════════════════════════════════
 // 인증
 // ══════════════════════════════════════════════════════════
+onAuthStateChanged(auth, user => {
+    if (user) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        document.getElementById('connection-text').textContent = user.email;
+        initApp();
+    } else {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('app-screen').classList.add('hidden');
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+});
+
 window.loginUser = async function() {
-    const email    = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const errEl    = document.getElementById('login-error');
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errEl    = document.getElementById('auth-error');
     errEl.classList.add('hidden');
     try {
         await signInWithEmailAndPassword(auth, email, password);
-    } catch (e) {
-        errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+    } catch(e) {
+        errEl.textContent = '로그인 실패: ' + e.message;
         errEl.classList.remove('hidden');
     }
 };
 
 window.registerUser = async function() {
-    const email    = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const errEl    = document.getElementById('login-error');
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errEl    = document.getElementById('auth-error');
     errEl.classList.add('hidden');
     if (!email || password.length < 6) {
         errEl.textContent = '이메일과 6자 이상 비밀번호를 입력하세요.';
@@ -771,1353 +744,1389 @@ window.registerUser = async function() {
     }
     try {
         await createUserWithEmailAndPassword(auth, email, password);
-    } catch (e) {
-        errEl.textContent = e.message;
+        showToast('✅ 회원가입 완료! 자동 로그인됩니다.');
+    } catch(e) {
+        errEl.textContent = '회원가입 실패: ' + e.message;
         errEl.classList.remove('hidden');
     }
 };
 
 window.logoutUser = async function() {
+    if (!confirm('로그아웃 하시겠습니까?')) return;
     await signOut(auth);
 };
 
 // ══════════════════════════════════════════════════════════
-// 고객사
+// 앱 초기화
 // ══════════════════════════════════════════════════════════
-async function ensureClients() {
-    const snap = await getDocs(collection(db, 'clients'));
-    if (snap.empty) {
-        for (const [id, name] of Object.entries(CLIENT_MAP)) {
-            await setDoc(doc(db, 'clients', id), { name, order: 0 });
-        }
-    }
-    await renderClientNav();
-    await renderClientSettings();
-    await populateClientSelects();
-}
+async function initApp() {
+    const today = new Date();
+    document.getElementById('today-date').textContent =
+        today.toLocaleDateString('ko-KR', {
+            year:'numeric', month:'long', day:'numeric', weekday:'short'
+        });
 
-async function getClients() {
-    const snap = await getDocs(collection(db, 'clients'));
-    const list = [];
-    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-    list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    return list;
-}
+    const todayStr = today.toISOString().split('T')[0];
+    document.getElementById('report-month').value = todayStr.slice(0, 7);
+    document.getElementById('daily-date').value   = todayStr;
 
-async function renderClientNav() {
-    const clients = await getClients();
-    const nav     = document.getElementById('client-nav');
-    nav.innerHTML = `
-        <button onclick="filterByClient('all')"
-            class="client-btn flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition
-                   ${activeClient === 'all' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}">
-            전체
-        </button>
-        ${clients.map(c => `
-        <button onclick="filterByClient('${c.id}')"
-            class="client-btn flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition
-                   ${activeClient === c.id ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}">
-            ${c.name}
-        </button>`).join('')}
-    `;
-}
+    loadMemo();
+    document.getElementById('search-input').addEventListener('input', e => {
+        searchQuery = e.target.value.toLowerCase();
+        renderTasks();
+    });
 
-async function renderClientSettings() {
-    const clients = await getClients();
-    const el      = document.getElementById('client-settings-list');
-    if (!el) return;
-    el.innerHTML  = clients.map(c => `
-        <div class="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-xl border border-slate-200">
-            <div>
-                <span class="text-sm font-semibold text-slate-700">${c.name}</span>
-                <span class="text-xs text-slate-400 ml-2">${c.id}</span>
-            </div>
-            <button onclick="deleteClient('${c.id}')"
-                class="text-red-400 hover:text-red-600 transition">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-        </div>
-    `).join('');
+    await loadAllData();
+    pollTimer = setInterval(loadAllData, 30000);
     lucide.createIcons();
 }
-
-async function populateClientSelects() {
-    const clients = await getClients();
-    const options = clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    ['task-client', 'bulk-client', 'report-client'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const extra = id === 'report-client' ? '<option value="all">전체</option>' : '';
-        el.innerHTML = extra + options;
-    });
-}
-
-window.filterByClient = async function(clientId) {
-    activeClient = clientId;
-    await renderClientNav();
-    renderHub();
-};
-
-window.addClient = async function() {
-    const id   = document.getElementById('new-client-id').value.trim();
-    const name = document.getElementById('new-client-name').value.trim();
-    if (!id || !name) return showToast('ID와 고객사명을 모두 입력하세요.', 'error');
-    try {
-        await setDoc(doc(db, 'clients', id), { name, order: Date.now() });
-        document.getElementById('new-client-id').value  = '';
-        document.getElementById('new-client-name').value= '';
-        await ensureClients();
-        showToast('고객사가 추가되었습니다.');
-    } catch (e) {
-        showToast('추가 실패: ' + e.message, 'error');
-    }
-};
-
-window.deleteClient = async function(id) {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
-    await deleteDoc(doc(db, 'clients', id));
-    await ensureClients();
-    showToast('고객사가 삭제되었습니다.');
-};
 
 // ══════════════════════════════════════════════════════════
 // 데이터 로드
 // ══════════════════════════════════════════════════════════
 async function loadAllData() {
-    const uid = currentUser.uid;
-
-    // Tasks
     try {
-        const snap = await getDocs(query(collection(db, 'users', uid, 'tasks'), orderBy('createdAt', 'desc')));
-        allTasks   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch { allTasks = []; }
+        const res  = await fnGetAllData();
+        const data = res.data;
 
-    // Inbox
-    try {
-        const snap = await getDocs(query(collection(db, 'users', uid, 'inbox'), orderBy('receivedAt', 'desc')));
-        allInbox   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch { allInbox = []; }
+        tasks      = data.tasks    || [];
+        clients    = data.clients  || [];
+        events     = data.events   || [];
+        routines   = data.routines || [];
+        inboxMails = data.inbox    || [];
 
-    // Routines
-    try {
-        const snap  = await getDocs(collection(db, 'users', uid, 'routines'));
-        allRoutines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch { allRoutines = []; }
-
-    // Events
-    try {
-        const snap = await getDocs(query(collection(db, 'users', uid, 'events'), orderBy('date', 'asc')));
-        allEvents  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch { allEvents = []; }
-
-    // Memo
-    try {
-        const memoDoc = await getDoc(doc(db, 'users', uid, 'meta', 'memo'));
-        if (memoDoc.exists()) {
-            document.getElementById('quick-memo').value = memoDoc.data().content || '';
+        const memoEl = document.getElementById('quick-memo');
+        if (memoEl && data.memo && !memoEl.dataset.editing) {
+            memoEl.value = data.memo;
         }
-    } catch {}
-}
 
-// ══════════════════════════════════════════════════════════
-// 렌더링 허브
-// ══════════════════════════════════════════════════════════
-function renderHub() {
-    renderStats();
-    renderTaskList();
-    renderInboxList();
-    renderRoutineList();
-    renderEventList();
-}
-
-// ══════════════════════════════════════════════════════════
-// 탭 전환
-// ══════════════════════════════════════════════════════════
-window.switchTab = function(tab) {
-    document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.tab-btn').forEach(el => {
-        el.classList.remove('border-indigo-600', 'text-indigo-600');
-        el.classList.add('border-transparent', 'text-slate-500');
-    });
-    document.getElementById('pane-' + tab).classList.remove('hidden');
-    const btn = document.getElementById('tab-' + tab);
-    if (btn) {
-        btn.classList.remove('border-transparent', 'text-slate-500');
-        btn.classList.add('border-indigo-600', 'text-indigo-600');
+        renderAll();
+        setConnectionStatus(true);
+    } catch(e) {
+        showToast('데이터 로드 실패: ' + e.message, 'error');
+        setConnectionStatus(false);
     }
+}
+
+// ══════════════════════════════════════════════════════════
+// 전체 렌더링
+// ══════════════════════════════════════════════════════════
+function renderAll() {
+    renderClientNav();
+    renderClientSettings();
+    populateClientSelects();
+    renderTasks();
+    renderStats();
+    renderEvents();
+    renderRoutines();
+    renderInboxList();
+    lucide.createIcons();
+}
+
+// ══════════════════════════════════════════════════════════
+// 고객사 네비 / 설정
+// ══════════════════════════════════════════════════════════
+function renderClientNav() {
+    const nav = document.getElementById('client-nav');
+    nav.innerHTML =
+        `<button onclick="filterByClient('all')"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
+            ${currentClientFilter === 'all'
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-slate-600 hover:bg-slate-100'}"
+            data-client="all">🏠 전체 현황</button>` +
+        clients.map(c => `
+        <button onclick="filterByClient('${c.id}')"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
+            ${currentClientFilter === c.id
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-slate-600 hover:bg-slate-100'}"
+            data-client="${c.id}">${c.emoji || '🏢'} ${c.name}</button>`).join('');
+}
+
+function renderClientSettings() {
+    const container = document.getElementById('client-settings-list');
+    container.innerHTML = clients.map(c => `
+        <div class="flex items-center justify-between bg-slate-50 rounded px-2 py-1
+                    text-xs text-slate-600 border border-slate-100">
+            <span>${c.emoji || '🏢'} ${c.name}</span>
+            <button onclick="deleteClient('${c.id}')"
+                class="text-red-400 hover:text-red-600 ml-2">
+                <i data-lucide="trash-2" class="w-3 h-3"></i>
+            </button>
+        </div>`).join('');
+    lucide.createIcons();
+}
+
+function populateClientSelects() {
+    // 업무·루틴·이벤트 모달용
+    ['modal-client', 'routine-client', 'event-client-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const prev = el.value;
+        el.innerHTML = (id === 'event-client-input'
+            ? '<option value="">고객사 선택 안함</option>'
+            : '') +
+            clients.map(c =>
+                `<option value="${c.id}">${c.emoji || '🏢'} ${c.name}</option>`
+            ).join('');
+        if (prev) el.value = prev;
+    });
+
+    // 리포트·데일리 모달용
+    ['report-client', 'daily-client'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const prev = el.value;
+        el.innerHTML = '<option value="all">전체 고객사</option>' +
+            clients.map(c =>
+                `<option value="${c.id}">${c.emoji || '🏢'} ${c.name}</option>`
+            ).join('');
+        if (prev) el.value = prev;
+    });
+}
+
+// ── 고객사 필터 ──────────────────────────────────────────
+window.filterByClient = function(clientId) {
+    currentClientFilter = clientId;
+    const headerTitle = document.getElementById('header-title');
+    const headerDesc  = document.getElementById('header-desc');
+    if (clientId === 'all') {
+        headerTitle.textContent = '전체 현황 대시보드';
+        headerDesc.textContent  = '모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.';
+    } else {
+        const c = clients.find(x => x.id === clientId);
+        headerTitle.textContent = `${c?.emoji || '🏢'} ${c?.name || clientId}`;
+        headerDesc.textContent  = `${c?.name || clientId} 전담 업무 현황입니다.`;
+    }
+    renderClientNav();
+    renderTasks();
+    renderStats();
+    lucide.createIcons();
+};
+
+// ── 고객사 추가 / 삭제 ───────────────────────────────────
+window.addClient = async function() {
+    const name = document.getElementById('new-client-name').value.trim();
+    const id   = document.getElementById('new-client-id').value.trim();
+    if (!name || !id) { showToast('고객사명과 ID를 모두 입력하세요.', 'error'); return; }
+    if (clients.find(c => c.id === id)) { showToast('이미 존재하는 ID입니다.', 'error'); return; }
+    try {
+        await fnSaveClient({ id, name, emoji: '🏢' });
+        document.getElementById('new-client-name').value = '';
+        document.getElementById('new-client-id').value   = '';
+        showToast(`✅ ${name} 추가 완료!`);
+        await loadAllData();
+    } catch(e) { showToast('추가 실패: ' + e.message, 'error'); }
+};
+
+window.deleteClient = async function(id) {
+    const c = clients.find(x => x.id === id);
+    if (!confirm(`'${c?.name || id}' 고객사를 삭제하시겠습니까?\n관련 업무 데이터는 유지됩니다.`)) return;
+    try {
+        await fnDeleteClient({ id });
+        showToast('🗑️ 고객사 삭제 완료');
+        await loadAllData();
+    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
 };
 
 // ══════════════════════════════════════════════════════════
 // 통계
 // ══════════════════════════════════════════════════════════
 function renderStats() {
-    const today   = new Date();
-    const in7days = new Date(today); in7days.setDate(today.getDate() + 7);
+    const base   = currentClientFilter === 'all'
+        ? tasks
+        : tasks.filter(t => t.clientId === currentClientFilter);
+    const active = base.filter(t => t.status !== 'done');
+    const done   = base.filter(t => t.status === 'done');
+    const d7     = new Date(); d7.setDate(d7.getDate() + 7);
+    const urgent = active.filter(t => t.due && new Date(t.due) <= d7);
 
-    const total   = allTasks.length;
-    const done    = allTasks.filter(t => t.status === 'done').length;
-    const ongoing = allTasks.filter(t => t.status !== 'done').length;
-    const urgent  = allTasks.filter(t => {
-        if (t.status === 'done' || !t.dueDate) return false;
-        const due = new Date(t.dueDate);
-        return due >= today && due <= in7days;
-    }).length;
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
-    document.getElementById('stat-total').textContent   = total;
-    document.getElementById('stat-done').textContent    = done;
-    document.getElementById('stat-ongoing').textContent = ongoing;
-    document.getElementById('stat-urgent').textContent  = urgent;
-    document.getElementById('stat-pct').textContent     = pct + '%';
-    document.getElementById('stat-bar').style.width     = pct + '%';
-
-    // 마감 임박 목록
-    const urgentTasks = allTasks
-        .filter(t => {
-            if (t.status === 'done' || !t.dueDate) return false;
-            const due = new Date(t.dueDate);
-            return due >= today && due <= in7days;
-        })
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-        .slice(0, 5);
-
-    const urgentEl = document.getElementById('urgent-list');
-    if (urgentTasks.length === 0) {
-        urgentEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">마감 임박 업무가 없습니다.</p>`;
-    } else {
-        urgentEl.innerHTML = urgentTasks.map(t => {
-            const days = Math.ceil((new Date(t.dueDate) - today) / 86400000);
-            const clientName = CLIENT_MAP[t.clientId] || t.clientId || '';
-            return `
-            <div class="flex items-center justify-between py-2 px-3 bg-red-50 rounded-lg border border-red-100">
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold text-slate-700 truncate">${t.title}</p>
-                    <p class="text-xs text-slate-400">${clientName}</p>
-                </div>
-                <span class="text-xs font-bold text-red-500 ml-2 flex-shrink-0">D-${days}</span>
-            </div>`;
-        }).join('');
-    }
+    document.getElementById('stat-active').textContent = active.length;
+    document.getElementById('stat-done').textContent   = done.length;
+    document.getElementById('stat-urgent').textContent = urgent.length;
 }
 
 // ══════════════════════════════════════════════════════════
-// Tasks 필터 / 정렬 / 뷰모드
+// 업무 렌더링
 // ══════════════════════════════════════════════════════════
-window.setFilter = function(val) {
-    currentFilter = val;
-    renderTaskList();
-};
-
-window.sortBy = function(val) {
-    currentSort = val;
-    renderTaskList();
-};
-
-window.setViewMode = function(mode) {
-    currentView = mode;
-    document.getElementById('task-list').classList.toggle('hidden',   mode !== 'list');
-    document.getElementById('kanban-view').classList.toggle('hidden', mode !== 'kanban');
-    document.getElementById('view-list').className   =
-        mode === 'list'   ? 'px-3 py-2 text-sm bg-indigo-600 text-white'
-                          : 'px-3 py-2 text-sm bg-white text-slate-500 hover:bg-slate-50';
-    document.getElementById('view-kanban').className =
-        mode === 'kanban' ? 'px-3 py-2 text-sm bg-indigo-600 text-white'
-                          : 'px-3 py-2 text-sm bg-white text-slate-500 hover:bg-slate-50';
-    renderTaskList();
-};
-
-function getFilteredSortedTasks() {
-    const today   = new Date();
-    const in7days = new Date(today); in7days.setDate(today.getDate() + 7);
-    const search  = (document.getElementById('search-input')?.value || '').toLowerCase();
-
-    let list = allTasks.filter(t => {
-        if (activeClient !== 'all' && t.clientId !== activeClient) return false;
-        if (search && !t.title.toLowerCase().includes(search)) return false;
-        if (currentFilter === 'ongoing') return t.status !== 'done';
-        if (currentFilter === 'done')    return t.status === 'done';
-        if (currentFilter === 'urgent') {
-            if (t.status === 'done' || !t.dueDate) return false;
-            const due = new Date(t.dueDate);
-            return due >= today && due <= in7days;
+function getFilteredTasks() {
+    let filtered = tasks.filter(t => {
+        if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return false;
+        if (currentFilter === 'active' && t.status === 'done')  return false;
+        if (currentFilter === 'done'   && t.status !== 'done')  return false;
+        if (searchQuery) {
+            const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '')).toLowerCase();
+            if (!hay.includes(searchQuery)) return false;
         }
         return true;
     });
 
-    list.sort((a, b) => {
-        if (currentSort === 'due') {
-            if (!a.dueDate) return 1; if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
+    filtered.sort((a, b) => {
+        let va = a[sortConfig.key] || '';
+        let vb = b[sortConfig.key] || '';
+        const pOrder = { High: 0, Medium: 1, Low: 2 };
+        if (sortConfig.key === 'priority') {
+            va = pOrder[va] ?? 1;
+            vb = pOrder[vb] ?? 1;
         }
-        if (currentSort === 'priority') {
-            const p = { high: 0, mid: 1, low: 2 };
-            return (p[a.priority] ?? 1) - (p[b.priority] ?? 1);
-        }
-        if (currentSort === 'client') {
-            return (a.clientId || '').localeCompare(b.clientId || '');
-        }
-        if (currentSort === 'created') {
-            const ta = a.createdAt?.toMillis?.() ?? 0;
-            const tb = b.createdAt?.toMillis?.() ?? 0;
-            return tb - ta;
-        }
+        if (va < vb) return sortConfig.dir === 'asc' ? -1 :  1;
+        if (va > vb) return sortConfig.dir === 'asc' ?  1 : -1;
         return 0;
     });
-    return list;
+    return filtered;
 }
 
-// ══════════════════════════════════════════════════════════
-// Tasks 렌더링 (리스트 + 칸반)
-// ══════════════════════════════════════════════════════════
-function renderTaskList() {
-    const tasks = getFilteredSortedTasks();
+function renderTasks() {
+    const filtered = getFilteredTasks();
+    if (currentViewMode === 'list') renderListView(filtered);
+    else                            renderKanbanView(filtered);
+}
 
-    if (currentView === 'list') {
-        const el = document.getElementById('task-list');
-        if (tasks.length === 0) {
-            el.innerHTML = `<div class="text-center py-16 text-slate-400">
-                <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
-                <p class="text-sm">등록된 업무가 없습니다.</p>
-            </div>`;
-            lucide.createIcons(); return;
-        }
-        el.innerHTML = tasks.map(t => taskCard(t)).join('');
+// ── 리스트 뷰 ────────────────────────────────────────────
+function renderListView(filtered) {
+    const tbody = document.getElementById('task-table-body');
+    if (!filtered.length) {
+        tbody.innerHTML = `
+            <tr><td colspan="7" class="px-6 py-12 text-center text-slate-400 text-sm">
+                <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+                <p>표시할 업무가 없습니다.</p>
+            </td></tr>`;
         lucide.createIcons();
-    } else {
-        renderKanban(tasks);
+        return;
     }
-}
-
-function taskCard(t) {
-    const clientName = CLIENT_MAP[t.clientId] || t.clientId || '미지정';
-    const priorityMap = { high: ['bg-red-100 text-red-700',   '높음'],
-                          mid:  ['bg-yellow-100 text-yellow-700', '보통'],
-                          low:  ['bg-slate-100 text-slate-500',   '낮음'] };
-    const [priCls, priLabel] = priorityMap[t.priority] || priorityMap.mid;
-    const statusMap = { ongoing: ['bg-blue-100 text-blue-700', '진행 중'],
-                        done:    ['bg-green-100 text-green-700', '완료'],
-                        hold:    ['bg-orange-100 text-orange-700', '보류'] };
-    const [stCls, stLabel]   = statusMap[t.status] || statusMap.ongoing;
-    const today  = new Date();
-    const due    = t.dueDate ? new Date(t.dueDate) : null;
-    const isUrgent = due && t.status !== 'done' && due >= today &&
-                     due <= new Date(today.getTime() + 7 * 86400000);
-    const isDue    = due && t.status !== 'done' && due < today;
-
-    return `
-    <div class="bg-white rounded-xl border ${isDue ? 'border-red-300' : 'border-slate-200'}
-         shadow-sm p-4 hover:shadow-md transition group">
-        <div class="flex items-start justify-between gap-3">
-            <div class="flex items-start gap-3 flex-1 min-w-0">
-                <button onclick="toggleTask('${t.id}')"
-                    class="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full border-2
-                           ${t.status === 'done' ? 'bg-green-500 border-green-500' : 'border-slate-300 hover:border-indigo-400'}
-                           flex items-center justify-center transition">
-                    ${t.status === 'done' ? '<i data-lucide="check" class="w-3 h-3 text-white"></i>' : ''}
+    tbody.innerHTML = filtered.map(t => {
+        const client  = clients.find(c => c.id === t.clientId);
+        const overdue = isOverdue(t.due) && t.status !== 'done';
+        const histCnt = (t.history || []).length;
+        return `
+        <tr class="hover:bg-slate-50 transition-colors
+            ${t.status === 'done' ? 'opacity-60' : ''}
+            ${overdue ? 'bg-red-50' : ''}">
+            <td class="px-6 py-4 text-center">
+                <button onclick="toggleStatus('${t.id}')" title="상태 토글"
+                    class="w-6 h-6 rounded-full border-2 flex items-center justify-center mx-auto transition-colors
+                    ${t.status === 'done'
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : 'border-slate-300 hover:border-green-400 hover:bg-green-50'}">
+                    ${t.status === 'done'
+                        ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
                 </button>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-slate-800 truncate
-                              ${t.status === 'done' ? 'line-through text-slate-400' : ''}">
-                        ${t.title}
-                    </p>
-                    <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
-                            ${clientName}
-                        </span>
-                        <span class="text-xs px-2 py-0.5 rounded-full ${priCls} font-medium">${priLabel}</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full ${stCls} font-medium">${stLabel}</span>
-                        ${isUrgent ? '<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold animate-pulse">마감 임박</span>' : ''}
-                        ${isDue    ? '<span class="text-xs px-2 py-0.5 rounded-full bg-red-200 text-red-700 font-bold">기한 초과</span>' : ''}
-                    </div>
-                    ${t.memo ? `<p class="text-xs text-slate-400 mt-1.5 line-clamp-2">${t.memo}</p>` : ''}
+            </td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 rounded-md text-xs font-semibold"
+                    style="background:${client?.color || '#E2E8F0'}22;
+                           color:${client?.color || '#64748B'}">
+                    ${client?.emoji || '🏢'} ${client?.name || t.clientId}
+                </span>
+            </td>
+            <td class="px-6 py-4">
+                <p class="font-semibold text-slate-800 truncate
+                    ${t.status === 'done' ? 'line-through text-slate-400' : ''}">
+                    ${t.title}
+                </p>
+                ${t.note
+                    ? `<p class="text-xs text-slate-400 truncate mt-0.5">${t.note}</p>`
+                    : ''}
+                ${overdue
+                    ? '<span class="text-xs text-red-500 font-bold">⚠ 기한 초과</span>'
+                    : ''}
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-500">${t.startDate || '-'}</td>
+            <td class="px-6 py-4 text-sm ${overdue ? 'text-red-600 font-bold' : 'text-slate-500'}">
+                ${t.due || '-'}
+            </td>
+            <td class="px-6 py-4">${getPriorityBadge(t.priority)}</td>
+            <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openHistoryModal('${t.id}')" title="이력"
+                        class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative">
+                        <i data-lucide="history" class="w-4 h-4"></i>
+                        ${histCnt > 0
+                            ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white
+                                text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                                ${histCnt}</span>`
+                            : ''}
+                    </button>
+                    <button onclick="openEditTaskModal('${t.id}')" title="수정"
+                        class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="deleteTask('${t.id}')" title="삭제"
+                        class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
                 </div>
-            </div>
-            <div class="flex items-center gap-1 flex-shrink-0">
-                <span class="text-xs text-slate-400 mr-1">
-                    ${t.dueDate ? formatDate(t.dueDate) : '마감일 없음'}
-                </span>
-                <button onclick="openEditTaskModal('${t.id}')"
-                    class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-indigo-600 transition rounded-lg hover:bg-indigo-50">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="deleteTask('${t.id}')"
-                    class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition rounded-lg hover:bg-red-50">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
-            </div>
-        </div>
-    </div>`;
-}
-
-function renderKanban(tasks) {
-    const cols = {
-        ongoing: { label: '진행 중', color: 'bg-blue-500',   tasks: [] },
-        hold:    { label: '보류',    color: 'bg-orange-400', tasks: [] },
-        done:    { label: '완료',    color: 'bg-green-500',  tasks: [] },
-    };
-    tasks.forEach(t => {
-        const col = cols[t.status] || cols.ongoing;
-        col.tasks.push(t);
-    });
-
-    const el = document.getElementById('kanban-view');
-    el.innerHTML = Object.entries(cols).map(([key, col]) => `
-        <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
-            <div class="flex items-center gap-2 mb-4">
-                <div class="w-2.5 h-2.5 rounded-full ${col.color}"></div>
-                <h3 class="font-bold text-slate-700 text-sm">${col.label}</h3>
-                <span class="ml-auto text-xs font-semibold text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                    ${col.tasks.length}
-                </span>
-            </div>
-            <div class="kanban-col space-y-2">
-                ${col.tasks.length === 0
-                    ? `<p class="text-xs text-slate-400 text-center py-4">없음</p>`
-                    : col.tasks.map(t => {
-                        const clientName = CLIENT_MAP[t.clientId] || t.clientId || '';
-                        return `
-                        <div class="bg-white rounded-lg border border-slate-200 p-3 shadow-sm hover:shadow transition">
-                            <p class="text-xs font-semibold text-slate-700 mb-1 line-clamp-2">${t.title}</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-indigo-500 font-medium">${clientName}</span>
-                                <span class="text-xs text-slate-400">${t.dueDate ? formatDate(t.dueDate) : ''}</span>
-                            </div>
-                            <div class="flex gap-1 mt-2">
-                                <button onclick="openEditTaskModal('${t.id}')"
-                                    class="text-xs text-slate-400 hover:text-indigo-600 transition">
-                                    <i data-lucide="pencil" class="w-3 h-3"></i>
-                                </button>
-                                <button onclick="deleteTask('${t.id}')"
-                                    class="text-xs text-slate-400 hover:text-red-500 transition">
-                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
-                                </button>
-                            </div>
-                        </div>`;
-                    }).join('')
-                }
-            </div>
-        </div>
-    `).join('');
+            </td>
+        </tr>`;
+    }).join('');
     lucide.createIcons();
 }
 
+// ── 칸반 뷰 ─────────────────────────────────────────────
+function renderKanbanView(filtered) {
+    const todoCol = document.getElementById('kanban-todo-col');
+    const doneCol = document.getElementById('kanban-done-col');
+    const todo    = filtered.filter(t => t.status !== 'done');
+    const done    = filtered.filter(t => t.status === 'done');
+
+    document.getElementById('kanban-todo-count').textContent = todo.length;
+    document.getElementById('kanban-done-count').textContent = done.length;
+
+    const makeCard = t => {
+        const client  = clients.find(c => c.id === t.clientId);
+        const overdue = isOverdue(t.due) && t.status !== 'done';
+        return `
+        <div class="bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-slate-200'}
+                    p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2">
+                <span class="px-2 py-0.5 rounded text-xs font-semibold"
+                    style="background:${client?.color || '#E2E8F0'}22;
+                           color:${client?.color || '#64748B'}">
+                    ${client?.emoji || '🏢'} ${client?.name || t.clientId}
+                </span>
+                ${getPriorityBadge(t.priority)}
+            </div>
+            <p class="font-semibold text-slate-800 text-sm mb-1
+                ${t.status === 'done' ? 'line-through text-slate-400' : ''}">
+                ${t.title}
+            </p>
+            ${t.note
+                ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2">${t.note}</p>`
+                : ''}
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">
+                    📅 ${t.due || '기한 없음'} ${overdue ? '⚠ 초과' : ''}
+                </span>
+                <div class="flex gap-1">
+                    <button onclick="toggleStatus('${t.id}')"
+                        class="p-1 text-slate-400 hover:text-green-600 rounded transition-colors">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="openHistoryModal('${t.id}')"
+                        class="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors">
+                        <i data-lucide="history" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="openEditTaskModal('${t.id}')"
+                        class="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="deleteTask('${t.id}')"
+                        class="p-1 text-slate-400 hover:text-red-600 rounded transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    };
+
+    todoCol.innerHTML = todo.length
+        ? todo.map(makeCard).join('')
+        : '<p class="text-xs text-slate-400 text-center py-8">진행 중인 업무가 없습니다.</p>';
+    doneCol.innerHTML = done.length
+        ? done.map(makeCard).join('')
+        : '<p class="text-xs text-slate-400 text-center py-8">완료된 업무가 없습니다.</p>';
+    lucide.createIcons();
+}
+
+// ── 뷰 모드 / 필터 / 정렬 ───────────────────────────────
+window.setViewMode = function(mode) {
+    currentViewMode = mode;
+    document.getElementById('view-list-container').classList.toggle('hidden',   mode !== 'list');
+    document.getElementById('view-kanban-container').classList.toggle('hidden', mode !== 'kanban');
+    const btnList   = document.getElementById('btn-view-list');
+    const btnKanban = document.getElementById('btn-view-kanban');
+    const baseClass = 'px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1';
+    btnList.className   = baseClass + (mode === 'list'
+        ? ' bg-slate-100 text-slate-800'
+        : ' text-slate-500 hover:bg-slate-50 hover:text-slate-700');
+    btnKanban.className = baseClass + (mode === 'kanban'
+        ? ' bg-slate-100 text-slate-800'
+        : ' text-slate-500 hover:bg-slate-50 hover:text-slate-700');
+    renderTasks();
+    lucide.createIcons();
+};
+
+window.setFilter = function(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === f;
+        btn.className = `filter-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+            ${active ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`;
+    });
+    renderTasks();
+};
+
+window.sortBy = function(key) {
+    sortConfig = (sortConfig.key === key)
+        ? { key, dir: sortConfig.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: 'asc' };
+    renderTasks();
+};
+
 // ══════════════════════════════════════════════════════════
-// 업무 CRUD
+// 업무 상태 토글
 // ══════════════════════════════════════════════════════════
-window.openAddTaskModal = async function() {
-    document.getElementById('task-modal-title').textContent = '업무 추가';
-    document.getElementById('task-edit-id').value  = '';
-    document.getElementById('task-title').value    = '';
-    document.getElementById('task-start').value    = '';
-    document.getElementById('task-due').value      = '';
-    document.getElementById('task-priority').value = 'mid';
-    document.getElementById('task-status').value   = 'ongoing';
-    document.getElementById('task-memo').value     = '';
-    await populateClientSelects();
+window.toggleStatus = async function(id) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const newSt = t.status === 'done' ? 'active' : 'done';
+    try {
+        await fnUpdateStatus({ id, status: newSt });
+        t.status = newSt;
+        renderTasks();
+        renderStats();
+        lucide.createIcons();
+    } catch(e) { showToast('상태 변경 실패: ' + e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════════════════
+// 업무 모달
+// ══════════════════════════════════════════════════════════
+window.openAddTaskModal = function() {
+    document.getElementById('task-modal-title').textContent  = '새 업무 추가';
+    document.getElementById('modal-task-id').value           = '';
+    document.getElementById('modal-title').value             = '';
+    document.getElementById('modal-note').value              = '';
+    document.getElementById('modal-ref-doc').value           = '';
+    document.getElementById('modal-due').value               = '';
+    document.getElementById('modal-start-date').value        = '';
+    document.getElementById('modal-priority').value          = 'Medium';
+    const mc = document.getElementById('modal-client');
+    if (currentClientFilter !== 'all') mc.value = currentClientFilter;
     openModal('task-modal');
 };
 
-window.openEditTaskModal = async function(id) {
-    const t = allTasks.find(x => x.id === id);
+window.openEditTaskModal = function(id) {
+    const t = tasks.find(x => x.id === id);
     if (!t) return;
-    document.getElementById('task-modal-title').textContent = '업무 수정';
-    document.getElementById('task-edit-id').value  = id;
-    document.getElementById('task-title').value    = t.title || '';
-    document.getElementById('task-start').value    = t.startDate || '';
-    document.getElementById('task-due').value      = t.dueDate || '';
-    document.getElementById('task-priority').value = t.priority || 'mid';
-    document.getElementById('task-status').value   = t.status || 'ongoing';
-    document.getElementById('task-memo').value     = t.memo || '';
-    await populateClientSelects();
-    document.getElementById('task-client').value   = t.clientId || '';
+    document.getElementById('task-modal-title').textContent  = '업무 수정';
+    document.getElementById('modal-task-id').value           = t.id;
+    document.getElementById('modal-title').value             = t.title     || '';
+    document.getElementById('modal-note').value              = t.note      || '';
+    document.getElementById('modal-ref-doc').value           = t.refDoc    || '';
+    document.getElementById('modal-due').value               = t.due       || '';
+    document.getElementById('modal-start-date').value        = t.startDate || '';
+    document.getElementById('modal-priority').value          = t.priority  || 'Medium';
+    document.getElementById('modal-client').value            = t.clientId  || '';
     openModal('task-modal');
 };
 
 window.saveTask = async function() {
-    const uid      = currentUser.uid;
-    const id       = document.getElementById('task-edit-id').value;
-    const title    = document.getElementById('task-title').value.trim();
-    const clientId = document.getElementById('task-client').value;
-    const startDate= document.getElementById('task-start').value;
-    const dueDate  = document.getElementById('task-due').value;
-    const priority = document.getElementById('task-priority').value;
-    const status   = document.getElementById('task-status').value;
-    const memo     = document.getElementById('task-memo').value.trim();
+    const id       = document.getElementById('modal-task-id').value;
+    const title    = document.getElementById('modal-title').value.trim();
+    if (!title) { showToast('업무명을 입력하세요.', 'error'); return; }
 
-    if (!title) return showToast('업무명을 입력하세요.', 'error');
+    const clientId   = document.getElementById('modal-client').value;
+    const clientName = clients.find(c => c.id === clientId)?.name || '';
 
-    const data = { title, clientId, startDate, dueDate, priority, status, memo };
-
+    const payload = {
+        id:        id || undefined,
+        clientId,
+        clientName,
+        title,
+        note:      document.getElementById('modal-note').value.trim(),
+        refDoc:    document.getElementById('modal-ref-doc').value.trim(),
+        due:       document.getElementById('modal-due').value,
+        startDate: document.getElementById('modal-start-date').value,
+        priority:  document.getElementById('modal-priority').value,
+        status:    'active'
+    };
+    const btn = document.getElementById('modal-save-btn');
+    btn.disabled = true; btn.textContent = '저장 중...';
     try {
-        if (id) {
-            await updateDoc(doc(db, 'users', uid, 'tasks', id), data);
-            showToast('업무가 수정되었습니다.');
-        } else {
-            await addDoc(collection(db, 'users', uid, 'tasks'), {
-                ...data, createdAt: serverTimestamp()
-            });
-            showToast('업무가 추가되었습니다.');
-        }
+        await fnSaveTask(payload);
         closeModal('task-modal');
+        showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!');
         await loadAllData();
-        renderHub();
-    } catch (e) {
+    } catch(e) {
         showToast('저장 실패: ' + e.message, 'error');
-    }
-};
-
-window.toggleTask = async function(id) {
-    const uid  = currentUser.uid;
-    const task = allTasks.find(t => t.id === id);
-    if (!task) return;
-    const newStatus = task.status === 'done' ? 'ongoing' : 'done';
-    try {
-        await updateDoc(doc(db, 'users', uid, 'tasks', id), { status: newStatus });
-        await loadAllData();
-        renderHub();
-    } catch (e) {
-        showToast('상태 변경 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = '저장하기';
     }
 };
 
 window.deleteTask = async function(id) {
-    if (!confirm('업무를 삭제하시겠습니까?')) return;
-    const uid = currentUser.uid;
+    if (!confirm('이 업무를 삭제하시겠습니까?')) return;
     try {
-        await deleteDoc(doc(db, 'users', uid, 'tasks', id));
-        showToast('업무가 삭제되었습니다.');
+        await fnDeleteTask({ id });
+        showToast('🗑️ 업무 삭제 완료');
         await loadAllData();
-        renderHub();
-    } catch (e) {
-        showToast('삭제 실패: ' + e.message, 'error');
-    }
+    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
 };
 
 // ══════════════════════════════════════════════════════════
-// Inbox 렌더링
+// 이력 모달
 // ══════════════════════════════════════════════════════════
-function renderInboxList() {
-    const el = document.getElementById('inbox-list');
-    if (!el) return;
+window.openHistoryModal = function(taskId) {
+    const t = tasks.find(x => x.id === taskId);
+    if (!t) return;
+    document.getElementById('history-target-task-id').value  = taskId;
+    document.getElementById('history-task-title').textContent = t.title;
+    renderHistoryList(t.history || []);
+    openModal('history-modal');
+};
 
-    const pending  = allInbox.filter(m => m.parseStatus === 'pending');
-    const analyzed = allInbox.filter(m => m.parseStatus === 'analyzed');
-    const rejected = allInbox.filter(m => m.parseStatus === 'rejected');
-
-    if (allInbox.length === 0) {
-        el.innerHTML = `
-        <div class="text-center py-20 text-slate-400">
-            <i data-lucide="mail-open" class="w-12 h-12 mx-auto mb-4 opacity-30"></i>
-            <p class="text-sm font-semibold">수집된 메일이 없습니다.</p>
-            <p class="text-xs mt-1">Gmail 동기화 버튼을 눌러 메일을 가져오세요.</p>
-        </div>`;
-        lucide.createIcons();
+function renderHistoryList(history) {
+    const container = document.getElementById('history-list-container');
+    if (!history.length) {
+        container.innerHTML =
+            '<p class="text-sm text-slate-400 text-center py-8">아직 기록된 이력이 없습니다.</p>';
         return;
     }
+    container.innerHTML = [...history].reverse().map(h => `
+        <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
+            <div class="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-100">
+                <p class="text-sm text-slate-700">${h.text}</p>
+                <p class="text-xs text-slate-400 mt-1">${formatDate(h.createdAt)}</p>
+            </div>
+        </div>`).join('');
+}
 
-    const renderSection = (title, icon, items, colorClass) => {
-        if (items.length === 0) return '';
+window.addHistory = async function() {
+    const taskId = document.getElementById('history-target-task-id').value;
+    const text   = document.getElementById('history-input-text').value.trim();
+    if (!text) return;
+    const t = tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const history = [...(t.history || []), { text, createdAt: new Date().toISOString() }];
+    try {
+        await fnSaveTask({ ...t, history });
+        t.history = history;
+        document.getElementById('history-input-text').value = '';
+        renderHistoryList(history);
+        showToast('✅ 이력 추가 완료!');
+    } catch(e) { showToast('이력 추가 실패: ' + e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════════════════
+// 이벤트 (사이드바 일정)
+// ══════════════════════════════════════════════════════════
+function renderEvents() {
+    const container = document.getElementById('event-list');
+    const today     = new Date(); today.setHours(0,0,0,0);
+    const upcoming  = events
+        .filter(e => new Date(e.date) >= today)
+        .sort((a,b) => a.date.localeCompare(b.date))
+        .slice(0, 5);
+
+    if (!upcoming.length) {
+        container.innerHTML =
+            '<p class="text-xs text-slate-400 px-2">예정된 일정이 없습니다.</p>';
+        return;
+    }
+    container.innerHTML = upcoming.map(e => {
+        const d     = new Date(e.date);
+        const diff  = Math.round((d - today) / 86400000);
+        const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
+        const color = diff === 0
+            ? 'bg-red-100 text-red-700'
+            : diff <= 3
+                ? 'bg-orange-100 text-orange-700'
+                : 'bg-blue-50 text-blue-700';
         return `
-        <div class="mb-6">
-            <div class="flex items-center gap-2 mb-3">
-                <i data-lucide="${icon}" class="w-4 h-4 ${colorClass}"></i>
-                <h3 class="font-bold text-slate-700 text-sm">${title}</h3>
-                <span class="text-xs font-semibold ${colorClass} bg-slate-100 px-2 py-0.5 rounded-full">
-                    ${items.length}
-                </span>
+        <div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group">
+            <span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">
+                ${label}
+            </span>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-slate-700 truncate">${e.title}</p>
+                <p class="text-xs text-slate-400">${e.date}</p>
             </div>
-            <div class="space-y-4">
-                ${items.map(m => inboxCard(m)).join('')}
-            </div>
+            <button onclick="deleteEvent('${e.id}')"
+                class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0">
+                <i data-lucide="x" class="w-3 h-3"></i>
+            </button>
         </div>`;
-    };
-
-    el.innerHTML =
-        renderSection('AI 분석 완료 — 승인 대기', 'cpu', analyzed, 'text-indigo-500') +
-        renderSection('수집됨 — 분석 대기', 'clock', pending, 'text-amber-500') +
-        renderSection('거절됨', 'x-circle', rejected, 'text-slate-400');
-
-    lucide.createIcons();
-}
-
-function inboxCard(m) {
-    const isAnalyzed = m.parseStatus === 'analyzed';
-    const isRejected = m.parseStatus === 'rejected';
-    const tasks      = m.extractedTasks || [];
-    const receivedAt = m.receivedAt?.toDate?.() || (m.receivedAt ? new Date(m.receivedAt) : null);
-    const timeStr    = receivedAt
-        ? receivedAt.toLocaleDateString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
-        : '';
-
-    const cardBorder = isAnalyzed ? 'border-indigo-200 bg-indigo-50/30'
-                     : isRejected ? 'border-slate-200 bg-slate-50 opacity-60'
-                     :              'border-amber-200 bg-amber-50/30';
-
-    return `
-    <div class="rounded-xl border ${cardBorder} shadow-sm p-5 transition hover:shadow-md">
-        <!-- 발신자 & 시간 -->
-        <div class="flex items-start justify-between gap-3 mb-3">
-            <div class="flex items-center gap-2 min-w-0">
-                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-bold text-indigo-600">
-                        ${(m.from || '?').charAt(0).toUpperCase()}
-                    </span>
-                </div>
-                <div class="min-w-0">
-                    <p class="text-xs font-bold text-slate-700 truncate">${m.from || '발신자 없음'}</p>
-                    <p class="text-xs text-slate-400">${timeStr}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-1 flex-shrink-0">
-                ${isAnalyzed ? `
-                    <button onclick="handleApproveInbox('${m.id}', this)"
-                        class="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">
-                        <i data-lucide="check" class="w-3 h-3"></i> 승인
-                    </button>
-                    <button onclick="handleRejectInbox('${m.id}', this)"
-                        class="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition">
-                        <i data-lucide="x" class="w-3 h-3"></i> 거절
-                    </button>
-                ` : isRejected ? `
-                    <span class="text-xs text-slate-400 font-medium px-2 py-1 bg-slate-100 rounded-lg">거절됨</span>
-                ` : `
-                    <span class="text-xs text-amber-600 font-medium px-2 py-1 bg-amber-100 rounded-lg flex items-center gap-1">
-                        <i data-lucide="clock" class="w-3 h-3"></i> 분석 대기
-                    </span>
-                `}
-            </div>
-        </div>
-
-        <!-- 제목 -->
-        <p class="text-sm font-bold text-slate-800 mb-2 truncate">
-            ${m.subject || '(제목 없음)'}
-        </p>
-
-        <!-- 원본 본문 미리보기 -->
-        <div class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
-            <p class="text-xs text-slate-400 font-semibold mb-1">📧 원본 메일</p>
-            <p class="text-xs text-slate-600 line-clamp-3 leading-relaxed whitespace-pre-line">
-                ${m.body || m.snippet || '(본문 없음)'}
-            </p>
-        </div>
-
-        <!-- AI 추출 태스크 -->
-        ${isAnalyzed && tasks.length > 0 ? `
-        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-            <p class="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1">
-                <i data-lucide="sparkles" class="w-3 h-3"></i>
-                AI 추출 업무 (${tasks.length}건) — 승인 시 Tasks로 이동
-            </p>
-            <ul class="space-y-1.5">
-                ${tasks.map((task, i) => `
-                <li class="flex items-start gap-2">
-                    <span class="flex-shrink-0 w-4 h-4 rounded-full bg-indigo-200 text-indigo-700
-                                 text-xs font-bold flex items-center justify-center mt-0.5">${i + 1}</span>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-semibold text-slate-700">${task.title || task}</p>
-                        ${task.dueDate   ? `<p class="text-xs text-slate-400">마감: ${task.dueDate}</p>`       : ''}
-                        ${task.priority  ? `<p class="text-xs text-slate-400">우선순위: ${task.priority}</p>`  : ''}
-                    </div>
-                </li>`).join('')}
-            </ul>
-        </div>`
-        : isAnalyzed && tasks.length === 0 ? `
-        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <p class="text-xs text-slate-400 text-center">AI가 추출한 업무가 없습니다.</p>
-        </div>` : ''}
-    </div>`;
-}
-
-// ══════════════════════════════════════════════════════════
-// Inbox 액션
-// ══════════════════════════════════════════════════════════
-window.handleApproveInbox = async function(inboxId, btn) {
-    btn.disabled  = true;
-    btn.innerHTML = '<span class="loader"></span>';
-    try {
-        await fnApproveInbox({ inboxId });
-        showToast('승인 완료 — Tasks로 이동되었습니다.');
-        await loadAllData();
-        renderHub();
-        renderInboxList();
-    } catch (e) {
-        showToast('승인 실패: ' + e.message, 'error');
-        btn.disabled  = false;
-        btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> 승인';
-        lucide.createIcons();
-    }
-};
-
-window.handleRejectInbox = async function(inboxId, btn) {
-    btn.disabled  = true;
-    btn.innerHTML = '<span class="loader"></span>';
-    try {
-        await fnRejectInbox({ inboxId });
-        showToast('거절 처리되었습니다.');
-        await loadAllData();
-        renderInboxList();
-    } catch (e) {
-        showToast('거절 실패: ' + e.message, 'error');
-        btn.disabled  = false;
-        btn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i> 거절';
-        lucide.createIcons();
-    }
-};
-
-window.handleIngestGmail = async function(btn) {
-    btn.disabled  = true;
-    const orig    = btn.innerHTML;
-    btn.innerHTML = '<span class="loader"></span> 수집 중...';
-    try {
-        const res = await fnIngestGmail({});
-        showToast(`메일 수집 완료 (${res.data?.count ?? 0}건)`);
-        await loadAllData();
-        renderInboxList();
-    } catch (e) {
-        showToast('수집 실패: ' + e.message, 'error');
-    } finally {
-        btn.disabled  = false;
-        btn.innerHTML = orig;
-        lucide.createIcons();
-    }
-};
-
-window.handleAnalyzeMails = async function(btn) {
-    btn.disabled  = true;
-    const orig    = btn.innerHTML;
-    btn.innerHTML = '<span class="loader"></span> 분석 중...';
-    try {
-        const res = await fnAnalyzeMails({});
-        showToast(`AI 분석 완료 (${res.data?.count ?? 0}건)`);
-        await loadAllData();
-        renderInboxList();
-    } catch (e) {
-        showToast('분석 실패: ' + e.message, 'error');
-    } finally {
-        btn.disabled  = false;
-        btn.innerHTML = orig;
-        lucide.createIcons();
-    }
-};
-
-window.syncGmail = async function() {
-    const btn        = document.getElementById('btn-sync-gmail');
-    const progressEl = document.getElementById('sync-progress');
-    const barEl      = document.getElementById('sync-progress-bar');
-    const textEl     = document.getElementById('sync-progress-text');
-    const detailEl   = document.getElementById('sync-progress-detail');
-
-    btn.disabled  = true;
-    btn.innerHTML = '<span class="loader"></span> 동기화 중...';
-    progressEl.classList.remove('hidden');
-
-    const setProgress = (pct, text, detail = '') => {
-        barEl.style.width    = pct + '%';
-        textEl.textContent   = text;
-        detailEl.textContent = detail;
-    };
-
-    try {
-        setProgress(10, '📥 Gmail 메일 수집 중...', '');
-        const ingestRes = await fnIngestGmail({});
-        const ingestCnt = ingestRes.data?.count ?? 0;
-
-        setProgress(50, '🤖 AI 분석 중...', `${ingestCnt}건 수집 완료`);
-        const analyzeRes = await fnAnalyzeMails({});
-        const analyzeCnt = analyzeRes.data?.count ?? 0;
-
-        setProgress(100, '✅ 동기화 완료', `분석 ${analyzeCnt}건`);
-        showToast(`동기화 완료 — 수집 ${ingestCnt}건 / 분석 ${analyzeCnt}건`);
-
-        await loadAllData();
-        renderInboxList();
-
-        setTimeout(() => progressEl.classList.add('hidden'), 3000);
-    } catch (e) {
-        setProgress(100, '❌ 오류 발생', e.message);
-        showToast('동기화 실패: ' + e.message, 'error');
-        setTimeout(() => progressEl.classList.add('hidden'), 4000);
-    } finally {
-        btn.disabled  = false;
-        btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i> Gmail 동기화';
-        lucide.createIcons();
-    }
-};
-
-// ══════════════════════════════════════════════════════════
-// 루틴
-// ══════════════════════════════════════════════════════════
-function renderRoutineList() {
-    const el = document.getElementById('routine-list');
-    if (!el) return;
-
-    if (allRoutines.length === 0) {
-        el.innerHTML = `
-        <div class="text-center py-16 text-slate-400">
-            <i data-lucide="repeat" class="w-10 h-10 mx-auto mb-3 opacity-30"></i>
-            <p class="text-sm">등록된 루틴이 없습니다.</p>
-        </div>`;
-        lucide.createIcons();
-        return;
-    }
-
-    const cycleLabel = { daily: '매일', weekly: '매주', monthly: '매월' };
-
-    el.innerHTML = allRoutines.map(r => `
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4 group hover:shadow-md transition">
-        <button onclick="toggleRoutine('${r.id}')"
-            class="flex-shrink-0 w-6 h-6 rounded-full border-2
-                   ${r.done ? 'bg-green-500 border-green-500' : 'border-slate-300 hover:border-indigo-400'}
-                   flex items-center justify-center transition">
-            ${r.done ? '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>' : ''}
-        </button>
-        <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-slate-700 truncate
-                      ${r.done ? 'line-through text-slate-400' : ''}">
-                ${r.title}
-            </p>
-            <div class="flex items-center gap-2 mt-1">
-                <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
-                    ${cycleLabel[r.cycle] || r.cycle}
-                </span>
-                ${r.memo ? `<span class="text-xs text-slate-400 truncate">${r.memo}</span>` : ''}
-            </div>
-        </div>
-        <button onclick="deleteRoutine('${r.id}')"
-            class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500
-                   rounded-lg hover:bg-red-50 transition flex-shrink-0">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-        </button>
-    </div>`).join('');
-    lucide.createIcons();
-}
-
-window.saveRoutine = async function() {
-    const uid   = currentUser.uid;
-    const title = document.getElementById('routine-title').value.trim();
-    const cycle = document.getElementById('routine-cycle').value;
-    const memo  = document.getElementById('routine-memo').value.trim();
-    if (!title) return showToast('루틴명을 입력하세요.', 'error');
-    try {
-        await addDoc(collection(db, 'users', uid, 'routines'), {
-            title, cycle, memo, done: false, createdAt: serverTimestamp()
-        });
-        closeModal('routine-modal');
-        document.getElementById('routine-title').value = '';
-        document.getElementById('routine-memo').value  = '';
-        await loadAllData();
-        renderRoutineList();
-        showToast('루틴이 추가되었습니다.');
-    } catch (e) {
-        showToast('저장 실패: ' + e.message, 'error');
-    }
-};
-
-window.toggleRoutine = async function(id) {
-    const uid     = currentUser.uid;
-    const routine = allRoutines.find(r => r.id === id);
-    if (!routine) return;
-    try {
-        await updateDoc(doc(db, 'users', uid, 'routines', id), { done: !routine.done });
-        await loadAllData();
-        renderRoutineList();
-    } catch (e) {
-        showToast('상태 변경 실패: ' + e.message, 'error');
-    }
-};
-
-window.deleteRoutine = async function(id) {
-    if (!confirm('루틴을 삭제하시겠습니까?')) return;
-    const uid = currentUser.uid;
-    try {
-        await deleteDoc(doc(db, 'users', uid, 'routines', id));
-        await loadAllData();
-        renderRoutineList();
-        showToast('루틴이 삭제되었습니다.');
-    } catch (e) {
-        showToast('삭제 실패: ' + e.message, 'error');
-    }
-};
-
-window.resetRoutines = async function() {
-    if (!confirm('모든 루틴을 미완료 상태로 초기화하시겠습니까?')) return;
-    const uid = currentUser.uid;
-    try {
-        const promises = allRoutines.map(r =>
-            updateDoc(doc(db, 'users', uid, 'routines', r.id), { done: false })
-        );
-        await Promise.all(promises);
-        await loadAllData();
-        renderRoutineList();
-        showToast('루틴이 초기화되었습니다.');
-    } catch (e) {
-        showToast('초기화 실패: ' + e.message, 'error');
-    }
-};
-
-// ══════════════════════════════════════════════════════════
-// 일정 (Events)
-// ══════════════════════════════════════════════════════════
-function renderEventList() {
-    const el = document.getElementById('event-list');
-    if (!el) return;
-
-    const today      = new Date().toISOString().slice(0, 10);
-    const upcoming   = allEvents
-        .filter(e => e.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(0, 8);
-
-    if (upcoming.length === 0) {
-        el.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">예정된 일정이 없습니다.</p>`;
-        return;
-    }
-
-    el.innerHTML = upcoming.map(e => `
-    <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 group transition">
-        <div class="flex items-center gap-3 min-w-0">
-            <div class="flex-shrink-0 text-center bg-indigo-50 rounded-lg px-2 py-1 min-w-[40px]">
-                <p class="text-xs font-bold text-indigo-600">
-                    ${new Date(e.date + 'T00:00:00').toLocaleDateString('ko-KR', { month:'short', day:'numeric' })}
-                </p>
-                ${e.time ? `<p class="text-xs text-slate-400">${e.time}</p>` : ''}
-            </div>
-            <div class="min-w-0">
-                <p class="text-xs font-semibold text-slate-700 truncate">${e.title}</p>
-                ${e.memo ? `<p class="text-xs text-slate-400 truncate">${e.memo}</p>` : ''}
-            </div>
-        </div>
-        <button onclick="deleteEvent('${e.id}')"
-            class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition flex-shrink-0">
-            <i data-lucide="x" class="w-3.5 h-3.5"></i>
-        </button>
-    </div>`).join('');
+    }).join('');
     lucide.createIcons();
 }
 
 window.openAddEventModal = function() {
-    document.getElementById('event-title').value = '';
-    document.getElementById('event-date').value  = new Date().toISOString().slice(0, 10);
-    document.getElementById('event-time').value  = '';
-    document.getElementById('event-memo').value  = '';
-    openModal('event-modal');
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('event-title-input').value = '';
+    document.getElementById('event-date-input').value  = today;
+    document.getElementById('event-client-input').value = '';
+    openModal('add-event-modal');
 };
 
 window.saveEvent = async function() {
-    const uid   = currentUser.uid;
-    const title = document.getElementById('event-title').value.trim();
-    const date  = document.getElementById('event-date').value;
-    const time  = document.getElementById('event-time').value;
-    const memo  = document.getElementById('event-memo').value.trim();
-    if (!title || !date) return showToast('일정명과 날짜를 입력하세요.', 'error');
-    try {
-        await addDoc(collection(db, 'users', uid, 'events'), {
-            title, date, time, memo, createdAt: serverTimestamp()
-        });
-        closeModal('event-modal');
-        await loadAllData();
-        renderEventList();
-        showToast('일정이 추가되었습니다.');
-    } catch (e) {
-        showToast('저장 실패: ' + e.message, 'error');
+    const title    = document.getElementById('event-title-input').value.trim();
+    const date     = document.getElementById('event-date-input').value;
+    const clientId = document.getElementById('event-client-input').value;
+    if (!title || !date) {
+        showToast('일정명과 날짜를 입력하세요.', 'error');
+        return;
     }
+    try {
+        await fnSaveTask({
+            title,
+            due:       date,
+            startDate: date,
+            clientId:  clientId || 'common',
+            priority:  'Medium',
+            status:    'event',
+            isEvent:   true
+        });
+        closeModal('add-event-modal');
+        showToast('✅ 일정 추가 완료!');
+        await loadAllData();
+    } catch(e) { showToast('일정 저장 실패: ' + e.message, 'error'); }
 };
 
 window.deleteEvent = async function(id) {
-    if (!confirm('일정을 삭제하시겠습니까?')) return;
-    const uid = currentUser.uid;
+    if (!confirm('이 일정을 삭제하시겠습니까?')) return;
     try {
-        await deleteDoc(doc(db, 'users', uid, 'events', id));
+        await fnDeleteTask({ id });
+        showToast('🗑️ 일정 삭제 완료');
         await loadAllData();
-        renderEventList();
-        showToast('일정이 삭제되었습니다.');
-    } catch (e) {
-        showToast('삭제 실패: ' + e.message, 'error');
+    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════════════════
+// 루틴 체크리스트
+// ══════════════════════════════════════════════════════════
+function renderRoutines() {
+    const container = document.getElementById('routine-list');
+    if (!routines.length) {
+        container.innerHTML = `
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="repeat" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i>
+                <p class="text-sm">등록된 루틴이 없습니다.</p>
+                <p class="text-xs mt-1">상단 "루틴 추가" 버튼을 이용하세요.</p>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    // 고객사별 그룹핑
+    const grouped = routines.reduce((acc, r) => {
+        const key = r.clientId || 'common';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(r);
+        return acc;
+    }, {});
+
+    const typeColor = {
+        Report:   'bg-purple-100 text-purple-700',
+        Contract: 'bg-blue-100   text-blue-700',
+        System:   'bg-green-100  text-green-700',
+        Other:    'bg-slate-100  text-slate-600'
+    };
+    const typeLabel = {
+        Report:   '월간보고',
+        Contract: '계약관리',
+        System:   '시스템',
+        Other:    '기타'
+    };
+
+    container.innerHTML = Object.entries(grouped).map(([clientId, rList]) => {
+        const client  = clients.find(c => c.id === clientId);
+        const done    = rList.filter(r => r.checked).length;
+        const pct     = Math.round((done / rList.length) * 100);
+
+        return `
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-200
+                        flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="text-lg">${client?.emoji || '🏢'}</span>
+                    <div>
+                        <h4 class="font-bold text-slate-800">
+                            ${client?.name || clientId}
+                        </h4>
+                        <p class="text-xs text-slate-500">${done} / ${rList.length} 완료</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-28 bg-slate-200 rounded-full h-1.5">
+                        <div class="bg-indigo-500 h-1.5 rounded-full transition-all duration-500"
+                            style="width:${pct}%"></div>
+                    </div>
+                    <span class="text-sm font-bold text-indigo-600">${pct}%</span>
+                </div>
+            </div>
+            <div class="divide-y divide-slate-100">
+                ${rList.map(r => `
+                <div class="flex items-start gap-4 px-5 py-3 hover:bg-slate-50 transition-colors">
+                    <input type="checkbox" ${r.checked ? 'checked' : ''}
+                        onchange="toggleRoutine('${r.id}', this.checked)"
+                        class="mt-1 w-4 h-4 rounded text-indigo-600 cursor-pointer
+                               accent-indigo-600 flex-shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs px-2 py-0.5 rounded font-semibold
+                                ${typeColor[r.type] || typeColor.Other}">
+                                ${typeLabel[r.type] || r.type}
+                            </span>
+                            <p class="text-sm font-medium text-slate-800
+                                ${r.checked ? 'line-through text-slate-400' : ''}">
+                                ${r.title}
+                            </p>
+                        </div>
+                        ${r.caution
+                            ? `<p class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                   <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                                   ${r.caution}
+                               </p>`
+                            : ''}
+                    </div>
+                    <button onclick="deleteRoutine('${r.id}')"
+                        class="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0 p-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>`).join('')}
+            </div>
+        </div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+window.saveRoutine = async function() {
+    const clientId = document.getElementById('routine-client').value;
+    const type     = document.getElementById('routine-type').value;
+    const title    = document.getElementById('routine-title').value.trim();
+    const caution  = document.getElementById('routine-caution').value.trim();
+    if (!title) { showToast('루틴명을 입력하세요.', 'error'); return; }
+    try {
+        await fnSaveTask({
+            clientId, type, title, caution,
+            status:   'routine',
+            isRoutine: true,
+            checked:   false
+        });
+        closeModal('routine-modal');
+        showToast('✅ 루틴 추가 완료!');
+        await loadAllData();
+    } catch(e) { showToast('루틴 저장 실패: ' + e.message, 'error'); }
+};
+
+window.toggleRoutine = async function(id, checked) {
+    const r = routines.find(x => x.id === id);
+    if (!r) return;
+    try {
+        await fnUpdateStatus({ id, status: 'routine', checked });
+        r.checked = checked;
+        renderRoutines();
+        lucide.createIcons();
+    } catch(e) {
+        showToast('루틴 상태 변경 실패: ' + e.message, 'error');
     }
 };
 
-// ══════════════════════════════════════════════════════════
-// 메모
-// ══════════════════════════════════════════════════════════
-window.onMemoInput = function() {
-    clearTimeout(_memoTimer);
-    document.getElementById('memo-status').textContent = '저장 중...';
-    _memoTimer = setTimeout(async () => {
-        const uid     = currentUser.uid;
-        const content = document.getElementById('quick-memo').value;
-        try {
-            await setDoc(doc(db, 'users', uid, 'meta', 'memo'), {
-                content, updatedAt: serverTimestamp()
-            });
-            document.getElementById('memo-status').textContent = '저장됨 ✓';
-            setTimeout(() => {
-                document.getElementById('memo-status').textContent = '';
-            }, 2000);
-        } catch {}
-    }, 1000);
+window.deleteRoutine = async function(id) {
+    if (!confirm('이 루틴을 삭제하시겠습니까?')) return;
+    try {
+        await fnDeleteTask({ id });
+        showToast('🗑️ 루틴 삭제 완료');
+        await loadAllData();
+    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+};
+
+window.resetRoutines = async function() {
+    if (!confirm('모든 루틴을 미완료 상태로 초기화하시겠습니까?\n새 달 시작 시 사용하세요.')) return;
+    try {
+        await Promise.all(
+            routines.map(r => fnUpdateStatus({ id: r.id, status: 'routine', checked: false }))
+        );
+        showToast('✅ 루틴 초기화 완료!');
+        await loadAllData();
+    } catch(e) { showToast('초기화 실패: ' + e.message, 'error'); }
 };
 
 // ══════════════════════════════════════════════════════════
-// 리포트
+// Gmail Inbox
+// ══════════════════════════════════════════════════════════
+function renderInboxList() {
+    const container = document.getElementById('inbox-list');
+    const badge     = document.getElementById('inbox-badge');
+
+    if (!inboxMails.length) {
+        badge.classList.add('hidden');
+        container.innerHTML = `
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="mail-open" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i>
+                <p class="text-sm">수집된 메일이 없습니다.</p>
+                <p class="text-xs mt-1">"Gmail 수집" 버튼을 눌러 메일을 가져오세요.</p>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    const pending = inboxMails.filter(m => m.status === 'pending' || !m.status);
+    badge.textContent = pending.length || '';
+    pending.length
+        ? badge.classList.remove('hidden')
+        : badge.classList.add('hidden');
+
+    container.innerHTML = inboxMails.map(mail => {
+        const isAnalyzed = mail.aiSummary || mail.suggestedTask;
+        const isPending  = mail.status === 'pending' || !mail.status;
+        const isApproved = mail.status === 'approved';
+        const isRejected = mail.status === 'rejected';
+
+        return `
+        <div class="bg-white rounded-xl border
+            ${isApproved ? 'border-green-200 bg-green-50/30'
+            : isRejected ? 'border-slate-200 opacity-50'
+            : isAnalyzed ? 'border-blue-200'
+            : 'border-slate-200'} shadow-sm p-5">
+            <div class="flex justify-between items-start gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        ${isApproved
+                            ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">✅ 승인됨</span>'
+                            : isRejected
+                                ? '<span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">❌ 거절됨</span>'
+                                : '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">📥 대기중</span>'}
+                        <h4 class="font-semibold text-slate-800 text-sm truncate">
+                            ${mail.subject || '(제목 없음)'}
+                        </h4>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-2">
+                        From: ${mail.from || '알 수 없음'}
+                        · ${mail.receivedAt
+                            ? new Date(mail.receivedAt).toLocaleString('ko-KR')
+                            : ''}
+                    </p>
+                    <p class="text-xs text-slate-600 bg-slate-50 rounded p-2 line-clamp-2">
+                        ${mail.snippet || mail.body || '(내용 없음)'}
+                    </p>
+                    ${isAnalyzed ? `
+                    <div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <p class="text-xs font-bold text-blue-700 mb-1 flex items-center gap-1">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i> AI 분석 결과
+                        </p>
+                        ${mail.aiSummary
+                            ? `<p class="text-xs text-blue-800 mb-1">📋 ${mail.aiSummary}</p>`
+                            : ''}
+                        ${mail.suggestedTask ? `
+                        <div class="bg-white rounded p-2 border border-blue-100 mt-1 space-y-0.5">
+                            <p class="text-xs font-semibold text-slate-700">
+                                📌 ${mail.suggestedTask.title || ''}
+                            </p>
+                            <p class="text-xs text-slate-500">
+                                마감: ${mail.suggestedTask.due || '-'}
+                                · 우선순위: ${mail.suggestedTask.priority || 'Medium'}
+                                · 고객사 ${mail.suggestedTask.clientId || '-'}
+                            </p>
+                        </div>` : ''}
+                    </div>` : ''}
+                </div>
+                ${isPending && isAnalyzed ? `
+                <div class="flex flex-col gap-2 flex-shrink-0">
+                    <button onclick="approveInboxMail('${mail.id}')"
+                        class="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white
+                               rounded-lg text-xs font-medium hover:bg-green-700 transition shadow-sm">
+                        <i data-lucide="check" class="w-3 h-3"></i> 승인
+                    </button>
+                    <button onclick="rejectInboxMail('${mail.id}')"
+                        class="flex items-center gap-1 px-3 py-1.5 bg-slate-200 text-slate-600
+                               rounded-lg text-xs font-medium hover:bg-slate-300 transition">
+                        <i data-lucide="x" class="w-3 h-3"></i> 거절
+                    </button>
+                </div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+window.approveInboxMail = async function(id) {
+    try {
+        await fnApproveDraft({ id });
+        showToast('✅ 승인 완료! Tasks에 추가되었습니다.');
+        await loadAllData();
+    } catch(e) { showToast('승인 실패: ' + e.message, 'error'); }
+};
+
+window.rejectInboxMail = async function(id) {
+    try {
+        await fnUpdateStatus({ id, status: 'rejected' });
+        showToast('❌ 거절 처리 완료');
+        await loadAllData();
+    } catch(e) { showToast('거절 실패: ' + e.message, 'error'); }
+};
+
+// ── Gmail 수집 / 분석 ────────────────────────────────────
+window.handleIngestGmail = async function(btn) {
+    setProgress(true, 'Gmail 메일 수집 중...', 30);
+    btn.disabled = true;
+    try {
+        const res = await fnIngestGmail();
+        const cnt = res.data?.count || 0;
+        setProgress(true, `수집 완료: ${cnt}건`, 100, `총 ${cnt}개 메일 수집`);
+        showToast(`✅ Gmail 수집 완료: ${cnt}건`);
+        await loadAllData();
+    } catch(e) {
+        showToast('수집 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => setProgress(false), 2000);
+    }
+};
+
+window.handleAnalyzeMails = async function(btn) {
+    setProgress(true, 'AI 메일 분석 중...', 50, '잠시 기다려 주세요...');
+    btn.disabled = true;
+    try {
+        const res = await fnAnalyzeMails();
+        const cnt = res.data?.analyzed || 0;
+        setProgress(true, `AI 분석 완료: ${cnt}건`, 100);
+        showToast(`✅ AI 분석 완료: ${cnt}건`);
+        await loadAllData();
+    } catch(e) {
+        showToast('분석 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => setProgress(false), 2000);
+    }
+};
+
+window.syncGmail = async function() {
+    const btn = document.getElementById('btn-sync-gmail');
+    btn.disabled = true;
+    try {
+        setProgress(true, 'Gmail 수집 중...', 20);
+        const r1 = await fnIngestGmail();
+        const cnt = r1.data?.count || 0;
+
+        setProgress(true, `수집 완료 (${cnt}건) → AI 분석 중...`, 60, '분석 중...');
+        const r2 = await fnAnalyzeMails();
+        const analyzed = r2.data?.analyzed || 0;
+
+        setProgress(true, '완료!', 100, `수집: ${cnt}건 / 분석: ${analyzed}건`);
+        showToast(`✅ 완료! 수집: ${cnt}건, 분석: ${analyzed}건`);
+        await loadAllData();
+    } catch(e) {
+        showToast('동기화 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => setProgress(false), 2500);
+    }
+};
+
+function setProgress(show, text = '', pct = 0, detail = '') {
+    const el    = document.getElementById('sync-progress');
+    const txtEl = document.getElementById('sync-progress-text');
+    const barEl = document.getElementById('sync-progress-bar');
+    const detEl = document.getElementById('sync-progress-detail');
+    el.classList.toggle('hidden', !show);
+    if (show) {
+        txtEl.textContent   = text;
+        barEl.style.width   = pct + '%';
+        detEl.textContent   = detail;
+    }
+}
+
+// ══════════════════════════════════════════════════════════
+// 리포트 / 데일리
 // ══════════════════════════════════════════════════════════
 window.createReport = async function() {
     const clientId = document.getElementById('report-client').value;
-    const month    = document.getElementById('report-month').value; // YYYY-MM
+    const month    = document.getElementById('report-month').value;
+    const output   = document.getElementById('report-output');
+    const btn      = document.getElementById('btn-create-report');
+    if (!month) { showToast('연월을 선택하세요.', 'error'); return; }
 
-    if (!month) return showToast('월을 선택하세요.', 'error');
-
-    const clients  = await getClients();
-    const clientMap= {};
-    clients.forEach(c => { clientMap[c.id] = c.name; });
-
-    const [year, mon] = month.split('-').map(Number);
-    const filtered = allTasks.filter(t => {
-        if (clientId !== 'all' && t.clientId !== clientId) return false;
-        const d = t.dueDate || t.startDate;
-        if (!d) return false;
-        const [y, m] = d.split('-').map(Number);
-        return y === year && m === mon;
-    });
-
-    const done    = filtered.filter(t => t.status === 'done');
-    const ongoing = filtered.filter(t => t.status !== 'done');
-    const clientName = clientId === 'all' ? '전체' : (clientMap[clientId] || clientId);
-
-    const lines = [
-        `📊 월간 업무 리포트`,
-        `기간: ${year}년 ${mon}월 | 고객사: ${clientName}`,
-        `생성일: ${new Date().toLocaleDateString('ko-KR')}`,
-        `${'─'.repeat(40)}`,
-        ``,
-        `✅ 완료 업무 (${done.length}건)`,
-        ...done.map(t => `  • [${clientMap[t.clientId] || t.clientId || '미지정'}] ${t.title}${t.dueDate ? ' (' + formatDate(t.dueDate) + ')' : ''}`),
-        ``,
-        `🔄 진행 중 업무 (${ongoing.length}건)`,
-        ...ongoing.map(t => `  • [${clientMap[t.clientId] || t.clientId || '미지정'}] ${t.title}${t.dueDate ? ' (' + formatDate(t.dueDate) + ')' : ''}`),
-        ``,
-        `${'─'.repeat(40)}`,
-        `총 ${filtered.length}건 중 ${done.length}건 완료 (완료율 ${filtered.length > 0 ? Math.round(done.length / filtered.length * 100) : 0}%)`,
-    ];
-
-    document.getElementById('report-output').textContent = lines.join('\n');
+    output.textContent = '⏳ AI가 월간 리포트를 생성 중입니다...';
+    btn.disabled = true;
+    try {
+        const res = await fnMonthlySummary({ clientId, month });
+        output.textContent = res.data?.text || '결과를 받지 못했습니다.';
+    } catch(e) {
+        output.textContent = '생성 실패: ' + e.message;
+        showToast('리포트 생성 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
 };
 
 window.copyReport = function() {
     const text = document.getElementById('report-output').textContent;
-    if (!text.trim()) return showToast('리포트를 먼저 생성하세요.', 'error');
     navigator.clipboard.writeText(text)
-        .then(() => showToast('클립보드에 복사되었습니다.'))
+        .then(() => showToast('📋 클립보드에 복사되었습니다!'))
         .catch(() => showToast('복사 실패', 'error'));
 };
 
-// ══════════════════════════════════════════════════════════
-// 데일리 리포트
-// ══════════════════════════════════════════════════════════
 window.openDailyModal = function() {
-    updateDailyPreview();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('daily-date').value    = today;
+    document.getElementById('daily-output').textContent =
+        '고객사와 기준일을 선택 후 "AI 생성" 버튼을 클릭하세요.';
     openModal('daily-modal');
 };
 
-function updateDailyPreview() {
-    const done  = document.getElementById('daily-done').value.trim();
-    const todo  = document.getElementById('daily-todo').value.trim();
-    const note  = document.getElementById('daily-note').value.trim();
-    const today = new Date().toLocaleDateString('ko-KR', {
-        year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
-    });
+window.createDailyReport = async function() {
+    const clientId = document.getElementById('daily-client').value;
+    const date     = document.getElementById('daily-date').value;
+    const output   = document.getElementById('daily-output');
+    const btn      = document.getElementById('btn-create-daily');
+    if (!date) { showToast('기준일을 선택하세요.', 'error'); return; }
 
-    const lines = [
-        `📋 데일리 리포트 — ${today}`,
-        `${'─'.repeat(35)}`,
-        ``,
-        `✅ 오늘 한 일`,
-        done ? done.split('\n').map(l => `  • ${l}`).join('\n') : '  (없음)',
-        ``,
-        `📌 내일 할 일`,
-        todo ? todo.split('\n').map(l => `  • ${l}`).join('\n') : '  (없음)',
-        note ? `\n⚠️ 특이사항\n  ${note}` : '',
-    ].filter(l => l !== undefined);
+    output.textContent = '⏳ AI가 데일리 보고를 생성 중입니다...';
+    btn.disabled = true;
+    try {
+        const res = await fnDailySummary({ clientId, date });
+        output.textContent = res.data?.text || '결과를 받지 못했습니다.';
+    } catch(e) {
+        output.textContent = '생성 실패: ' + e.message;
+        showToast('데일리 보고 생성 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+};
 
-    document.getElementById('daily-preview').textContent = lines.join('\n');
-}
-
-// 데일리 입력 변경 시 미리보기 업데이트
-['daily-done', 'daily-todo', 'daily-note'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', updateDailyPreview);
-});
-
-window.copyDailyReport = function() {
-    const text = document.getElementById('daily-preview').textContent;
+window.copyDaily = function() {
+    const text = document.getElementById('daily-output').textContent;
     navigator.clipboard.writeText(text)
-        .then(() => {
-            showToast('데일리 리포트가 복사되었습니다.');
-            closeModal('daily-modal');
-        })
+        .then(() => showToast('📋 클립보드에 복사되었습니다!'))
         .catch(() => showToast('복사 실패', 'error'));
 };
 
 // ══════════════════════════════════════════════════════════
-// AI 텍스트 파싱 (Bulk)
+// AI 일괄 파싱
 // ══════════════════════════════════════════════════════════
-window.openBulkModal = async function() {
+window.openBulkModal = function() {
     document.getElementById('bulk-input').value = '';
-    document.getElementById('bulk-result').classList.add('hidden');
-    document.getElementById('bulk-task-list').innerHTML = '';
-    _bulkParsed = [];
-    await populateClientSelects();
+    document.getElementById('bulk-result').innerHTML = '';
+    document.getElementById('bulk-confirm-area').classList.add('hidden');
+    bulkParsedTasks = [];
     openModal('bulk-modal');
 };
 
 window.runBulkParse = async function() {
-    const text     = document.getElementById('bulk-input').value.trim();
-    const clientId = document.getElementById('bulk-client').value;
-    if (!text) return showToast('텍스트를 입력하세요.', 'error');
+    const text = document.getElementById('bulk-input').value.trim();
+    const btn  = document.getElementById('btn-bulk-parse');
+    const res  = document.getElementById('bulk-result');
+    const area = document.getElementById('bulk-confirm-area');
+    if (!text) { showToast('파싱할 텍스트를 입력하세요.', 'error'); return; }
 
-    const btn      = document.querySelector('#bulk-modal button[onclick="runBulkParse()"]');
-    btn.disabled   = true;
-    btn.innerHTML  = '<span class="loader"></span> 분석 중...';
+    res.innerHTML = `
+        <div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+            <div class="loader"></div>
+            <p class="text-sm text-emerald-700">AI가 업무를 파싱 중입니다...</p>
+        </div>`;
+    area.classList.add('hidden');
+    btn.disabled = true;
 
     try {
-        const res   = await fnBulkParse({ text, clientId });
-        _bulkParsed = res.data?.tasks || [];
+        const result = await fnParseTasksAI({ text });
+        bulkParsedTasks = result.data?.tasks || [];
 
-        if (_bulkParsed.length === 0) {
-            showToast('추출된 업무가 없습니다.', 'error');
+        if (!bulkParsedTasks.length) {
+            res.innerHTML =
+                '<p class="text-sm text-slate-500 p-4 text-center">파싱 결과가 없습니다. 텍스트를 확인하세요.</p>';
             return;
         }
 
-        const listEl = document.getElementById('bulk-task-list');
-        listEl.innerHTML = _bulkParsed.map((t, i) => `
-        <div class="flex items-start gap-3 bg-white border border-slate-200 rounded-lg p-3">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-purple-100 text-purple-700
-                         text-xs font-bold flex items-center justify-center mt-0.5">${i + 1}</span>
-            <div class="flex-1 min-w-0">
-                <p class="text-xs font-semibold text-slate-700">${t.title}</p>
-                <div class="flex gap-2 mt-1">
-                    ${t.dueDate   ? `<span class="text-xs text-slate-400">📅 ${t.dueDate}</span>`    : ''}
-                    ${t.priority  ? `<span class="text-xs text-slate-400">🔥 ${t.priority}</span>`   : ''}
-                    ${t.clientId  ? `<span class="text-xs text-indigo-500">${CLIENT_MAP[t.clientId] || t.clientId}</span>` : ''}
+        res.innerHTML = bulkParsedTasks.map((t, i) => `
+            <div class="bg-white border border-emerald-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs bg-emerald-100 text-emerald-700
+                                     px-2 py-0.5 rounded font-bold">#${i+1}</span>
+                        <span class="text-sm font-semibold text-slate-800">${t.title}</span>
+                    </div>
+                    ${getPriorityBadge(t.priority)}
                 </div>
-            </div>
-        </div>`).join('');
-
-        document.getElementById('bulk-result').classList.remove('hidden');
-        showToast(`${_bulkParsed.length}건의 업무가 추출되었습니다.`);
-    } catch (e) {
-        showToast('파싱 실패: ' + e.message, 'error');
+                <div class="grid grid-cols-2 gap-2 text-xs text-slate-500">
+                    <span>🏢 ${t.clientId || '-'}</span>
+                    <span>📅 ${t.due || '마감 미정'}</span>
+                    ${t.note
+                        ? `<span class="col-span-2 text-slate-600">📝 ${t.note}</span>`
+                        : ''}
+                </div>
+            </div>`).join('');
+        area.classList.remove('hidden');
+        showToast(`✅ ${bulkParsedTasks.length}개 업무 파싱 완료! 검토 후 승인하세요.`);
+    } catch(e) {
+        res.innerHTML =
+            `<p class="text-sm text-red-500 p-4">파싱 실패: ${e.message}</p>`;
+        showToast('AI 파싱 실패: ' + e.message, 'error');
     } finally {
-        btn.disabled  = false;
-        btn.innerHTML = '<i data-lucide="cpu" class="w-4 h-4"></i> AI 파싱 실행';
-        lucide.createIcons();
+        btn.disabled = false;
     }
 };
 
-window.saveBulkTask = async function() {
-    if (_bulkParsed.length === 0) return showToast('저장할 업무가 없습니다.', 'error');
-    const uid      = currentUser.uid;
-    const clientId = document.getElementById('bulk-client').value;
+window.confirmBulkTasks = async function() {
+    if (!bulkParsedTasks.length) return;
+    const btn = document.querySelector('#bulk-confirm-area button:last-child');
+    btn.disabled = true; btn.textContent = '저장 중...';
     try {
-        const promises = _bulkParsed.map(t =>
-            addDoc(collection(db, 'users', uid, 'tasks'), {
-                title:     t.title,
-                clientId:  t.clientId || clientId,
-                dueDate:   t.dueDate || '',
-                startDate: '',
-                priority:  t.priority || 'mid',
-                status:    'ongoing',
-                memo:      t.memo || '',
-                createdAt: serverTimestamp(),
-            })
-        );
-        await Promise.all(promises);
+        await Promise.all(bulkParsedTasks.map(t =>
+            fnSaveTask({ ...t, status: 'active' })
+        ));
         closeModal('bulk-modal');
+        showToast(`✅ ${bulkParsedTasks.length}개 업무 저장 완료!`);
         await loadAllData();
-        renderHub();
-        showToast(`${_bulkParsed.length}건의 업무가 저장되었습니다.`);
-        _bulkParsed = [];
-    } catch (e) {
+    } catch(e) {
         showToast('저장 실패: ' + e.message, 'error');
+        btn.disabled = false; btn.textContent = '전체 승인 및 저장';
     }
 };
 
 // ══════════════════════════════════════════════════════════
-// 전체 데이터 초기화 (forceSeed)
+// 퀵메모 자동저장
 // ══════════════════════════════════════════════════════════
-window.forceSeed = async function() {
-    if (!confirm('모든 업무, 루틴, 일정 데이터를 삭제합니다.\n정말 초기화하시겠습니까?')) return;
-    if (!confirm('⚠️ 이 작업은 되돌릴 수 없습니다.\n계속하시겠습니까?')) return;
+function loadMemo() {
+    const memoEl = document.getElementById('quick-memo');
+    if (!memoEl) return;
 
-    const uid = currentUser.uid;
+    // 포커스 진입 시 편집 중 플래그 설정 → 폴링에서 덮어쓰지 않도록
+    memoEl.addEventListener('focus', () => {
+        memoEl.dataset.editing = 'true';
+    });
+
+    memoEl.addEventListener('input', () => {
+        clearTimeout(memoTimer);
+        memoTimer = setTimeout(async () => {
+            try {
+                await fnSaveMemo({ text: memoEl.value });
+                showToast('📝 메모 저장 완료', 'success');
+            } catch(e) {
+                showToast('메모 저장 실패: ' + e.message, 'error');
+            }
+        }, 1200); // 1.2초 디바운스
+    });
+
+    memoEl.addEventListener('blur', () => {
+        delete memoEl.dataset.editing;
+    });
+}
+
+window.clearMemo = async function() {
+    if (!confirm('퀵메모를 초기화하시겠습니까?')) return;
+    const memoEl = document.getElementById('quick-memo');
+    memoEl.value = '';
     try {
-        const colNames = ['tasks', 'inbox', 'routines', 'events'];
-        for (const col of colNames) {
-            const snap = await getDocs(collection(db, 'users', uid, col));
-            await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-        }
-        await loadAllData();
-        renderHub();
-        showToast('전체 데이터가 초기화되었습니다.');
-    } catch (e) {
+        await fnSaveMemo({ text: '' });
+        showToast('🗑️ 메모 초기화 완료');
+    } catch(e) {
         showToast('초기화 실패: ' + e.message, 'error');
     }
 };
 
 // ══════════════════════════════════════════════════════════
-// 유틸 함수
+// 탭 전환
 // ══════════════════════════════════════════════════════════
-window.formatDate = function(dateStr) {
-    if (!dateStr) return '';
-    try {
-        const d = new Date(dateStr + 'T00:00:00');
-        return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-    } catch { return dateStr; }
+window.switchTab = function(tab) {
+    // 모든 탭 패널 숨기기
+    document.querySelectorAll('.tab-panel').forEach(el => {
+        el.classList.add('hidden');
+    });
+    // 선택 탭 패널 표시
+    const target = document.getElementById('view-' + tab);
+    if (target) target.classList.remove('hidden');
+
+    // 탭 버튼 스타일 토글
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isActive = btn.dataset.tab === tab;
+        if (isActive) {
+            btn.classList.add('tab-active', 'text-blue-600', 'font-semibold');
+            btn.classList.remove('tab-inactive', 'text-slate-500');
+        } else {
+            btn.classList.add('tab-inactive', 'text-slate-500');
+            btn.classList.remove('tab-active', 'text-blue-600', 'font-semibold');
+        }
+    });
+
+    // Gmail 탭 진입 시 Inbox 재렌더링
+    if (tab === 'inbox') {
+        renderInboxList();
+        lucide.createIcons();
+    }
+    // 루틴 탭 진입 시 재렌더링
+    if (tab === 'routine') {
+        renderRoutines();
+        lucide.createIcons();
+    }
 };
 
+// ══════════════════════════════════════════════════════════
+// 모달 열기 / 닫기
+// ══════════════════════════════════════════════════════════
 window.openModal = function(id) {
-    document.getElementById(id).classList.remove('hidden');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    // 배경 스크롤 잠금
+    document.body.style.overflow = 'hidden';
 };
 
 window.closeModal = function(id) {
-    document.getElementById(id).classList.add('hidden');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    document.body.style.overflow = '';
 };
 
-let _toastTimer = null;
-window.showToast = function(msg, type = 'success') {
-    const el    = document.getElementById('toast');
-    const msgEl = document.getElementById('toast-msg');
-    const icon  = el.querySelector('i');
+// 모달 바깥 클릭 시 닫기
+document.addEventListener('click', e => {
+    document.querySelectorAll('[id$="-modal"]').forEach(modal => {
+        if (!modal.classList.contains('hidden') && e.target === modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    });
+});
 
-    msgEl.textContent = msg;
-    el.className = `fixed bottom-8 left-1/2 -translate-x-1/2 z-[999]
-        px-5 py-3 rounded-xl shadow-xl text-sm font-semibold text-white
-        transition-all duration-300 flex items-center gap-2 min-w-[200px] justify-center
-        ${type === 'error' ? 'bg-red-500' : 'bg-slate-800'}`;
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('[id$="-modal"]').forEach(modal => {
+        if (!modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    });
+});
 
-    if (icon) icon.setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check-circle');
-    lucide.createIcons();
-
-    el.classList.remove('hidden');
-    clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
-};
-
-window.onSearchInput = function() {
-    renderTaskList();
-};
-
-window.toggleClientSettings = function() {
-    switchTab('settings');
+// ══════════════════════════════════════════════════════════
+// 사이드바 토글 (모바일 대응)
+// ══════════════════════════════════════════════════════════
+window.toggleSidebar = function() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('-translate-x-full');
 };
 
 // ══════════════════════════════════════════════════════════
-// 앱 초기화
+// 연결 상태
 // ══════════════════════════════════════════════════════════
-async function initApp(user) {
-    currentUser = user;
-
-    // 오늘 날짜
-    document.getElementById('today-date').textContent =
-        new Date().toLocaleDateString('ko-KR', {
-            year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
-        });
-
-    // 연결 상태 표시
-    const statusEl = document.getElementById('connection-status');
-    const textEl   = document.getElementById('connection-text');
-    statusEl.className =
-        'w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse flex-shrink-0';
-    if (textEl) textEl.textContent = '연결됨';
-
-    // 리포트 월 기본값 (현재 월)
-    const monthEl = document.getElementById('report-month');
-    if (monthEl) {
-        const now = new Date();
-        monthEl.value =
-            `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+function setConnectionStatus(online) {
+    const dot  = document.getElementById('connection-dot');
+    const text = document.getElementById('connection-status-text');
+    if (online) {
+        dot.className  = 'w-2 h-2 rounded-full bg-green-400';
+        text.textContent = '연결됨';
+        text.className   = 'text-xs text-green-600 font-medium';
+    } else {
+        dot.className  = 'w-2 h-2 rounded-full bg-red-400';
+        text.textContent = '연결 끊김';
+        text.className   = 'text-xs text-red-500 font-medium';
     }
-
-    // 고객사 초기화
-    await ensureClients();
-
-    // 데이터 로드 & 렌더링
-    await loadAllData();
-    renderHub();
-
-    // 기본 탭
-    switchTab('dashboard');
 }
 
 // ══════════════════════════════════════════════════════════
-// 인증 상태 감지 (앱 진입점)
+// 유틸리티
 // ══════════════════════════════════════════════════════════
-onAuthStateChanged(auth, async (user) => {
-    const loginScreen = document.getElementById('login-screen');
-    const appScreen   = document.getElementById('app-screen');
+function isOverdue(due) {
+    if (!due) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return new Date(due) < today;
+}
 
-    if (user) {
-        // 로그인 성공
-        loginScreen.classList.add('hidden');
-        appScreen.classList.remove('hidden');
-        await initApp(user);
-        lucide.createIcons();
-    } else {
-        // 미로그인
-        loginScreen.classList.remove('hidden');
-        appScreen.classList.add('hidden');
-        currentUser = null;
-        allTasks    = [];
-        allInbox    = [];
-        allRoutines = [];
-        allEvents   = [];
-        lucide.createIcons();
+function formatDate(iso) {
+    if (!iso) return '-';
+    try {
+        return new Date(iso).toLocaleString('ko-KR', {
+            year:   'numeric',
+            month:  '2-digit',
+            day:    '2-digit',
+            hour:   '2-digit',
+            minute: '2-digit'
+        });
+    } catch { return iso; }
+}
+
+function getPriorityBadge(priority) {
+    const map = {
+        High:   { cls: 'bg-red-100 text-red-700',    label: '🔴 High'    },
+        Medium: { cls: 'bg-yellow-100 text-yellow-700', label: '🟡 Medium' },
+        Low:    { cls: 'bg-green-100 text-green-700',  label: '🟢 Low'     }
+    };
+    const p = map[priority] || map.Medium;
+    return `<span class="px-2 py-0.5 rounded text-xs font-semibold ${p.cls}">${p.label}</span>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// 토스트 알림
+// ══════════════════════════════════════════════════════════
+let toastTimer = null;
+
+window.showToast = function(msg, type = 'success') {
+    const toast   = document.getElementById('toast');
+    const msgEl   = document.getElementById('toast-msg');
+    const iconEl  = document.getElementById('toast-icon');
+
+    const styles = {
+        success: {
+            bg:   'bg-slate-800',
+            icon: 'check-circle'
+        },
+        error: {
+            bg:   'bg-red-600',
+            icon: 'alert-circle'
+        },
+        info: {
+            bg:   'bg-blue-600',
+            icon: 'info'
+        }
+    };
+    const s = styles[type] || styles.success;
+
+    toast.className = [
+        'fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-xl',
+        'text-sm font-medium text-white transition-all duration-300',
+        'flex items-center gap-2 max-w-sm',
+        s.bg
+    ].join(' ');
+
+    msgEl.textContent      = msg;
+    iconEl.dataset.lucide  = s.icon;
+    lucide.createIcons({ attrs: { class: 'w-4 h-4 flex-shrink-0' } });
+
+    toast.classList.remove('hidden');
+    toast.style.opacity   = '1';
+    toast.style.transform = 'translateY(0)';
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.style.opacity   = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(() => toast.classList.add('hidden'), 300);
+    }, 3000);
+};
+
+// ══════════════════════════════════════════════════════════
+// 전체 초기화 (강제 시드)
+// ══════════════════════════════════════════════════════════
+window.forceSeed = async function() {
+    if (!confirm('⚠️ 전체 데이터를 초기화하고 샘플 데이터로 재설정합니다.\n\n기존 모든 업무/고객사/루틴 데이터가 삭제됩니다.\n계속하시겠습니까?')) return;
+
+    const btn = document.getElementById('btn-force-seed');
+    if (btn) { btn.disabled = true; btn.textContent = '초기화 중...'; }
+
+    try {
+        const fnForceSeed = httpsCallable(functions, 'forceSeed');
+        await fnForceSeed();
+        showToast('✅ 전체 초기화 완료! 샘플 데이터가 로드됩니다.');
+        await loadAllData();
+    } catch(e) {
+        showToast('초기화 실패: ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '전체 초기화'; }
     }
-});
+};
 
 // ══════════════════════════════════════════════════════════
-// 모달 외부 클릭 시 닫기
+// 엔터키 로그인 바인딩
 // ══════════════════════════════════════════════════════════
-['task-modal', 'event-modal', 'routine-modal',
- 'bulk-modal', 'daily-modal'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('click', (e) => {
-        if (e.target === el) closeModal(id);
-    });
-});
-
-// ══════════════════════════════════════════════════════════
-// 키보드 단축키
-// ══════════════════════════════════════════════════════════
-document.addEventListener('keydown', (e) => {
-    // ESC → 열린 모달 닫기
-    if (e.key === 'Escape') {
-        ['task-modal', 'event-modal', 'routine-modal',
-         'bulk-modal', 'daily-modal'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el && !el.classList.contains('hidden')) closeModal(id);
+document.addEventListener('DOMContentLoaded', () => {
+    const pwInput = document.getElementById('auth-password');
+    if (pwInput) {
+        pwInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') loginUser();
         });
     }
-
-    // Ctrl+Enter → 로그인 화면에서 로그인
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        const loginScreen = document.getElementById('login-screen');
-        if (!loginScreen.classList.contains('hidden')) loginUser();
-    }
 });
 
 // ══════════════════════════════════════════════════════════
-// Enter 키 → 로그인
-// ══════════════════════════════════════════════════════════
-document.getElementById('login-password')
-    ?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') loginUser();
-    });
-
-// ══════════════════════════════════════════════════════════
-// Lucide 아이콘 초기 렌더
+// lucide 아이콘 최초 렌더링
 // ══════════════════════════════════════════════════════════
 lucide.createIcons();
+
 </script>
 </body>
 </html>
