@@ -777,7 +777,6 @@ async function initApp() {
     });
 
     await loadAllData();
-    pollTimer = setInterval(loadAllData, 30000);
     lucide.createIcons();
 }
 
@@ -1883,7 +1882,8 @@ function loadMemo() {
         clearTimeout(memoTimer);
         memoTimer = setTimeout(async () => {
             try {
-                await fnSaveMemo({ text: memoEl.value });
+                // 수정됨: text를 content로 바꾸고, 무한 생성을 막기 위해 id를 'quick-memo-doc'으로 고정
+                await fnSaveMemo({ id: 'quick-memo-doc', content: memoEl.value });
                 showToast('📝 메모 저장 완료', 'success');
             } catch(e) {
                 showToast('메모 저장 실패: ' + e.message, 'error');
@@ -1901,13 +1901,45 @@ window.clearMemo = async function() {
     const memoEl = document.getElementById('quick-memo');
     memoEl.value = '';
     try {
-        await fnSaveMemo({ text: '' });
+        // 수정됨: 여기도 동일하게 고정 id와 content 사용
+        await fnSaveMemo({ id: 'quick-memo-doc', content: '' });
         showToast('🗑️ 메모 초기화 완료');
     } catch(e) {
         showToast('초기화 실패: ' + e.message, 'error');
     }
 };
 
+// ══════════════════════════════════════════════════════════
+// 데이터 로드
+// ══════════════════════════════════════════════════════════
+async function loadAllData() {
+    try {
+        const res  = await fnGetAllData();
+        const data = res.data;
+
+        tasks      = data.tasks    || [];
+        clients    = data.clients  || [];
+        events     = data.events   || [];
+        routines   = data.routines || [];
+        inboxMails = data.inbox    || [];
+        
+        // 수정됨: 백엔드는 memos 라는 배열(리스트)을 내려보냄
+        const memos = data.memos   || []; 
+
+        const memoEl = document.getElementById('quick-memo');
+        if (memoEl && !memoEl.dataset.editing) {
+            // 수정됨: 고정 아이디('quick-memo-doc')를 가진 메모를 배열에서 찾아서 텍스트 창에 꽂아 넣음
+            const savedMemo = memos.find(m => m.id === 'quick-memo-doc');
+            memoEl.value = savedMemo ? savedMemo.content : '';
+        }
+
+        renderAll();
+        setConnectionStatus(true);
+    } catch(e) {
+        showToast('데이터 로드 실패: ' + e.message, 'error');
+        setConnectionStatus(false);
+    }
+}
 // ══════════════════════════════════════════════════════════
 // 탭 전환
 // ══════════════════════════════════════════════════════════
