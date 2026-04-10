@@ -1436,7 +1436,7 @@ window.handleAnalyzeMails = async function(btn) {
             const res = await fnAnalyzeMails();
             const cnt = res.data?.analyzed || 0;
             totalAnalyzed += cnt;
-            if (cnt < 10) keepAnalyzing = false;
+            if (cnt === 0) keepAnalyzing = false;
             else { analyzeBatch++; await new Promise(resolve => setTimeout(resolve, 3000)); }
         }
         setProgress(true, `AI 분석 완료: ${totalAnalyzed}건`, 100);
@@ -1477,7 +1477,7 @@ window.syncGmail = async function() {
             const cnt = res.data?.analyzed || 0;
             totalAnalyzed += cnt;
 
-            if (cnt < 10) {
+            if (cnt === 0) {
                 keepAnalyzing = false;
             } else {
                 analyzeBatch++;
