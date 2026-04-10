@@ -595,6 +595,7 @@ const firebaseConfig = {
     messagingSenderId: "573285599188",
     appId:             "1:573285599188:web:6fd7721b8d9805a2037841"
 };
+
 const app       = initializeApp(firebaseConfig);
 const auth      = getAuth(app);
 const functions = getFunctions(app, 'asia-northeast3');
@@ -685,6 +686,7 @@ async function initApp() {
     document.getElementById('daily-date').value   = todayStr;
 
     loadMemo();
+    
     document.getElementById('search-input').addEventListener('input', e => {
         searchQuery = e.target.value.toLowerCase();
         renderTasks();
@@ -1391,25 +1393,43 @@ window.rejectInboxMail = async function(id) {
 };
 
 window.handleIngestGmail = async function(btn) {
-    setProgress(true, 'Gmail 메일 수집 중...', 30);
     btn.disabled = true;
     try {
-        const res = await fnIngestGmail();
-        const cnt = res.data?.count || 0;
-        setProgress(true, `수집 완료: ${cnt}건`, 100, `총 ${cnt}개 메일 수집`);
-        showToast(`✅ Gmail 수집 완료: ${cnt}건`);
+        let totalCollected = 0;
+        let keepCollecting = true;
+        let collectBatch = 1;
+
+        while(keepCollecting) {
+            setProgress(true, `Gmail 단일 수집 중 (배치 ${collectBatch})...`, 20, `현재 ${totalCollected}건 수집됨...`);
+            const res = await fnIngestGmail();
+            const cnt = res.data?.count || 0;
+            totalCollected += cnt;
+            if (cnt === 0) keepCollecting = false;
+            else { collectBatch++; await new Promise(resolve => setTimeout(resolve, 1500)); }
+        }
+        setProgress(true, `수집 완료: ${totalCollected}건`, 100, `총 ${totalCollected}개 메일 수집`);
+        showToast(`✅ Gmail 수집 완료: ${totalCollected}건`);
         await loadAllData();
     } catch(e) { showToast('수집 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
 };
 
 window.handleAnalyzeMails = async function(btn) {
-    setProgress(true, 'AI 메일 분석 중...', 50, '잠시 기다려 주세요...');
     btn.disabled = true;
     try {
-        const res = await fnAnalyzeMails();
-        const cnt = res.data?.analyzed || 0;
-        setProgress(true, `AI 분석 완료: ${cnt}건`, 100);
-        showToast(`✅ AI 분석 완료: ${cnt}건`);
+        let totalAnalyzed = 0;
+        let keepAnalyzing = true;
+        let analyzeBatch = 1;
+
+        while(keepAnalyzing) {
+            setProgress(true, `AI 단일 분석 중 (배치 ${analyzeBatch})...`, 60, `현재 누적 ${totalAnalyzed}건 완료. 잠시 대기...`);
+            const res = await fnAnalyzeMails();
+            const cnt = res.data?.analyzed || 0;
+            totalAnalyzed += cnt;
+            if (cnt < 10) keepAnalyzing = false;
+            else { analyzeBatch++; await new Promise(resolve => setTimeout(resolve, 3000)); }
+        }
+        setProgress(true, `AI 분석 완료: ${totalAnalyzed}건`, 100);
+        showToast(`✅ AI 분석 완료: ${totalAnalyzed}건`);
         await loadAllData();
     } catch(e) { showToast('분석 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
 };
@@ -1418,16 +1438,53 @@ window.syncGmail = async function() {
     const btn = document.getElementById('btn-sync-gmail');
     btn.disabled = true;
     try {
-        setProgress(true, 'Gmail 수집 중...', 20);
-        const r1 = await fnIngestGmail();
-        const cnt = r1.data?.count || 0;
-        setProgress(true, `수집 완료 (${cnt}건) → AI 분석 중...`, 60, '분석 중...');
-        const r2 = await fnAnalyzeMails();
-        const analyzed = r2.data?.analyzed || 0;
-        setProgress(true, '완료!', 100, `수집: ${cnt}건 / 분석: ${analyzed}건`);
-        showToast(`✅ 완료! 수집: ${cnt}건, 분석: ${analyzed}건`);
+        let totalCollected = 0;
+        let keepCollecting = true;
+        let collectBatch = 1;
+
+        while(keepCollecting) {
+            setProgress(true, `Gmail 수집 중 (배치 ${collectBatch})...`, 20, `현재 ${totalCollected}건 수집됨...`);
+            const res = await fnIngestGmail();
+            const cnt = res.data?.count || 0;
+            totalCollected += cnt;
+            
+            if (cnt === 0) {
+                keepCollecting = false;
+            } else {
+                collectBatch++;
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+        }
+
+        let totalAnalyzed = 0;
+        let keepAnalyzing = true;
+        let analyzeBatch = 1;
+
+        while(keepAnalyzing) {
+            setProgress(true, `AI 분석 중 (배치 ${analyzeBatch})...`, 60, `수집 완료: ${totalCollected}건 / 분석 완료: ${totalAnalyzed}건`);
+            const res = await fnAnalyzeMails();
+            const cnt = res.data?.analyzed || 0;
+            totalAnalyzed += cnt;
+
+            if (cnt < 10) {
+                keepAnalyzing = false;
+            } else {
+                analyzeBatch++;
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        }
+
+        setProgress(true, '모든 동기화 완료!', 100, `총 수집: ${totalCollected}건 / 총 분석: ${totalAnalyzed}건`);
+        showToast(`✅ 완벽 동기화: 수집 ${totalCollected}건, 분석 ${totalAnalyzed}건 완료`);
         await loadAllData();
-    } catch(e) { showToast('동기화 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2500); }
+
+    } catch(e) {
+        showToast('동기화 중 오류 발생: ' + e.message, 'error');
+        console.error(e);
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => setProgress(false), 3000);
+    }
 };
 
 function setProgress(show, text = '', pct = 0, detail = '') {
