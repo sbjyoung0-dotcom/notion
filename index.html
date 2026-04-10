@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PM Multi-Client HQ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #F8FAFC; color: #1E293B; }
@@ -388,9 +388,9 @@
             <div>
                 <label class="block text-xs font-bold text-gray-500 mb-1">우선순위</label>
                 <select id="modal-priority" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="High">High</option>
-                    <option value="Medium" selected>Medium</option>
-                    <option value="Low">Low</option>
+                    <option value="high">High</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="low">Low</option>
                 </select>
             </div>
             <button onclick="saveTask()" id="modal-save-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition">저장하기</button>
@@ -614,6 +614,17 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 
+// XSS 방어용 이스케이프 함수
+function escHtml(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
 let clients             = [];
 let tasks               = [];
 let events              = [];
@@ -779,18 +790,18 @@ function renderClientNav() {
             ${currentClientFilter === 'all' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}"
             data-client="all">🏠 전체 현황</button>` +
         clients.map(c => `
-        <button onclick="filterByClient('${c.id}')"
+        <button onclick="filterByClient('${escHtml(c.id)}')"
             class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
             ${currentClientFilter === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}"
-            data-client="${c.id}">${c.emoji || '🏢'} ${c.name}</button>`).join('');
+            data-client="${escHtml(c.id)}">${c.emoji || '🏢'} ${escHtml(c.name)}</button>`).join('');
 }
 
 function renderClientSettings() {
     const container = document.getElementById('client-settings-list');
     container.innerHTML = clients.map(c => `
         <div class="flex items-center justify-between bg-slate-50 rounded px-2 py-1 text-xs text-slate-600 border border-slate-100">
-            <span>${c.emoji || '🏢'} ${c.name}</span>
-            <button onclick="deleteClient('${c.id}')" class="text-red-400 hover:text-red-600 ml-2">
+            <span>${c.emoji || '🏢'} ${escHtml(c.name)}</span>
+            <button onclick="deleteClient('${escHtml(c.id)}')" class="text-red-400 hover:text-red-600 ml-2">
                 <i data-lucide="trash-2" class="w-3 h-3"></i>
             </button>
         </div>`).join('');
@@ -885,7 +896,7 @@ function getFilteredTasks() {
     filtered.sort((a, b) => {
         let va = a[sortConfig.key] || '';
         let vb = b[sortConfig.key] || '';
-        const pOrder = { High: 0, Medium: 1, Low: 2 };
+        const pOrder = { high: 0, medium: 1, low: 2 };
         if (sortConfig.key === 'priority') {
             va = pOrder[va] ?? 1;
             vb = pOrder[vb] ?? 1;
@@ -921,7 +932,7 @@ function renderListView(filtered) {
         return `
         <tr class="hover:bg-slate-50 transition-colors ${t.status === 'done' ? 'opacity-60' : ''} ${overdue ? 'bg-red-50' : ''}">
             <td class="px-6 py-4 text-center">
-                <button onclick="toggleStatus('${t.id}')" title="상태 토글"
+                <button onclick="toggleStatus('${escHtml(t.id)}')" title="상태 토글"
                     class="w-6 h-6 rounded-full border-2 flex items-center justify-center mx-auto transition-colors
                     ${t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400 hover:bg-green-50'}">
                     ${t.status === 'done' ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
@@ -929,27 +940,27 @@ function renderListView(filtered) {
             </td>
             <td class="px-6 py-4">
                 <span class="px-2 py-1 rounded-md text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">
-                    ${client?.emoji || '🏢'} ${client?.name || t.clientId}
+                    ${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}
                 </span>
             </td>
             <td class="px-6 py-4">
-                <p class="font-semibold text-slate-800 truncate ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${t.title}</p>
-                ${t.note ? `<p class="text-xs text-slate-400 truncate mt-0.5">${t.note}</p>` : ''}
+                <p class="font-semibold text-slate-800 truncate ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
+                ${t.note ? `<p class="text-xs text-slate-400 truncate mt-0.5">${escHtml(t.note)}</p>` : ''}
                 ${overdue ? '<span class="text-xs text-red-500 font-bold">⚠ 기한 초과</span>' : ''}
             </td>
-            <td class="px-6 py-4 text-sm text-slate-500">${t.startDate || '-'}</td>
-            <td class="px-6 py-4 text-sm ${overdue ? 'text-red-600 font-bold' : 'text-slate-500'}">${t.due || '-'}</td>
+            <td class="px-6 py-4 text-sm text-slate-500">${escHtml(t.startDate || '-')}</td>
+            <td class="px-6 py-4 text-sm ${overdue ? 'text-red-600 font-bold' : 'text-slate-500'}">${escHtml(t.due || '-')}</td>
             <td class="px-6 py-4">${getPriorityBadge(t.priority)}</td>
             <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-1.5">
-                    <button onclick="openHistoryModal('${t.id}')" title="이력" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative">
+                    <button onclick="openHistoryModal('${escHtml(t.id)}')" title="이력" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative">
                         <i data-lucide="history" class="w-4 h-4"></i>
                         ${histCnt > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">${histCnt}</span>` : ''}
                     </button>
-                    <button onclick="openEditTaskModal('${t.id}')" title="수정" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                    <button onclick="openEditTaskModal('${escHtml(t.id)}')" title="수정" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
-                    <button onclick="deleteTask('${t.id}')" title="삭제" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onclick="deleteTask('${escHtml(t.id)}')" title="삭제" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </div>
@@ -975,19 +986,19 @@ function renderKanbanView(filtered) {
         <div class="bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md transition-shadow">
             <div class="flex justify-between items-start mb-2">
                 <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">
-                    ${client?.emoji || '🏢'} ${client?.name || t.clientId}
+                    ${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}
                 </span>
                 ${getPriorityBadge(t.priority)}
             </div>
-            <p class="font-semibold text-slate-800 text-sm mb-1 ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${t.title}</p>
-            ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2">${t.note}</p>` : ''}
+            <p class="font-semibold text-slate-800 text-sm mb-1 ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
+            ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2">${escHtml(t.note)}</p>` : ''}
             <div class="flex justify-between items-center mt-2">
-                <span class="text-xs ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">📅 ${t.due || '기한 없음'} ${overdue ? '⚠ 초과' : ''}</span>
+                <span class="text-xs ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">📅 ${escHtml(t.due || '기한 없음')} ${overdue ? '⚠ 초과' : ''}</span>
                 <div class="flex gap-1">
-                    <button onclick="toggleStatus('${t.id}')" class="p-1 text-slate-400 hover:text-green-600 rounded transition-colors"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
-                    <button onclick="openHistoryModal('${t.id}')" class="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"><i data-lucide="history" class="w-4 h-4"></i></button>
-                    <button onclick="openEditTaskModal('${t.id}')" class="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                    <button onclick="deleteTask('${t.id}')" class="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    <button onclick="toggleStatus('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-green-600 rounded transition-colors"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+                    <button onclick="openHistoryModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"><i data-lucide="history" class="w-4 h-4"></i></button>
+                    <button onclick="openEditTaskModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="deleteTask('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </div>
         </div>`;
@@ -1046,7 +1057,7 @@ window.openAddTaskModal = function() {
     document.getElementById('modal-ref-doc').value           = '';
     document.getElementById('modal-due').value               = '';
     document.getElementById('modal-start-date').value        = '';
-    document.getElementById('modal-priority').value          = 'Medium';
+    document.getElementById('modal-priority').value          = 'medium';
     const mc = document.getElementById('modal-client');
     if (currentClientFilter !== 'all') mc.value = currentClientFilter;
     openModal('task-modal');
@@ -1062,7 +1073,7 @@ window.openEditTaskModal = function(id) {
     document.getElementById('modal-ref-doc').value           = t.refDoc    || '';
     document.getElementById('modal-due').value               = t.due        || '';
     document.getElementById('modal-start-date').value        = t.startDate || '';
-    document.getElementById('modal-priority').value          = t.priority  || 'Medium';
+    document.getElementById('modal-priority').value          = t.priority  || 'medium';
     document.getElementById('modal-client').value            = t.clientId  || '';
     openModal('task-modal');
 };
@@ -1129,7 +1140,7 @@ function renderHistoryList(history) {
         <div class="flex gap-3 items-start">
             <div class="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
             <div class="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                <p class="text-sm text-slate-700">${h.text}</p>
+                <p class="text-sm text-slate-700">${escHtml(h.text)}</p>
                 <p class="text-xs text-slate-400 mt-1">${formatDate(h.createdAt)}</p>
             </div>
         </div>`).join('');
@@ -1172,10 +1183,10 @@ function renderEvents() {
         <div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group">
             <span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span>
             <div class="flex-1 min-w-0">
-                <p class="text-xs font-medium text-slate-700 truncate">${e.title}</p>
-                <p class="text-xs text-slate-400">${e.date}</p>
+                <p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p>
+                <p class="text-xs text-slate-400">${escHtml(e.date)}</p>
             </div>
-            <button onclick="deleteEvent('${e.id}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
+            <button onclick="deleteEvent('${escHtml(e.id)}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
         </div>`;
     }).join('');
     lucide.createIcons();
@@ -1195,7 +1206,7 @@ window.saveEvent = async function() {
     const clientId = document.getElementById('event-client-input').value;
     if (!title || !date) { showToast('일정명과 날짜를 입력하세요.', 'error'); return; }
     try {
-        await fnSaveTask({ title, due: date, startDate: date, clientId: clientId || 'common', priority: 'Medium', status: 'event', isEvent: true });
+        await fnSaveTask({ title, due: date, startDate: date, clientId: clientId || 'common', priority: 'medium', status: 'event', isEvent: true });
         closeModal('add-event-modal');
         showToast('✅ 일정 추가 완료!');
         await loadAllData();
@@ -1245,7 +1256,7 @@ function renderRoutines() {
                 <div class="flex items-center gap-3">
                     <span class="text-lg">${client?.emoji || '🏢'}</span>
                     <div>
-                        <h4 class="font-bold text-slate-800">${client?.name || clientId}</h4>
+                        <h4 class="font-bold text-slate-800">${escHtml(client?.name || clientId)}</h4>
                         <p class="text-xs text-slate-500">${done} / ${rList.length} 완료</p>
                     </div>
                 </div>
@@ -1259,15 +1270,15 @@ function renderRoutines() {
             <div class="divide-y divide-slate-100">
                 ${rList.map(r => `
                 <div class="flex items-start gap-4 px-5 py-3 hover:bg-slate-50 transition-colors">
-                    <input type="checkbox" ${r.checked ? 'checked' : ''} onchange="toggleRoutine('${r.id}', this.checked)" class="mt-1 w-4 h-4 rounded text-indigo-600 cursor-pointer accent-indigo-600 flex-shrink-0">
+                    <input type="checkbox" ${r.checked ? 'checked' : ''} onchange="toggleRoutine('${escHtml(r.id)}', this.checked)" class="mt-1 w-4 h-4 rounded text-indigo-600 cursor-pointer accent-indigo-600 flex-shrink-0">
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs px-2 py-0.5 rounded font-semibold ${typeColor[r.type] || typeColor.Other}">${typeLabel[r.type] || r.type}</span>
-                            <p class="text-sm font-medium text-slate-800 ${r.checked ? 'line-through text-slate-400' : ''}">${r.title}</p>
+                            <span class="text-xs px-2 py-0.5 rounded font-semibold ${typeColor[r.type] || typeColor.Other}">${escHtml(typeLabel[r.type] || r.type)}</span>
+                            <p class="text-sm font-medium text-slate-800 ${r.checked ? 'line-through text-slate-400' : ''}">${escHtml(r.title)}</p>
                         </div>
-                        ${r.caution ? `<p class="text-xs text-amber-600 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>${r.caution}</p>` : ''}
+                        ${r.caution ? `<p class="text-xs text-amber-600 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>${escHtml(r.caution)}</p>` : ''}
                     </div>
-                    <button onclick="deleteRoutine('${r.id}')" class="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteRoutine('${escHtml(r.id)}')" class="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </div>`).join('')}
             </div>
         </div>`;
@@ -1350,25 +1361,25 @@ function renderInboxList() {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1 flex-wrap">
                         ${isApproved ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">✅ 승인됨</span>' : isRejected ? '<span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">❌ 거절됨</span>' : '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">📥 대기중</span>'}
-                        <h4 class="font-semibold text-slate-800 text-sm truncate">${mail.subject || '(제목 없음)'}</h4>
+                        <h4 class="font-semibold text-slate-800 text-sm truncate">${escHtml(mail.subject || '(제목 없음)')}</h4>
                     </div>
-                    <p class="text-xs text-slate-500 mb-2">From: ${mail.from || '알 수 없음'} · ${mail.receivedAt ? new Date(mail.receivedAt).toLocaleString('ko-KR') : ''}</p>
-                    <p class="text-xs text-slate-600 bg-slate-50 rounded p-2 line-clamp-2">${mail.bodyText || mail.body || '(내용 없음)'}</p>
+                    <p class="text-xs text-slate-500 mb-2">From: ${escHtml(mail.from || '알 수 없음')} · ${mail.receivedAt ? new Date(mail.receivedAt).toLocaleString('ko-KR') : ''}</p>
+                    <p class="text-xs text-slate-600 bg-slate-50 rounded p-2 line-clamp-2">${escHtml(mail.bodyText || mail.body || '(내용 없음)')}</p>
                     ${isAnalyzed ? `
                     <div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3">
                         <p class="text-xs font-bold text-blue-700 mb-1 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i> AI 분석 결과</p>
-                        ${mail.aiSummary ? `<p class="text-xs text-blue-800 mb-1">📋 ${mail.aiSummary}</p>` : ''}
+                        ${mail.aiSummary ? `<p class="text-xs text-blue-800 mb-1">📋 ${escHtml(mail.aiSummary)}</p>` : ''}
                         ${mail.suggestedTask ? `
                         <div class="bg-white rounded p-2 border border-blue-100 mt-1 space-y-0.5">
-                            <p class="text-xs font-semibold text-slate-700">📌 ${mail.suggestedTask.title || ''}</p>
-                            <p class="text-xs text-slate-500">마감: ${mail.suggestedTask.due || '-'} · 우선순위: ${mail.suggestedTask.priority || 'Medium'} · 고객사 ${mail.suggestedTask.clientId || '-'}</p>
+                            <p class="text-xs font-semibold text-slate-700">📌 ${escHtml(mail.suggestedTask.title || '')}</p>
+                            <p class="text-xs text-slate-500">마감: ${escHtml(mail.suggestedTask.due || '-')} · 우선순위: ${escHtml(mail.suggestedTask.priority || 'medium')} · 고객사 ${escHtml(mail.suggestedTask.clientId || '-')}</p>
                         </div>` : ''}
                     </div>` : ''}
                 </div>
                 ${isPending && isAnalyzed ? `
                 <div class="flex flex-col gap-2 flex-shrink-0">
-                    <button onclick="approveInboxMail('${mail.id}')" class="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition shadow-sm"><i data-lucide="check" class="w-3 h-3"></i> 승인</button>
-                    <button onclick="rejectInboxMail('${mail.id}')" class="flex items-center gap-1 px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-300 transition"><i data-lucide="x" class="w-3 h-3"></i> 거절</button>
+                    <button onclick="approveInboxMail('${escHtml(mail.id)}')" class="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition shadow-sm"><i data-lucide="check" class="w-3 h-3"></i> 승인</button>
+                    <button onclick="rejectInboxMail('${escHtml(mail.id)}')" class="flex items-center gap-1 px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-300 transition"><i data-lucide="x" class="w-3 h-3"></i> 거절</button>
                 </div>` : ''}
             </div>
         </div>`;
@@ -1567,13 +1578,13 @@ window.runBulkParse = async function() {
                 <div class="flex items-start justify-between gap-2 mb-2">
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">#${i+1}</span>
-                        <span class="text-sm font-semibold text-slate-800">${t.title}</span>
+                        <span class="text-sm font-semibold text-slate-800">${escHtml(t.title)}</span>
                     </div>
                     ${getPriorityBadge(t.priority)}
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-xs text-slate-500">
-                    <span>🏢 ${t.clientId || '-'}</span><span>📅 ${t.due || '마감 미정'}</span>
-                    ${t.note ? `<span class="col-span-2 text-slate-600">📝 ${t.note}</span>` : ''}
+                    <span>🏢 ${escHtml(t.clientId || '-')}</span><span>📅 ${escHtml(t.due || '마감 미정')}</span>
+                    ${t.note ? `<span class="col-span-2 text-slate-600">📝 ${escHtml(t.note)}</span>` : ''}
                 </div>
             </div>`).join('');
         area.classList.remove('hidden');
@@ -1676,11 +1687,12 @@ function formatDate(iso) {
 
 function getPriorityBadge(priority) {
     const map = {
-        High: { cls: 'bg-red-100 text-red-700', label: '🔴 High' },
-        Medium: { cls: 'bg-yellow-100 text-yellow-700', label: '🟡 Medium' },
-        Low: { cls: 'bg-green-100 text-green-700', label: '🟢 Low' }
+        high: { cls: 'bg-red-100 text-red-700', label: '🔴 High' },
+        medium: { cls: 'bg-yellow-100 text-yellow-700', label: '🟡 Medium' },
+        low: { cls: 'bg-green-100 text-green-700', label: '🟢 Low' }
     };
-    const p = map[priority] || map.Medium;
+    const key = (priority || '').toLowerCase();
+    const p = map[key] || map.medium;
     return `<span class="px-2 py-0.5 rounded text-xs font-semibold ${p.cls}">${p.label}</span>`;
 }
 
@@ -1746,6 +1758,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+window.runMigration = async function() { const targets = tasks.filter(t => t.status === 'pending'); if(targets.length === 0) { alert("변환할 과거 데이터가 없습니다."); return; } console.log("총 " + targets.length + "개의 데이터를 변환합니다. 창을 닫지 마세요."); let count = 0; for(const t of targets) { try { await fnUpdateStatus({ id: t.id, status: 'active', collection: 'tasks' }); count++; console.log(count + "개 변환 완료"); } catch(e) { console.error(t.id + " 변환 실패", e); } } alert("마이그레이션 완료. 총 " + count + "개의 데이터가 복구되었습니다."); location.reload(); };
 
 lucide.createIcons();
 </script>
