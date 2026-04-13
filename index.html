@@ -614,7 +614,6 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 
-// XSS 방어용 이스케이프 함수
 function escHtml(str) {
     if (!str || typeof str !== 'string') return '';
     return str
@@ -1040,13 +1039,21 @@ window.toggleStatus = async function(id) {
     const t = tasks.find(x => x.id === id);
     if (!t) return;
     const newSt = t.status === 'done' ? 'active' : 'done';
+    
+    // 낙관적 UI: 화면 먼저 변경
+    t.status = newSt;
+    renderTasks();
+    renderStats();
+    lucide.createIcons();
+
     try {
         await fnUpdateStatus({ id, status: newSt });
-        t.status = newSt;
-        renderTasks();
-        renderStats();
-        lucide.createIcons();
-    } catch(e) { showToast('상태 변경 실패: ' + e.message, 'error'); }
+    } catch(e) { 
+        // 롤백
+        t.status = newSt === 'done' ? 'active' : 'done';
+        renderTasks(); renderStats(); lucide.createIcons();
+        showToast('상태 변경 실패: ' + e.message, 'error'); 
+    }
 };
 
 window.openAddTaskModal = function() {
@@ -1083,7 +1090,7 @@ window.saveTask = async function() {
     const title    = document.getElementById('modal-title').value.trim();
     if (!title) { showToast('업무명을 입력하세요.', 'error'); return; }
 
-    const clientId   = document.getElementById('modal-client').value;
+    const clientId   = document.getElementById('modal-client').value || 'ALL';
     const clientName = clients.find(c => c.id === clientId)?.name || '';
 
     const payload = {
@@ -1098,13 +1105,22 @@ window.saveTask = async function() {
         priority:  document.getElementById('modal-priority').value,
         status:    'active'
     };
+    
     const btn = document.getElementById('modal-save-btn');
     btn.disabled = true; btn.textContent = '저장 중...';
     try {
-        await fnSaveTask(payload);
+        const res = await fnSaveTask(payload);
         closeModal('task-modal');
         showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!');
-        await loadAllData();
+        
+        // 낙관적 업데이트
+        if (id) {
+            const idx = tasks.findIndex(x => x.id === id);
+            if(idx > -1) tasks[idx] = { ...tasks[idx], ...payload };
+        } else {
+            tasks.push({ id: res.data.id, ...payload, createdAt: new Date().toISOString() });
+        }
+        renderTasks(); renderStats(); lucide.createIcons();
     } catch(e) {
         showToast('저장 실패: ' + e.message, 'error');
     } finally {
@@ -1114,11 +1130,21 @@ window.saveTask = async function() {
 
 window.deleteTask = async function(id) {
     if (!confirm('이 업무를 삭제하시겠습니까?')) return;
+    
+    // 낙관적 롤백 세팅
+    const idx = tasks.findIndex(x => x.id === id);
+    const backup = tasks[idx];
+    tasks.splice(idx, 1);
+    renderTasks(); renderStats(); lucide.createIcons();
+
     try {
         await fnDeleteTask({ id });
         showToast('🗑️ 업무 삭제 완료');
-        await loadAllData();
-    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+    } catch(e) { 
+        tasks.splice(idx, 0, backup); // 롤백
+        renderTasks(); renderStats(); lucide.createIcons();
+        showToast('삭제 실패: ' + e.message, 'error'); 
+    }
 };
 
 window.openHistoryModal = function(taskId) {
@@ -1152,14 +1178,23 @@ window.addHistory = async function() {
     if (!text) return;
     const t = tasks.find(x => x.id === taskId);
     if (!t) return;
+    
     const history = [...(t.history || []), { text, createdAt: new Date().toISOString() }];
+    
+    // 낙관적 UI
+    const oldHistory = t.history;
+    t.history = history;
+    document.getElementById('history-input-text').value = '';
+    renderHistoryList(history);
+
     try {
         await fnSaveTask({ ...t, history });
-        t.history = history;
-        document.getElementById('history-input-text').value = '';
-        renderHistoryList(history);
         showToast('✅ 이력 추가 완료!');
-    } catch(e) { showToast('이력 추가 실패: ' + e.message, 'error'); }
+    } catch(e) { 
+        t.history = oldHistory;
+        renderHistoryList(oldHistory);
+        showToast('이력 추가 실패: ' + e.message, 'error'); 
+    }
 };
 
 function renderEvents() {
@@ -1206,20 +1241,29 @@ window.saveEvent = async function() {
     const clientId = document.getElementById('event-client-input').value;
     if (!title || !date) { showToast('일정명과 날짜를 입력하세요.', 'error'); return; }
     try {
-        await fnSaveTask({ title, due: date, startDate: date, clientId: clientId || 'common', priority: 'medium', status: 'event', isEvent: true });
+        const res = await fnSaveTask({ title, due: date, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true });
         closeModal('add-event-modal');
         showToast('✅ 일정 추가 완료!');
-        await loadAllData();
+        events.push({ id: res.data.id, title, date, clientId: clientId || 'ALL' });
+        renderEvents();
     } catch(e) { showToast('일정 저장 실패: ' + e.message, 'error'); }
 };
 
 window.deleteEvent = async function(id) {
     if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+    const idx = events.findIndex(x => x.id === id);
+    const backup = events[idx];
+    events.splice(idx, 1);
+    renderEvents();
+
     try {
         await fnDeleteTask({ id });
         showToast('🗑️ 일정 삭제 완료');
-        await loadAllData();
-    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+    } catch(e) { 
+        events.splice(idx, 0, backup);
+        renderEvents();
+        showToast('삭제 실패: ' + e.message, 'error'); 
+    }
 };
 
 function renderRoutines() {
@@ -1236,7 +1280,7 @@ function renderRoutines() {
     }
 
     const grouped = routines.reduce((acc, r) => {
-        const key = r.clientId || 'common';
+        const key = r.clientId || 'ALL';
         if (!acc[key]) acc[key] = [];
         acc[key].push(r);
         return acc;
@@ -1293,39 +1337,54 @@ window.saveRoutine = async function() {
     const caution  = document.getElementById('routine-caution').value.trim();
     if (!title) { showToast('루틴명을 입력하세요.', 'error'); return; }
     try {
-        await fnSaveTask({ clientId, type, title, caution, status: 'routine', isRoutine: true, checked: false });
+        const res = await fnSaveTask({ clientId: clientId || 'ALL', type, title, caution, status: 'routine', isRoutine: true, checked: false });
         closeModal('routine-modal');
         showToast('✅ 루틴 추가 완료!');
-        await loadAllData();
+        routines.push({ id: res.data.id, clientId: clientId || 'ALL', type, title, caution, status: 'routine', isRoutine: true, checked: false });
+        renderRoutines();
     } catch(e) { showToast('루틴 저장 실패: ' + e.message, 'error'); }
 };
 
 window.toggleRoutine = async function(id, checked) {
     const r = routines.find(x => x.id === id);
     if (!r) return;
+    const oldVal = r.checked;
+    r.checked = checked;
+    renderRoutines();
     try {
         await fnUpdateStatus({ id, status: 'routine', checked });
-        r.checked = checked;
+    } catch(e) { 
+        r.checked = oldVal;
         renderRoutines();
-        lucide.createIcons();
-    } catch(e) { showToast('루틴 상태 변경 실패: ' + e.message, 'error'); }
+        showToast('루틴 상태 변경 실패: ' + e.message, 'error'); 
+    }
 };
 
 window.deleteRoutine = async function(id) {
     if (!confirm('이 루틴을 삭제하시겠습니까?')) return;
+    const idx = routines.findIndex(x => x.id === id);
+    const backup = routines[idx];
+    routines.splice(idx, 1);
+    renderRoutines();
+
     try {
         await fnDeleteTask({ id });
         showToast('🗑️ 루틴 삭제 완료');
-        await loadAllData();
-    } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+    } catch(e) { 
+        routines.splice(idx, 0, backup);
+        renderRoutines();
+        showToast('삭제 실패: ' + e.message, 'error'); 
+    }
 };
 
 window.resetRoutines = async function() {
     if (!confirm('모든 루틴을 미완료 상태로 초기화하시겠습니까?\n새 달 시작 시 사용하세요.')) return;
+    // 낙관적 리셋
+    routines.forEach(r => r.checked = false);
+    renderRoutines();
     try {
         await Promise.all(routines.map(r => fnUpdateStatus({ id: r.id, status: 'routine', checked: false })));
         showToast('✅ 루틴 초기화 완료!');
-        await loadAllData();
     } catch(e) { showToast('초기화 실패: ' + e.message, 'error'); }
 };
 
@@ -1388,19 +1447,37 @@ function renderInboxList() {
 }
 
 window.approveInboxMail = async function(id) {
+    const idx = inboxMails.findIndex(m => m.id === id);
+    const backup = inboxMails[idx];
+    inboxMails.splice(idx, 1);
+    renderInboxList();
+
     try {
         await fnApproveDraft({ id });
         showToast('✅ 승인 완료! Tasks에 추가되었습니다.');
-        await loadAllData();
-    } catch(e) { showToast('승인 실패: ' + e.message, 'error'); }
+        // 캘린더 연동 등 백엔드 작업이 끝났으므로 비동기 백그라운드 새로고침
+        fnGetAllData().then(res => { tasks = res.data.tasks || []; renderTasks(); renderStats(); });
+    } catch(e) { 
+        inboxMails.splice(idx, 0, backup);
+        renderInboxList();
+        showToast('승인 실패: ' + e.message, 'error'); 
+    }
 };
 
 window.rejectInboxMail = async function(id) {
+    const idx = inboxMails.findIndex(m => m.id === id);
+    const backup = inboxMails[idx];
+    inboxMails.splice(idx, 1);
+    renderInboxList();
+
     try {
         await fnUpdateStatus({ id, status: 'rejected' });
         showToast('❌ 거절 처리 완료');
-        await loadAllData();
-    } catch(e) { showToast('거절 실패: ' + e.message, 'error'); }
+    } catch(e) { 
+        inboxMails.splice(idx, 0, backup);
+        renderInboxList();
+        showToast('거절 실패: ' + e.message, 'error'); 
+    }
 };
 
 window.handleIngestGmail = async function(btn) {
@@ -1745,7 +1822,7 @@ window.forceSeed = async function() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.textContent = '전체 초기화';
+            btn.textContent = '전체 초기화 & 재설치';
         }
     }
 };
