@@ -62,7 +62,7 @@
 </div>
 
 <div id="app-screen" class="hidden flex h-screen w-full overflow-hidden">
-    <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col z-20">
+    <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col z-20 transition-transform duration-300">
         <div class="p-5 border-b border-slate-100">
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <i data-lucide="briefcase" class="text-blue-600"></i> PM HQ
@@ -1207,17 +1207,21 @@ window.addHistory = async function() {
 function renderEvents() {
     const container = document.getElementById('event-list');
     const today     = new Date(); today.setHours(0,0,0,0);
-    const upcoming  = events
-        .filter(e => new Date(e.date) >= today)
-        .sort((a,b) => a.date.localeCompare(b.date))
-        .slice(0, 5);
+    
+    // 📌 핵심 수정: 별도의 events 배열이 아닌 'tasks' 배열에서 실시간 필터링
+    const upcoming = tasks
+        .filter(t => t.isEvent === true && t.due) // 이벤트이면서 날짜가 있는 것만
+        .filter(t => new Date(t.due) >= today)    // 📌 e.date 대신 t.due를 사용하여 필터링
+        .sort((a,b) => a.due.localeCompare(b.due)) // 날짜순 정렬
+        .slice(0, 5); // 상위 5개만 표시
 
     if (!upcoming.length) {
         container.innerHTML = '<p class="text-xs text-slate-400 px-2">예정된 일정이 없습니다.</p>';
         return;
     }
+    
     container.innerHTML = upcoming.map(e => {
-        const d     = new Date(e.date);
+        const d     = new Date(e.due);
         const diff  = Math.round((d - today) / 86400000);
         const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
         const color = diff === 0 ? 'bg-red-100 text-red-700' : diff <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700';
@@ -1226,9 +1230,11 @@ function renderEvents() {
             <span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span>
             <div class="flex-1 min-w-0">
                 <p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p>
-                <p class="text-xs text-slate-400">${escHtml(e.date)}</p>
+                <p class="text-xs text-slate-400">${escHtml(e.due)} ${e.time || ''}</p>
             </div>
-            <button onclick="deleteEvent('${escHtml(e.id)}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
+            <button onclick="deleteEvent('${escHtml(e.id)}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0">
+                <i data-lucide="x" class="w-3 h-3"></i>
+            </button>
         </div>`;
     }).join('');
     lucide.createIcons();
@@ -1620,18 +1626,29 @@ function setProgress(show, text = '', pct = 0, detail = '') {
     if (show) { txtEl.textContent = text; barEl.style.width = pct + '%'; detEl.textContent = detail; }
 }
 
+// 📌 월간 리포트 생성 로직 수정
 window.createReport = async function() {
     const clientId = document.getElementById('report-client').value;
     const month    = document.getElementById('report-month').value;
     const output   = document.getElementById('report-output');
     const btn      = document.getElementById('btn-create-report');
+    
     if (!month) { showToast('연월을 선택하세요.', 'error'); return; }
+    
     output.textContent = '⏳ AI가 월간 리포트를 생성 중입니다...';
     btn.disabled = true;
+    
     try {
-        const res = await fnMonthlySummary({ clientId, month });
-        output.textContent = res.data?.text || '결과를 받지 못했습니다.';
-    } catch(e) { output.textContent = '생성 실패: ' + e.message; showToast('리포트 생성 실패: ' + e.message, 'error'); } finally { btn.disabled = false; }
+        // 수정 1: 백엔드 파라미터명(yearMonth) 일치
+        const res = await fnMonthlySummary({ clientId, yearMonth: month });
+        // 수정 2: 백엔드 반환 키(rawText) 일치
+        output.textContent = res.data?.rawText || res.data?.text || '결과를 받지 못했습니다.';
+    } catch(e) { 
+        output.textContent = '생성 실패: ' + e.message; 
+        showToast('리포트 생성 실패: ' + e.message, 'error'); 
+    } finally { 
+        btn.disabled = false; 
+    }
 };
 
 window.copyReport = function() {
@@ -1646,18 +1663,28 @@ window.openDailyModal = function() {
     openModal('daily-modal');
 };
 
+// 📌 데일리 리포트 생성 로직 수정
 window.createDailyReport = async function() {
     const clientId = document.getElementById('daily-client').value;
     const date     = document.getElementById('daily-date').value;
     const output   = document.getElementById('daily-output');
     const btn      = document.getElementById('btn-create-daily');
+    
     if (!date) { showToast('기준일을 선택하세요.', 'error'); return; }
+    
     output.textContent = '⏳ AI가 데일리 보고를 생성 중입니다...';
     btn.disabled = true;
+    
     try {
         const res = await fnDailySummary({ clientId, date });
-        output.textContent = res.data?.text || '결과를 받지 못했습니다.';
-    } catch(e) { output.textContent = '생성 실패: ' + e.message; showToast('데일리 보고 생성 실패: ' + e.message, 'error'); } finally { btn.disabled = false; }
+        // 수정 2: 백엔드 반환 키(rawText) 일치
+        output.textContent = res.data?.rawText || res.data?.text || '결과를 받지 못했습니다.';
+    } catch(e) { 
+        output.textContent = '생성 실패: ' + e.message; 
+        showToast('데일리 보고 생성 실패: ' + e.message, 'error'); 
+    } finally { 
+        btn.disabled = false; 
+    }
 };
 
 window.copyDaily = function() {
