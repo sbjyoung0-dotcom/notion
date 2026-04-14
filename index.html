@@ -562,9 +562,15 @@
                 <label class="block text-xs font-bold text-gray-500 mb-1">일정명</label>
                 <input type="text" id="event-title-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="예: 카카오 킥오프 미팅">
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">날짜</label>
-                <input type="date" id="event-date-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">날짜</label>
+                    <input type="date" id="event-date-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">시간</label>
+                    <input type="time" id="event-time-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-500 mb-1">고객사 (선택)</label>
@@ -572,7 +578,7 @@
                     <option value="">고객사 선택 안함</option>
                 </select>
             </div>
-            <button onclick="saveEvent()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition">일정 저장</button>
+            <button onclick="saveEvent()" id="btn-save-event" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition">일정 저장</button>
         </div>
     </div>
 </div>
@@ -613,6 +619,7 @@ const fnAnalyzeMails   = httpsCallable(functions, 'analyzeInboxMails', { timeout
 const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
+const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
 
 function escHtml(str) {
     if (!str || typeof str !== 'string') return '';
@@ -1231,6 +1238,7 @@ window.openAddEventModal = function() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('event-title-input').value = '';
     document.getElementById('event-date-input').value  = today;
+    document.getElementById('event-time-input').value  = '09:00'; // 📌 기본 시간 세팅
     document.getElementById('event-client-input').value = '';
     openModal('add-event-modal');
 };
@@ -1238,15 +1246,39 @@ window.openAddEventModal = function() {
 window.saveEvent = async function() {
     const title    = document.getElementById('event-title-input').value.trim();
     const date     = document.getElementById('event-date-input').value;
+    const time     = document.getElementById('event-time-input').value || '09:00'; // 📌 시간 가져오기
     const clientId = document.getElementById('event-client-input').value;
+    
     if (!title || !date) { showToast('일정명과 날짜를 입력하세요.', 'error'); return; }
+
+    const btn = document.getElementById('btn-save-event');
+    btn.disabled = true; btn.textContent = '구글 캘린더 연동 중...';
+
     try {
-        const res = await fnSaveTask({ title, due: date, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true });
+        // 1. 파이어베이스 DB에 저장 (ID 발급받기)
+        const payload = { title, due: date, time, duration: 60, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true };
+        const res = await fnSaveTask(payload);
+        const eventId = res.data.id;
+
+        // 2. 구글 캘린더 API 호출 (실제 캘린더에 꽂아넣기)
+        await fnAddToCalendar({ eventId, title, date, time, duration: 60 });
+
         closeModal('add-event-modal');
-        showToast('✅ 일정 추가 완료!');
-        events.push({ id: res.data.id, title, date, clientId: clientId || 'ALL' });
+        showToast('✅ 구글 캘린더 및 대시보드 일정 추가 완료!');
+        
+        // 3. 프론트엔드 화면 양쪽(Events, Tasks) 모두 업데이트
+        const newEventObj = { id: eventId, ...payload, createdAt: new Date().toISOString() };
+        events.push(newEventObj);
+        tasks.push(newEventObj); // 📌 tasks 배열에도 추가하여 중앙 대시보드에 즉시 표시
+        
         renderEvents();
-    } catch(e) { showToast('일정 저장 실패: ' + e.message, 'error'); }
+        renderTasks();
+        renderStats();
+    } catch(e) { 
+        showToast('캘린더 연동 실패: ' + e.message, 'error'); 
+    } finally {
+        btn.disabled = false; btn.textContent = '일정 저장';
+    }
 };
 
 window.deleteEvent = async function(id) {
