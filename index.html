@@ -1569,15 +1569,6 @@ window.handleIngestGmail = async function(btn) {
     } catch(e) { showToast('수집 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
 };
 
-// 변경 전: 3초 대기 (setTimeout 3000)
-// 변경 후: 1초 대기 (setTimeout 1000)
-//
-// 이유: 백엔드가 한번에 10건을 처리하므로
-//       프론트 루프 호출 빈도가 줄어 대기시간도 줄여도 안전
-//
-// index.html에서 handleAnalyzeMails 함수의 setTimeout을 수정:
- 
-/*
 window.handleAnalyzeMails = async function(btn) {
     btn.disabled = true;
     try {
@@ -1654,7 +1645,6 @@ function setProgress(show, text = '', pct = 0, detail = '') {
     if (show) { txtEl.textContent = text; barEl.style.width = pct + '%'; detEl.textContent = detail; }
 }
 
-// 📌 월간 리포트 생성 로직 수정
 window.createReport = async function() {
     const clientId = document.getElementById('report-client').value;
     const month    = document.getElementById('report-month').value;
@@ -1667,9 +1657,7 @@ window.createReport = async function() {
     btn.disabled = true;
     
     try {
-        // 수정 1: 백엔드 파라미터명(yearMonth) 일치
         const res = await fnMonthlySummary({ clientId, yearMonth: month });
-        // 수정 2: 백엔드 반환 키(rawText) 일치
         output.textContent = res.data?.rawText || res.data?.text || '결과를 받지 못했습니다.';
     } catch(e) { 
         output.textContent = '생성 실패: ' + e.message; 
@@ -1691,7 +1679,6 @@ window.openDailyModal = function() {
     openModal('daily-modal');
 };
 
-// 📌 데일리 리포트 생성 로직 수정
 window.createDailyReport = async function() {
     const clientId = document.getElementById('daily-client').value;
     const date     = document.getElementById('daily-date').value;
@@ -1705,7 +1692,6 @@ window.createDailyReport = async function() {
     
     try {
         const res = await fnDailySummary({ clientId, date });
-        // 수정 2: 백엔드 반환 키(rawText) 일치
         output.textContent = res.data?.rawText || res.data?.text || '결과를 받지 못했습니다.';
     } catch(e) { 
         output.textContent = '생성 실패: ' + e.message; 
