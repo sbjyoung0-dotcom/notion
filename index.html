@@ -1569,26 +1569,39 @@ window.handleIngestGmail = async function(btn) {
     } catch(e) { showToast('수집 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
 };
 
+// 변경 전: 3초 대기 (setTimeout 3000)
+// 변경 후: 1초 대기 (setTimeout 1000)
+//
+// 이유: 백엔드가 한번에 10건을 처리하므로
+//       프론트 루프 호출 빈도가 줄어 대기시간도 줄여도 안전
+//
+// index.html에서 handleAnalyzeMails 함수의 setTimeout을 수정:
+ 
+/*
 window.handleAnalyzeMails = async function(btn) {
     btn.disabled = true;
     try {
         let totalAnalyzed = 0;
         let keepAnalyzing = true;
         let analyzeBatch = 1;
-
+ 
         while(keepAnalyzing) {
-            setProgress(true, `AI 단일 분석 중 (배치 ${analyzeBatch})...`, 60, `현재 누적 ${totalAnalyzed}건 완료. 잠시 대기...`);
+            setProgress(true, `AI 분석 중 (배치 ${analyzeBatch}, 최대 10건씩)...`, 60, `현재 누적 ${totalAnalyzed}건 완료.`);
             const res = await fnAnalyzeMails();
             const cnt = res.data?.analyzed || 0;
             totalAnalyzed += cnt;
             if (cnt === 0) keepAnalyzing = false;
-            else { analyzeBatch++; await new Promise(resolve => setTimeout(resolve, 3000)); }
+            else { analyzeBatch++; await new Promise(resolve => setTimeout(resolve, 1000)); }
+                                                         // ↑ 3000 → 1000으로 단축
         }
         setProgress(true, `AI 분석 완료: ${totalAnalyzed}건`, 100);
         showToast(`✅ AI 분석 완료: ${totalAnalyzed}건`);
         await loadAllData();
     } catch(e) { showToast('분석 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
 };
+*/
+ 
+// syncGmail 함수도 동일하게 분석 대기 부분을 1000으로 변경
 
 window.syncGmail = async function() {
     const btn = document.getElementById('btn-sync-gmail');
