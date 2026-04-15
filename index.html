@@ -1584,7 +1584,7 @@ window.handleAnalyzeMails = async function(btn) {
         let totalAnalyzed = 0;
         let keepAnalyzing = true;
         let analyzeBatch = 1;
- 
+
         while(keepAnalyzing) {
             setProgress(true, `AI 분석 중 (배치 ${analyzeBatch}, 최대 10건씩)...`, 60, `현재 누적 ${totalAnalyzed}건 완료.`);
             const res = await fnAnalyzeMails();
@@ -1592,16 +1592,17 @@ window.handleAnalyzeMails = async function(btn) {
             totalAnalyzed += cnt;
             if (cnt === 0) keepAnalyzing = false;
             else { analyzeBatch++; await new Promise(resolve => setTimeout(resolve, 1000)); }
-                                                         // ↑ 3000 → 1000으로 단축
         }
         setProgress(true, `AI 분석 완료: ${totalAnalyzed}건`, 100);
         showToast(`✅ AI 분석 완료: ${totalAnalyzed}건`);
         await loadAllData();
-    } catch(e) { showToast('분석 실패: ' + e.message, 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
+    } catch(e) { 
+        showToast('분석 실패: ' + e.message, 'error'); 
+    } finally { 
+        btn.disabled = false; 
+        setTimeout(() => setProgress(false), 2000); 
+    }
 };
-*/
- 
-// syncGmail 함수도 동일하게 분석 대기 부분을 1000으로 변경
 
 window.syncGmail = async function() {
     const btn = document.getElementById('btn-sync-gmail');
@@ -1616,13 +1617,8 @@ window.syncGmail = async function() {
             const res = await fnIngestGmail();
             const cnt = res.data?.count || 0;
             totalCollected += cnt;
-            
-            if (cnt === 0) {
-                keepCollecting = false;
-            } else {
-                collectBatch++;
-                await new Promise(resolve => setTimeout(resolve, 1500));
-            }
+            if (cnt === 0) keepCollecting = false;
+            else { collectBatch++; await new Promise(resolve => setTimeout(resolve, 1500)); }
         }
 
         let totalAnalyzed = 0;
@@ -1634,22 +1630,15 @@ window.syncGmail = async function() {
             const res = await fnAnalyzeMails();
             const cnt = res.data?.analyzed || 0;
             totalAnalyzed += cnt;
-
-            if (cnt === 0) {
-                keepAnalyzing = false;
-            } else {
-                analyzeBatch++;
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            }
+            if (cnt === 0) keepAnalyzing = false;
+            else { analyzeBatch++; await new Promise(resolve => setTimeout(resolve, 1000)); }
         }
 
         setProgress(true, '모든 동기화 완료!', 100, `총 수집: ${totalCollected}건 / 총 분석: ${totalAnalyzed}건`);
         showToast(`✅ 완벽 동기화: 수집 ${totalCollected}건, 분석 ${totalAnalyzed}건 완료`);
         await loadAllData();
-
     } catch(e) {
         showToast('동기화 중 오류 발생: ' + e.message, 'error');
-        console.error(e);
     } finally {
         btn.disabled = false;
         setTimeout(() => setProgress(false), 3000);
