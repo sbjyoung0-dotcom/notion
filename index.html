@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PM Multi-Client HQ</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://unpkg.com/lucide@0.460.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -1036,19 +1037,20 @@ function renderKanbanView(filtered) {
     const makeCard = t => {
         const client  = clients.find(c => c.id === t.clientId);
         const overdue = isOverdue(t.due) && t.status !== 'done';
+        // 📌 중요: 카드 최상위 div에 data-id 속성과 cursor-grab 클래스를 추가했습니다.
         return `
-        <div class="bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start mb-2">
+        <div data-id="${escHtml(t.id)}" class="kanban-card cursor-grab active:cursor-grabbing bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2 pointer-events-none">
                 <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">
                     ${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}
                 </span>
                 ${getPriorityBadge(t.priority)}
             </div>
-            <p class="font-semibold text-slate-800 text-sm mb-1 ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
-            ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2">${escHtml(t.note)}</p>` : ''}
+            <p class="font-semibold text-slate-800 text-sm mb-1 pointer-events-none ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
+            ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2 pointer-events-none">${escHtml(t.note)}</p>` : ''}
             <div class="flex justify-between items-center mt-2">
-                <span class="text-xs ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">📅 ${escHtml(t.due || '기한 없음')} ${overdue ? '⚠ 초과' : ''}</span>
-                <div class="flex gap-1">
+                <span class="text-xs pointer-events-none ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">📅 ${escHtml(t.due || '기한 없음')} ${overdue ? '⚠ 초과' : ''}</span>
+                <div class="flex gap-1 z-10">
                     <button onclick="toggleStatus('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-green-600 rounded transition-colors"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
                     <button onclick="openHistoryModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"><i data-lucide="history" class="w-4 h-4"></i></button>
                     <button onclick="openEditTaskModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
@@ -1058,9 +1060,47 @@ function renderKanbanView(filtered) {
         </div>`;
     };
 
-    todoCol.innerHTML = todo.length ? todo.map(makeCard).join('') : '<p class="text-xs text-slate-400 text-center py-8">진행 중인 업무가 없습니다.</p>';
-    doneCol.innerHTML = done.length ? done.map(makeCard).join('') : '<p class="text-xs text-slate-400 text-center py-8">완료된 업무가 없습니다.</p>';
+    todoCol.innerHTML = todo.length ? todo.map(makeCard).join('') : '<p class="text-xs text-slate-400 text-center py-8 pointer-events-none">진행 중인 업무가 없습니다.</p>';
+    doneCol.innerHTML = done.length ? done.map(makeCard).join('') : '<p class="text-xs text-slate-400 text-center py-8 pointer-events-none">완료된 업무가 없습니다.</p>';
     lucide.createIcons();
+
+    // 📌 SortableJS 적용 (드래그 앤 드롭 활성화)
+    initSortable(todoCol, 'active');
+    initSortable(doneCol, 'done');
+}
+
+let sortableInstances = []; // 중복 적용 방지용
+
+function initSortable(el, newStatus) {
+    if (!el) return;
+    
+    // 이전에 생성된 인스턴스가 있으면 파괴 (메모리 누수 방지)
+    if (el.sortable) {
+        el.sortable.destroy();
+    }
+
+    el.sortable = new Sortable(el, {
+        group: 'shared', // 양쪽 리스트 간 이동 가능하게 함
+        animation: 150,
+        ghostClass: 'bg-slate-50', // 드래그 중인 자리의 디자인
+        onEnd: async function (evt) {
+            // 다른 리스트로 넘어갔을 때만 처리
+            if (evt.from !== evt.to) {
+                const taskId = evt.item.dataset.id;
+                if (!taskId) return;
+
+                // 시각적으로는 이동했지만, DB에도 상태를 업데이트해야 함
+                // (이전에 만들어둔 toggleStatus나 fnUpdateStatus를 활용)
+                try {
+                    await fnUpdateStatus({ id: taskId, status: newStatus });
+                    // onSnapshot이 알아서 화면을 새로고침해 줄 것이므로 showToast만 띄움
+                    showToast(`✅ 상태가 업데이트되었습니다.`);
+                } catch(e) {
+                    showToast('상태 변경 실패: ' + e.message, 'error');
+                }
+            }
+        },
+    });
 }
 
 window.setViewMode = function(mode) {
