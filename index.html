@@ -315,6 +315,10 @@
                             class="flex items-center gap-1.5 text-xs bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition shadow-sm">
                             <i data-lucide="refresh-cw" class="w-3 h-3"></i> 수집 + AI 분석
                         </button>
+			<button onclick="handleBulkDone()" id="btn-bulk-done"
+    			   class="flex items-center gap-1.5 text-xs bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition shadow-sm">
+    			   <i data-lucide="check-square" class="w-3 h-3"></i> 전체 완료 처리
+			</button>
                     </div>
                 </div>
                 <div id="sync-progress" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -613,6 +617,7 @@ const fnSaveTask       = httpsCallable(functions, 'saveTask');
 const fnDeleteTask     = httpsCallable(functions, 'deleteTask');
 const fnUpdateStatus   = httpsCallable(functions, 'updateTaskStatus');
 const fnApproveDraft   = httpsCallable(functions, 'approveDraft');
+const fnBulkDone = httpsCallable(functions, 'bulkApproveAsDone');
 const fnSaveClient     = httpsCallable(functions, 'saveClient');
 const fnDeleteClient   = httpsCallable(functions, 'deleteClient');
 const fnSaveMemo       = httpsCallable(functions, 'saveMemo');
@@ -622,7 +627,6 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
-const fnBulkDone = httpsCallable(functions, 'bulkApproveAsDone');
 
 function escHtml(str) {
     if (!str || typeof str !== 'string') return '';
@@ -658,18 +662,6 @@ onAuthStateChanged(auth, user => {
         document.getElementById('app-screen').classList.add('hidden');
     }
 });
-
-window.handleBulkDone = async function() {
-    if(!confirm("인박스의 모든 메일을 '완료' 업무로 일괄 전환하시겠습니까?")) return;
-    
-    try {
-        showToast('⏳ 일괄 처리 중...');
-        const res = await fnBulkDone();
-        showToast(`✅ ${res.data.count}건 처리 완료!`);
-    } catch(e) {
-        showToast('처리 실패: ' + e.message, 'error');
-    }
-};
 
 window.loginUser = async function() {
     const email    = document.getElementById('auth-email').value.trim();
@@ -1651,6 +1643,23 @@ window.rejectInboxMail = async function(id) {
         inboxMails.splice(idx, 0, backup);
         renderInboxList();
         showToast('거절 실패: ' + e.message, 'error'); 
+    }
+};
+
+window.handleBulkDone = async function() {
+    if(!confirm("인박스의 모든 메일을 '완료(Done)' 업무로 일괄 전환하시겠습니까?")) return;
+    
+    const btn = document.getElementById('btn-bulk-done');
+    if(btn) { btn.disabled = true; btn.innerHTML = '<div class="loader w-3 h-3 border-2"></div> 처리 중...'; }
+    
+    try {
+        const res = await fnBulkDone();
+        showToast(`✅ ${res.data.count}건 처리 완료!`);
+        // onSnapshot 덕분에 인박스와 태스크 리스트는 알아서 갱신됩니다.
+    } catch(e) {
+        showToast('처리 실패: ' + e.message, 'error');
+    } finally {
+        if(btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-square" class="w-3 h-3"></i> 전체 완료 처리'; lucide.createIcons(); }
     }
 };
 
