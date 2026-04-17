@@ -621,10 +621,7 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const functions = getFunctions(app, 'asia-northeast3');
-const db = getFirestore(app);
+
 function escHtml(str) {
     if (!str || typeof str !== 'string') return '';
     return str
