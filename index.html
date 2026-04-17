@@ -1083,21 +1083,22 @@ function initSortable(el, newStatus) {
         group: 'shared', // 양쪽 리스트 간 이동 가능하게 함
         animation: 150,
         ghostClass: 'bg-slate-50', // 드래그 중인 자리의 디자인
-        onEnd: async function (evt) {
-            // 다른 리스트로 넘어갔을 때만 처리
-            if (evt.from !== evt.to) {
-                const taskId = evt.item.dataset.id;
-                if (!taskId) return;
+        
+        // 📌 [수정] onEnd ➔ onAdd 로 변경!
+        // 출발지가 아니라 '도착지'를 기준으로 이벤트가 터지게 만들어, 
+        // 도착지의 정확한 newStatus('done' 또는 'active')를 가져옵니다.
+        onAdd: async function (evt) {
+            const taskId = evt.item.dataset.id;
+            if (!taskId) return;
 
-                // 시각적으로는 이동했지만, DB에도 상태를 업데이트해야 함
-                // (이전에 만들어둔 toggleStatus나 fnUpdateStatus를 활용)
-                try {
-                    await fnUpdateStatus({ id: taskId, status: newStatus });
-                    // onSnapshot이 알아서 화면을 새로고침해 줄 것이므로 showToast만 띄움
-                    showToast(`✅ 상태가 업데이트되었습니다.`);
-                } catch(e) {
-                    showToast('상태 변경 실패: ' + e.message, 'error');
-                }
+            try {
+                // 낙관적 UI는 SortableJS가 이미 카드를 옮겨주었으므로, DB만 조용히 바꿉니다.
+                await fnUpdateStatus({ id: taskId, status: newStatus });
+                showToast(`✅ 상태가 업데이트되었습니다.`);
+                
+                // (업데이트가 성공하면 onSnapshot이 알아서 화면을 깔끔하게 재정렬해 줍니다)
+            } catch(e) {
+                showToast('상태 변경 실패: ' + e.message, 'error');
             }
         },
     });
