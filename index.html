@@ -592,6 +592,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, limit, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey:            "AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ",
@@ -605,8 +606,8 @@ const firebaseConfig = {
 const app       = initializeApp(firebaseConfig);
 const auth      = getAuth(app);
 const functions = getFunctions(app, 'asia-northeast3');
+const db = getFirestore(app);
 
-const fnGetAllData     = httpsCallable(functions, 'getAllData');
 const fnSaveTask       = httpsCallable(functions, 'saveTask');
 const fnDeleteTask     = httpsCallable(functions, 'deleteTask');
 const fnUpdateStatus   = httpsCallable(functions, 'updateTaskStatus');
@@ -620,7 +621,10 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
-
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const functions = getFunctions(app, 'asia-northeast3');
+const db = getFirestore(app);
 function escHtml(str) {
     if (!str || typeof str !== 'string') return '';
     return str
@@ -713,31 +717,78 @@ async function initApp() {
     lucide.createIcons();
 }
 
+let unsubscribers = []; // 파이프들을 담아둘 배열
+
 async function loadAllData() {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    // 기존에 열려있던 파이프라인 닫기 (새로고침/재호출 시 중복 과금 방지)
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
+
     try {
-        const res  = await fnGetAllData();
-        const data = res.data;
+        // 1. Tasks (업무) 실시간 동기화
+        const qTasks = query(collection(db, "users", uid, "tasks"), orderBy("due", "asc"));
+        unsubscribers.push(onSnapshot(qTasks, (snap) => {
+            tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTasks(); 
+            renderStats();
+            renderEvents(); // 사이드바 일정도 같이 갱신
+        }));
 
-        tasks      = data.tasks    || [];
-        clients    = data.clients  || [];
-        events     = data.events   || [];
-        routines   = data.routines || [];
-        inboxMails = data.inbox    || [];
-        const memos = data.memos   || []; 
+        // 2. Inbox (인박스) 실시간 동기화 (pending 상태만)
+        const qInbox = query(collection(db, "users", uid, "inbox"), where("status", "==", "pending"), limit(100));
+        unsubscribers.push(onSnapshot(qInbox, (snap) => {
+            inboxMails = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // 서버 복합인덱스 에러 방지를 위해 프론트에서 최신순 정렬
+            inboxMails.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            renderInboxList();
+        }));
 
-        const memoEl = document.getElementById('quick-memo');
-        if (memoEl && !memoEl.dataset.editing) {
-            const savedMemo = memos.find(m => m.id === 'quick-memo-doc');
-            memoEl.value = savedMemo ? savedMemo.content : '';
-        }
+        // 3. Clients (고객사) 실시간 동기화
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "clients"), (snap) => {
+            clients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderClientNav();
+            renderClientSettings();
+            populateClientSelects();
+        }));
 
-        renderAll();
+        // 4. Routines (루틴) 실시간 동기화
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "routines"), (snap) => {
+            routines = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderRoutines();
+        }));
+
+        // 5. Memos (메모) 실시간 동기화
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "memos"), (snap) => {
+            const memos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const memoEl = document.getElementById('quick-memo');
+            if (memoEl && !memoEl.dataset.editing) {
+                const savedMemo = memos.find(m => m.id === 'quick-memo-doc');
+                memoEl.value = savedMemo ? savedMemo.content : '';
+            }
+        }));
+
+        // 6. Events (구형 일정 데이터) 실시간 동기화
+        const qEvents = query(collection(db, "users", uid, "events"), orderBy("due", "asc"));
+        unsubscribers.push(onSnapshot(qEvents, (snap) => {
+            events = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }));
+
         setConnectionStatus(true);
     } catch(e) {
-        showToast('데이터 로드 실패: ' + e.message, 'error');
+        showToast('실시간 연결 실패: ' + e.message, 'error');
         setConnectionStatus(false);
     }
 }
+
+// 📌 중요: 로그아웃 할 때 파이프를 꼭 끊어줘야 합니다. (기존 로그아웃 함수 수정)
+window.logoutUser = async function() {
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    unsubscribers.forEach(unsub => unsub()); // 파이프 절단!
+    await signOut(auth);
+};
 
 function renderAll() {
     renderClientNav();
@@ -1517,9 +1568,13 @@ window.approveInboxMail = async function(id) {
     renderInboxList();
 
     try {
-        await fnApproveDraft({ id }); // 📌 이메일 파라미터 없이 순수하게 id만 보냅니다.
+        await fnApproveDraft({ id }); 
         showToast('✅ 승인 완료! Tasks에 추가되었습니다.');
-        fnGetAllData().then(res => { tasks = res.data.tasks || []; renderTasks(); renderStats(); });
+        
+        // 🚀 지워진 부분: fnGetAllData().then(...) 을 완전히 삭제했습니다!
+        // 이유: fnApproveDraft가 DB에 태스크를 추가하는 순간, 
+        // 위 2단계에서 열어둔 onSnapshot 파이프가 그걸 감지하고 알아서 renderTasks()를 돌립니다.
+
     } catch(e) { 
         inboxMails.splice(idx, 0, backup);
         renderInboxList();
