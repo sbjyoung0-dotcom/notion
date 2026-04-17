@@ -622,6 +622,7 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
+const fnBulkDone = httpsCallable(functions, 'bulkApproveAsDone');
 
 function escHtml(str) {
     if (!str || typeof str !== 'string') return '';
@@ -657,6 +658,18 @@ onAuthStateChanged(auth, user => {
         document.getElementById('app-screen').classList.add('hidden');
     }
 });
+
+window.handleBulkDone = async function() {
+    if(!confirm("인박스의 모든 메일을 '완료' 업무로 일괄 전환하시겠습니까?")) return;
+    
+    try {
+        showToast('⏳ 일괄 처리 중...');
+        const res = await fnBulkDone();
+        showToast(`✅ ${res.data.count}건 처리 완료!`);
+    } catch(e) {
+        showToast('처리 실패: ' + e.message, 'error');
+    }
+};
 
 window.loginUser = async function() {
     const email    = document.getElementById('auth-email').value.trim();
