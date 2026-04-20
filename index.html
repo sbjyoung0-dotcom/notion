@@ -2240,6 +2240,21 @@ window.runMigration = async function() {
     alert(`마이그레이션 완료. 총 ${count}개 복구됨.`); 
     location.reload(); 
 };
+
+// 📌 콘솔 수동 실행용 임시 함수 등록
+window.runMergeDuplicateTasks = async function() {
+    try {
+        console.log("중복 태스크 병합 시작...");
+        // 백엔드에 정의된 함수 이름과 동일하게 호출 ('mergeDuplicateTasks')
+        const fnMerge = httpsCallable(functions, 'mergeDuplicateTasks');
+        const res = await fnMerge();
+        console.log("병합 완료 결과:", res.data);
+        alert(res.data.message || "병합이 완료되었습니다.");
+    } catch (e) {
+        console.error("병합 실패:", e);
+        alert("병합 실패: " + e.message);
+    }
+};
 </script>
 </body>
 </html>
