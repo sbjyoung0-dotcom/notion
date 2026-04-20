@@ -488,6 +488,7 @@ function renderMails() {
     </div>`).join('') : '<div style="padding:40px; text-align:center; color:var(--ink-4);">처리할 새 메일이 없습니다.</div>';
 }
 
+// 1. 스탯 박스 렌더링 (띄어쓰기 복구)
 function renderStats() {
     const activeTasks = tasks.filter(t => t.status !== 'done');
     const doneTasks = tasks.filter(t => t.status === 'done');
@@ -501,11 +502,43 @@ function renderStats() {
     const statDone = document.getElementById('stat-done');
     const statUrgent = document.getElementById('stat-urgent');
     
-    if(statActive) statActive.innerHTML = `${activeTasks.length}<span class="unit">tasks</span>`;
-    if(statDone) statDone.innerHTML = `${doneTasks.length}<span class="unit">ytd</span>`;
-    if(statUrgent) statUrgent.innerHTML = `${urgentTasks.length}<span class="unit">tasks</span>`;
+    // 📌 숫자와 <span class="unit"> 사이에 띄어쓰기 추가
+    if(statActive) statActive.innerHTML = `${activeTasks.length} <span class="unit">tasks</span>`;
+    if(statDone) statDone.innerHTML = `${doneTasks.length} <span class="unit">ytd</span>`;
+    if(statUrgent) statUrgent.innerHTML = `${urgentTasks.length} <span class="unit">tasks</span>`;
 }
 
+// 2. 칸반 보드 렌더링 (오리지널 디자인 복구)
+function renderKanbanView() {
+    const makeCard = t => {
+        const c = clients.find(x => x.id === t.clientId) || { name: t.clientId || 'Unknown', color: 'var(--ink-4)' };
+        return `
+        <div data-id="${escHtml(t.id)}" class="kan-card cursor-grab">
+            <div class="t ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</div>
+            <div class="m">
+                <span>${escHtml(c.name)}</span>
+                <span>${escHtml(t.due || '-')}</span>
+            </div>
+        </div>`;
+    };
+    
+    const todoCount = tasks.filter(t => t.status !== 'done').length;
+    const doneCount = tasks.filter(t => t.status === 'done').length;
+
+    // 헤더 숫자 업데이트
+    const todoHeader = document.querySelector('#view-kanban-container .kan-col:nth-child(1) h4');
+    const doneHeader = document.querySelector('#view-kanban-container .kan-col:nth-child(2) h4');
+    if(todoHeader) todoHeader.innerHTML = `<span>In Progress</span><span>${todoCount}</span>`;
+    if(doneHeader) doneHeader.innerHTML = `<span>Done</span><span>${doneCount}</span>`;
+
+    document.getElementById('kanban-todo-col').innerHTML = tasks.filter(t => t.status !== 'done').map(makeCard).join('');
+    document.getElementById('kanban-done-col').innerHTML = tasks.filter(t => t.status === 'done').map(makeCard).join('');
+    
+    initSortable(document.getElementById('kanban-todo-col'), 'active');
+    initSortable(document.getElementById('kanban-done-col'), 'done');
+}
+
+// 3. 사이드바 고객사 렌더링 (컬러 스와치 복구)
 function renderClientNav() {
     const nav = document.getElementById('client-nav');
     if(!nav) return;
@@ -518,9 +551,13 @@ function renderClientNav() {
     </div>
     ` + clients.map(c => {
         const count = tasks.filter(t => t.clientId === c.id).length;
+        // 색상이 없으면 기본 색상 배정
+        const bgColor = c.color || 'oklch(0.88 0.08 150)'; 
         return `
         <div class="client-item" onclick="filterByClient('${escHtml(c.id)}')">
-            <span class="client-swatch" style="background:${c.color || 'var(--ink-4)'};"></span>
+            <span class="client-swatch" style="background:${bgColor}; font-size:10px; color:var(--ink); display:flex; align-items:center; justify-content:center;">
+                ${escHtml(c.name).substring(0,1).toUpperCase()}
+            </span>
             <span>${escHtml(c.name)}</span>
             <span class="client-count">${count > 9 ? count : '0'+count}</span>
         </div>`;
