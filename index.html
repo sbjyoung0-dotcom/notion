@@ -627,37 +627,76 @@ window.currentClientFilter = 'all';
 
 window.escHtml = str => str ? String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[m])) : '';
 
+// 1. 안전한 로그인 감지기 (에러 방어 및 화면 토글 기능 추가)
 onAuthStateChanged(auth, user => {
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.querySelector('.app'); // 메인 앱 화면
+
     if (user) {
-        // UI 로그인 처리
-        document.querySelector('.who').innerHTML = `<a href="#">${user.email}</a>`;
-        document.querySelector('.status').innerHTML = 'connected · 실시간 동기화';
+        // 로그인 성공 시 로그인 창 숨기고 메인 앱 보여주기
+        if(loginScreen) loginScreen.classList.add('hidden');
+        if(appScreen) appScreen.classList.remove('hidden');
+
+        // 📌 ?. (옵셔널 체이닝)을 추가하여 요소가 없어도 에러가 나며 죽지 않게 방어합니다.
+        const whoEl = document.querySelector('.who');
+        if(whoEl) whoEl.innerHTML = `<a href="#">${user.email}</a>`;
+        
+        const statusEl = document.querySelector('.status');
+        if(statusEl) statusEl.innerHTML = 'connected · 실시간 동기화';
+
         loadAllData(user.uid);
     } else {
-        alert("로그인이 필요합니다. (실제 운영 시 로그인 모달 호출)");
+        // 로그아웃 상태면 로그인 창 띄우기
+        if(loginScreen) loginScreen.classList.remove('hidden');
+        if(appScreen) appScreen.classList.add('hidden');
     }
 });
 
-function loadAllData(uid) {
-    unsubscribers.forEach(u => u()); unsubscribers = [];
+// 2. 📌 지난번 제가 빼먹었던 로그인 / 회원가입 / 로그아웃 기능 복구
+window.loginUser = async function() {
+    const email = document.getElementById('auth-email')?.value.trim();
+    const password = document.getElementById('auth-password')?.value;
+    const errEl = document.getElementById('auth-error');
     
-    unsubscribers.push(onSnapshot(query(collection(db, "users", uid, "tasks"), orderBy("due", "asc")), snap => {
-        tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderTasks(); renderKanbanView(); renderStats();
-    }));
+    if(errEl) errEl.classList.add('hidden');
     
-    unsubscribers.push(onSnapshot(query(collection(db, "users", uid, "inbox"), where("status", "==", "pending")), snap => {
-        inboxMails = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-        renderMails();
-        const badge = document.querySelector('.tab .badge');
-        if(badge) badge.textContent = inboxMails.length;
-    }));
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch(e) {
+        if(errEl) {
+            errEl.textContent = '로그인 실패: ' + e.message;
+            errEl.classList.remove('hidden');
+        } else {
+            alert('로그인 실패: ' + e.message);
+        }
+    }
+};
 
-    unsubscribers.push(onSnapshot(collection(db, "users", uid, "clients"), snap => {
-        clients = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderClientNav();
-    }));
-}
+window.registerUser = async function() {
+    const email = document.getElementById('auth-email')?.value.trim();
+    const password = document.getElementById('auth-password')?.value;
+    const errEl = document.getElementById('auth-error');
+    
+    try {
+        // 회원가입용 Firebase 함수 (상단 import에 createUserWithEmailAndPassword 추가 필요)
+        import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert('회원가입 성공! 자동 로그인됩니다.');
+    } catch(e) {
+        if(errEl) {
+            errEl.textContent = '회원가입 실패: ' + e.message;
+            errEl.classList.remove('hidden');
+        } else {
+            alert('회원가입 실패: ' + e.message);
+        }
+    }
+};
+
+window.logoutUser = async function() {
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    unsubscribers.forEach(u => u()); 
+    await signOut(auth);
+};
 
 /* ================= 100% 오리지널 디자인 복원 렌더링 ================= */
 
