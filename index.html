@@ -7,23 +7,75 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="https://unpkg.com/lucide@0.460.0"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+        /* ============================================
+           PM HQ — Editorial Design System
+           Warm burnt-sienna + Instrument Serif italic
+           ============================================ */
+        :root {
+            --bg:        oklch(0.985 0.004 80);
+            --bg-elev:   oklch(1 0 0);
+            --bg-sunk:   oklch(0.965 0.006 80);
+            --line:      oklch(0.9 0.008 80);
+            --line-soft: oklch(0.94 0.006 80);
+            --ink:       oklch(0.22 0.012 80);
+            --ink-2:     oklch(0.42 0.012 80);
+            --ink-3:     oklch(0.58 0.012 80);
+            --ink-4:     oklch(0.72 0.01 80);
+            --accent:      oklch(0.56 0.16 28);
+            --accent-soft: oklch(0.94 0.04 28);
+            --accent-ink:  oklch(0.38 0.12 28);
+            --ok:     oklch(0.58 0.12 150);
+            --warn:   oklch(0.62 0.12 70);
+            --danger: oklch(0.56 0.14 25);
+            --danger-soft: oklch(0.95 0.04 25);
+            --info:   oklch(0.58 0.11 245);
+            --f-serif: 'Instrument Serif', 'Noto Sans KR', Georgia, serif;
+            --f-sans:  'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            --f-mono:  'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: var(--f-sans) !important;
+            background: var(--bg) !important;
+            color: var(--ink) !important;
+            font-size: 14px;
+            line-height: 1.5;
+            letter-spacing: -0.005em;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .hidden { display: none !important; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .tab-active   { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
-        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
-        .tab-inactive:hover { color: #334155; border-bottom: 2px solid #cbd5e1; }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+        /* ===== Tabs (override) ===== */
+        .tab-active {
+            border-bottom: 2px solid var(--accent) !important;
+            color: var(--ink) !important;
+            font-weight: 600 !important;
+        }
+        .tab-inactive {
+            border-bottom: 2px solid transparent !important;
+            color: var(--ink-3) !important;
+        }
+        .tab-inactive:hover { color: var(--ink-2) !important; border-bottom: 2px solid transparent !important; }
+
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
+            border: 2px solid var(--line);
+            border-top: 2px solid var(--accent);
             border-radius: 50%;
-            width: 16px; height: 16px;
-            animation: spin 1s linear infinite;
+            width: 14px; height: 14px;
+            animation: spin 0.8s linear infinite;
             display: inline-block;
         }
         @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
@@ -32,6 +84,895 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+
+        /* ============================================
+           BACKGROUND / PANEL OVERRIDES
+           Tailwind slate/blue → warm editorial palette
+           ============================================ */
+        .bg-slate-50, .bg-slate-100\/50 { background-color: var(--bg-sunk) !important; }
+        .bg-slate-100 { background-color: var(--bg-sunk) !important; }
+        main.bg-slate-50 { background: var(--bg) !important; }
+
+        .bg-white { background-color: var(--bg-elev) !important; }
+
+        /* Borders */
+        .border, .border-slate-100, .border-slate-200, .border-slate-300 { border-color: var(--line) !important; }
+        .divide-slate-100 > * + *, .divide-slate-200 > * + * { border-color: var(--line-soft) !important; }
+        .border-b, .border-t, .border-r, .border-l { border-color: var(--line) !important; }
+
+        /* Shadows — softer, warmer */
+        .shadow-sm { box-shadow: 0 1px 2px rgba(50, 35, 20, 0.04) !important; }
+        .shadow-md { box-shadow: 0 4px 12px rgba(50, 35, 20, 0.06) !important; }
+        .shadow-xl { box-shadow: 0 12px 40px rgba(50, 35, 20, 0.12) !important; }
+
+        /* ===== Text color overrides ===== */
+        .text-slate-800, .text-slate-700 { color: var(--ink) !important; }
+        .text-slate-600 { color: var(--ink-2) !important; }
+        .text-slate-500 { color: var(--ink-3) !important; }
+        .text-slate-400, .text-slate-300 { color: var(--ink-4) !important; }
+        .text-gray-500, .text-gray-400, .text-gray-600 { color: var(--ink-3) !important; }
+        .placeholder-yellow-400\/70::placeholder { color: var(--ink-4) !important; }
+
+        /* ============================================
+           SIDEBAR
+           ============================================ */
+        aside#sidebar {
+            background: var(--bg-elev) !important;
+            border-right: 1px solid var(--line) !important;
+        }
+
+        /* Brand logo area */
+        aside#sidebar h1 {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 28px !important;
+            font-weight: 400 !important;
+            letter-spacing: -0.02em !important;
+            color: var(--ink) !important;
+        }
+        aside#sidebar h1 i[data-lucide="briefcase"] {
+            color: var(--accent) !important;
+        }
+        aside#sidebar > div:first-child p {
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase !important;
+            color: var(--ink-3) !important;
+        }
+
+        /* Sidebar section labels */
+        aside#sidebar .text-xs.font-bold.text-slate-400.uppercase {
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.12em !important;
+            color: var(--ink-4) !important;
+            font-weight: 500 !important;
+        }
+
+        /* Client nav buttons */
+        #client-nav button {
+            color: var(--ink-2) !important;
+            font-size: 13.5px !important;
+            font-weight: 500 !important;
+            transition: all 0.12s !important;
+            position: relative;
+            border-radius: 8px !important;
+        }
+        #client-nav button:hover {
+            background: var(--bg-sunk) !important;
+            color: var(--ink) !important;
+        }
+        #client-nav button.bg-blue-50 {
+            background: var(--bg-sunk) !important;
+            color: var(--ink) !important;
+        }
+        #client-nav button.bg-blue-50::before {
+            content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
+            width: 2px; background: var(--accent); border-radius: 2px;
+        }
+        #client-nav button.text-blue-700 { color: var(--ink) !important; }
+
+        /* Event list items */
+        #event-list > div {
+            border: 1px solid var(--line-soft) !important;
+            background: var(--bg-elev) !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+            transition: border-color 0.12s;
+        }
+        #event-list > div:hover { border-color: var(--line) !important; }
+        #event-list > div span.bg-red-100 {
+            background: var(--danger-soft) !important;
+            color: var(--danger) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.04em !important;
+            font-weight: 600 !important;
+        }
+        #event-list > div span.bg-orange-100 {
+            background: var(--accent-soft) !important;
+            color: var(--accent-ink) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.04em !important;
+            font-weight: 600 !important;
+        }
+        #event-list > div span.bg-blue-50 {
+            background: var(--bg-sunk) !important;
+            color: var(--ink-2) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.04em !important;
+            font-weight: 600 !important;
+        }
+
+        /* Sidebar inputs */
+        #new-client-name, #new-client-id {
+            border: 1px solid var(--line) !important;
+            background: var(--bg) !important;
+            color: var(--ink) !important;
+            border-radius: 7px !important;
+            font-family: var(--f-sans) !important;
+        }
+        #new-client-name:focus, #new-client-id:focus {
+            border-color: var(--accent) !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        /* + 고객사 추가 button */
+        aside#sidebar button.bg-blue-50 {
+            background: var(--accent-soft) !important;
+            color: var(--accent-ink) !important;
+            border: 1px dashed oklch(0.82 0.08 28) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 10.5px !important;
+            letter-spacing: 0.06em !important;
+        }
+        aside#sidebar button.bg-blue-50:hover {
+            background: var(--accent) !important;
+            color: #fff !important;
+            border-style: solid !important;
+        }
+
+        /* Client settings list */
+        #client-settings-list > div {
+            background: transparent !important;
+            border: none !important;
+            padding: 5px 8px !important;
+            border-radius: 6px !important;
+            font-size: 12px !important;
+            color: var(--ink-2) !important;
+        }
+        #client-settings-list > div:hover { background: var(--bg-sunk) !important; }
+
+        /* Sidebar footer (connection + logout) */
+        aside#sidebar > div:last-child {
+            border-top: 1px solid var(--line-soft) !important;
+            background: var(--bg-sunk) !important;
+        }
+        #connection-text { color: var(--ink) !important; font-size: 12.5px !important; font-weight: 500 !important; }
+        #connection-status-text { font-family: var(--f-mono) !important; font-size: 10px !important; }
+
+        /* 전체 초기화 버튼 */
+        #btn-force-seed {
+            background: transparent !important;
+            border: 1px solid var(--line) !important;
+            color: var(--ink-3) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 10.5px !important;
+            letter-spacing: 0.06em !important;
+        }
+        #btn-force-seed:hover {
+            background: var(--danger-soft) !important;
+            color: var(--danger) !important;
+            border-color: var(--danger) !important;
+        }
+
+        /* ============================================
+           TOPBAR / HEADER
+           ============================================ */
+        main > header {
+            background: var(--bg) !important;
+            border-bottom: 1px solid var(--line) !important;
+            backdrop-filter: blur(8px);
+        }
+        #header-title {
+            font-family: var(--f-serif) !important;
+            font-size: 38px !important;
+            font-style: italic !important;
+            font-weight: 400 !important;
+            letter-spacing: -0.02em !important;
+            color: var(--ink) !important;
+            line-height: 1.1 !important;
+        }
+        #header-desc {
+            color: var(--ink-3) !important;
+            font-size: 13px !important;
+            max-width: 640px;
+        }
+
+        /* ===== Top action buttons ===== */
+        header button.bg-rose-500,
+        header button.bg-purple-600,
+        header button.bg-emerald-600,
+        header button.bg-blue-600,
+        header button.bg-indigo-600 {
+            background: var(--bg-elev) !important;
+            color: var(--ink-2) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 8px !important;
+            font-family: var(--f-sans) !important;
+            font-size: 12.5px !important;
+            font-weight: 500 !important;
+            padding: 8px 13px !important;
+            box-shadow: none !important;
+            transition: all 0.12s !important;
+        }
+        header button.bg-rose-500:hover,
+        header button.bg-purple-600:hover,
+        header button.bg-emerald-600:hover,
+        header button.bg-indigo-600:hover {
+            border-color: var(--ink-4) !important;
+            color: var(--ink) !important;
+        }
+        /* Primary action: 새 업무 */
+        header button.bg-blue-600 {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-color: var(--ink) !important;
+        }
+        header button.bg-blue-600:hover {
+            background: var(--accent-ink) !important;
+            border-color: var(--accent-ink) !important;
+            color: #fff !important;
+        }
+
+        /* Tabs styling */
+        .tab-btn {
+            font-family: var(--f-sans) !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            padding: 12px 18px 14px !important;
+        }
+        #inbox-badge {
+            background: var(--accent) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            font-weight: 600 !important;
+        }
+
+        /* ============================================
+           STATS WIDGET
+           ============================================ */
+        #stats-widget {
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+            background: var(--bg-elev) !important;
+            overflow: hidden !important;
+            gap: 0 !important;
+        }
+        #stats-widget > div {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            border-right: 1px solid var(--line-soft) !important;
+            padding: 22px 24px !important;
+            box-shadow: none !important;
+        }
+        #stats-widget > div:last-child { border-right: none !important; }
+        #stats-widget > div > div:first-child {
+            display: none !important;
+        }
+        #stats-widget > div > div:last-child { flex: 1; }
+        #stats-widget p.text-xs {
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.1em !important;
+            text-transform: uppercase !important;
+            color: var(--ink-3) !important;
+            margin-bottom: 8px !important;
+        }
+        #stat-active, #stat-done, #stat-urgent {
+            font-family: var(--f-serif) !important;
+            font-size: 44px !important;
+            font-weight: 400 !important;
+            font-style: italic !important;
+            line-height: 1 !important;
+            color: var(--ink) !important;
+            letter-spacing: -0.03em !important;
+        }
+        #stat-urgent { color: var(--accent-ink) !important; }
+
+        /* ============================================
+           QUICK MEMO
+           ============================================ */
+        section.bg-yellow-50 {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+        }
+        section.bg-yellow-50 h3 {
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.12em !important;
+            text-transform: uppercase !important;
+            color: var(--ink-4) !important;
+            font-weight: 500 !important;
+        }
+        section.bg-yellow-50 h3 i { color: var(--accent) !important; }
+        #quick-memo {
+            background: transparent !important;
+            border: none !important;
+            color: var(--ink-2) !important;
+            font-family: var(--f-sans) !important;
+            font-size: 13.5px !important;
+            line-height: 1.55 !important;
+        }
+        #quick-memo:focus {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        #memo-status { font-family: var(--f-mono) !important; font-size: 10px !important; color: var(--ok) !important; }
+
+        /* ============================================
+           SECTION TITLE (업무 목록)
+           ============================================ */
+        main section h3.text-lg {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 26px !important;
+            font-weight: 400 !important;
+            color: var(--ink) !important;
+            letter-spacing: -0.01em !important;
+        }
+        main section h3.text-lg i { display: none !important; }
+
+        /* View mode / filter buttons */
+        #btn-view-list, #btn-view-kanban, .filter-btn {
+            font-family: var(--f-sans) !important;
+            font-size: 11.5px !important;
+            font-weight: 500 !important;
+            border-radius: 6px !important;
+        }
+        #btn-view-list.bg-slate-100, #btn-view-kanban.bg-slate-100,
+        .filter-btn.bg-slate-100 {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+        }
+
+        /* Search input */
+        #search-input {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            color: var(--ink) !important;
+            font-family: var(--f-sans) !important;
+            font-size: 12.5px !important;
+            border-radius: 8px !important;
+        }
+        #search-input:focus {
+            border-color: var(--accent) !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        /* ============================================
+           TASK TABLE
+           ============================================ */
+        #view-list-container {
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+            background: var(--bg-elev) !important;
+        }
+        #view-list-container table thead {
+            background: var(--bg-sunk) !important;
+            border-bottom: 1px solid var(--line) !important;
+        }
+        #view-list-container table thead th {
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.1em !important;
+            text-transform: uppercase !important;
+            color: var(--ink-3) !important;
+            font-weight: 600 !important;
+            padding: 13px 12px !important;
+        }
+        #view-list-container table thead th:hover { color: var(--ink) !important; }
+        #view-list-container table tbody tr {
+            transition: background 0.1s !important;
+        }
+        #view-list-container table tbody tr:hover {
+            background: var(--bg-sunk) !important;
+        }
+        #view-list-container table tbody tr.bg-red-50 {
+            background: var(--danger-soft) !important;
+        }
+        #view-list-container table tbody td {
+            padding: 14px 12px !important;
+            color: var(--ink-2) !important;
+            border-bottom: 1px solid var(--line-soft) !important;
+        }
+
+        /* Status circle */
+        #view-list-container button.rounded-full.border-2 {
+            border: 1.5px solid var(--line) !important;
+            border-radius: 4px !important;
+            width: 16px !important;
+            height: 16px !important;
+        }
+        #view-list-container button.rounded-full.border-2.bg-green-500 {
+            background: var(--ink) !important;
+            border-color: var(--ink) !important;
+            color: var(--bg) !important;
+        }
+        #view-list-container button.rounded-full.border-2:hover {
+            border-color: var(--ink-3) !important;
+            background: transparent !important;
+        }
+        #view-list-container button.rounded-full.border-2.bg-green-500:hover {
+            background: var(--ink) !important;
+            border-color: var(--ink) !important;
+        }
+
+        /* Client pill in table */
+        #view-list-container td span.px-2.py-1.rounded-md {
+            background: transparent !important;
+            color: var(--ink) !important;
+            font-family: var(--f-sans) !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            padding: 0 !important;
+        }
+
+        /* Task title */
+        #view-list-container td p.font-semibold {
+            color: var(--ink) !important;
+            font-size: 13.5px !important;
+            font-weight: 500 !important;
+            line-height: 1.35 !important;
+        }
+        #view-list-container td p.text-xs.text-slate-400 {
+            color: var(--ink-3) !important;
+            font-size: 12px !important;
+            margin-top: 3px !important;
+        }
+
+        /* Date cells */
+        #view-list-container td.text-sm {
+            font-family: var(--f-mono) !important;
+            font-size: 11.5px !important;
+            color: var(--ink-2) !important;
+        }
+        #view-list-container td.text-red-600 {
+            color: var(--danger) !important;
+        }
+
+        /* Priority badges */
+        .px-2.py-0\.5.rounded.text-xs.font-bold,
+        .px-2.py-0\.5.rounded.text-xs.font-semibold {
+            font-family: var(--f-mono) !important;
+            font-size: 10.5px !important;
+            letter-spacing: 0.06em !important;
+            text-transform: uppercase !important;
+            font-weight: 600 !important;
+            padding: 3px 7px !important;
+        }
+        .bg-red-100.text-red-700 {
+            background: transparent !important;
+            color: var(--danger) !important;
+            border: 1px solid var(--danger) !important;
+        }
+        .bg-yellow-100.text-yellow-700 {
+            background: transparent !important;
+            color: var(--warn) !important;
+            border: 1px solid var(--warn) !important;
+        }
+        .bg-green-100.text-green-700 {
+            background: transparent !important;
+            color: var(--ok) !important;
+            border: 1px solid var(--ok) !important;
+        }
+        .bg-blue-100.text-blue-700 {
+            background: transparent !important;
+            color: var(--info) !important;
+            border: 1px solid var(--info) !important;
+        }
+
+        /* Row action icon buttons */
+        #view-list-container td button.p-1\.5 {
+            color: var(--ink-3) !important;
+            border-radius: 6px !important;
+            width: 28px;
+            height: 28px;
+            display: inline-grid !important;
+            place-items: center !important;
+            transition: all 0.1s !important;
+        }
+        #view-list-container td button.p-1\.5:hover {
+            background: var(--bg-sunk) !important;
+            color: var(--ink) !important;
+        }
+
+        /* ============================================
+           KANBAN
+           ============================================ */
+        #view-kanban-container > div {
+            background: var(--bg-sunk) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+        }
+        #view-kanban-container h4 {
+            font-family: var(--f-mono) !important;
+            font-size: 11px !important;
+            letter-spacing: 0.1em !important;
+            text-transform: uppercase !important;
+            color: var(--ink-3) !important;
+            font-weight: 600 !important;
+        }
+        #view-kanban-container h4 i[data-lucide="circle-dashed"] { color: var(--accent) !important; }
+        #view-kanban-container h4 i[data-lucide="check-circle-2"] { color: var(--ok) !important; }
+        #kanban-todo-count, #kanban-done-count {
+            background: var(--bg-elev) !important;
+            color: var(--ink-2) !important;
+            font-family: var(--f-mono) !important;
+            font-weight: 600 !important;
+        }
+        .kanban-card {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 10px !important;
+        }
+        .kanban-card:hover {
+            border-color: var(--ink-4) !important;
+        }
+        .kanban-card.border-red-300 {
+            border-color: var(--danger) !important;
+        }
+        .kanban-card p.font-semibold {
+            font-size: 13px !important;
+            color: var(--ink) !important;
+        }
+        .kanban-card button.p-1 {
+            color: var(--ink-3) !important;
+        }
+        .kanban-card button.p-1:hover {
+            background: var(--bg-sunk) !important;
+            color: var(--ink) !important;
+        }
+
+        /* ============================================
+           INBOX
+           ============================================ */
+        #view-inbox > div:first-child {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+        }
+        #view-inbox h3.text-lg {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 24px !important;
+            color: var(--ink) !important;
+            font-weight: 400 !important;
+        }
+        #view-inbox p.text-xs.text-blue-700 {
+            color: var(--ink-3) !important;
+            font-size: 13px !important;
+        }
+        #view-inbox div.p-2.bg-blue-100 {
+            background: var(--accent-soft) !important;
+            color: var(--accent) !important;
+        }
+
+        /* Inbox action buttons */
+        #btn-ingest-gmail, #btn-analyze-mails, #btn-sync-gmail {
+            background: var(--bg-elev) !important;
+            color: var(--ink-2) !important;
+            border: 1px solid var(--line) !important;
+            font-family: var(--f-sans) !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            border-radius: 7px !important;
+            box-shadow: none !important;
+        }
+        #btn-sync-gmail {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-color: var(--ink) !important;
+        }
+        #btn-ingest-gmail:hover, #btn-analyze-mails:hover {
+            border-color: var(--ink-4) !important;
+            color: var(--ink) !important;
+        }
+        #btn-sync-gmail:hover {
+            background: var(--accent-ink) !important;
+            border-color: var(--accent-ink) !important;
+        }
+
+        /* Sync progress */
+        #sync-progress {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 10px !important;
+        }
+        #sync-progress-text { color: var(--ink) !important; font-family: var(--f-sans) !important; }
+        #sync-progress-detail { color: var(--ink-3) !important; font-family: var(--f-mono) !important; font-size: 11px !important; }
+        #sync-progress .bg-blue-100 { background: var(--bg-sunk) !important; }
+        #sync-progress-bar { background: var(--accent) !important; }
+
+        /* Mail items */
+        #inbox-list > div {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+            padding: 16px 20px !important;
+        }
+        #inbox-list > div.border-blue-200 { border-color: var(--line) !important; }
+        #inbox-list > div.border-green-200 { border-color: var(--ok) !important; }
+        #inbox-list h4.font-semibold { color: var(--ink) !important; font-size: 13.5px !important; font-weight: 600 !important; }
+        #inbox-list p.text-xs { color: var(--ink-3) !important; font-size: 12px !important; }
+        #inbox-list p.bg-slate-50 {
+            background: var(--bg-sunk) !important;
+            border-radius: 8px !important;
+            padding: 10px 12px !important;
+        }
+        #inbox-list div.bg-blue-50 {
+            background: var(--accent-soft) !important;
+            border: 1px solid var(--accent-soft) !important;
+            border-radius: 8px !important;
+        }
+        #inbox-list div.bg-blue-50 p.text-blue-700,
+        #inbox-list div.bg-blue-50 p.text-blue-800 {
+            color: var(--accent-ink) !important;
+        }
+        #inbox-list div.bg-blue-50 i { color: var(--accent) !important; }
+        #inbox-list button.bg-green-600 {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-radius: 7px !important;
+            font-size: 11.5px !important;
+        }
+        #inbox-list button.bg-slate-200 {
+            background: transparent !important;
+            color: var(--ink-3) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 7px !important;
+            font-size: 11.5px !important;
+        }
+        #inbox-list button.bg-slate-200:hover {
+            background: var(--bg-sunk) !important;
+            color: var(--ink) !important;
+        }
+
+        /* ============================================
+           ROUTINES
+           ============================================ */
+        #view-routine > div:first-child {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+        }
+        #view-routine h3.text-lg {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 24px !important;
+            color: var(--ink) !important;
+            font-weight: 400 !important;
+        }
+        #view-routine p.text-xs.text-blue-700 {
+            color: var(--ink-3) !important;
+            font-size: 13px !important;
+        }
+        #view-routine div.p-2.bg-blue-100 {
+            background: var(--accent-soft) !important;
+            color: var(--accent) !important;
+        }
+        #view-routine button.border-blue-200 {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            color: var(--ink-2) !important;
+            border-radius: 8px !important;
+        }
+        #view-routine button.border-blue-200:hover {
+            border-color: var(--ink-4) !important;
+            color: var(--ink) !important;
+        }
+
+        #routine-list > div {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+        }
+        #routine-list > div > div:first-child {
+            background: transparent !important;
+            border-bottom: 1px solid var(--line-soft) !important;
+            padding: 18px 22px !important;
+        }
+        #routine-list h4.font-bold {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 22px !important;
+            font-weight: 400 !important;
+            color: var(--ink) !important;
+        }
+        #routine-list p.text-xs {
+            font-family: var(--f-mono) !important;
+            font-size: 10.5px !important;
+            color: var(--ink-3) !important;
+            letter-spacing: 0.04em !important;
+        }
+        #routine-list .bg-slate-200.rounded-full {
+            background: var(--bg-sunk) !important;
+        }
+        #routine-list .bg-indigo-500 { background: var(--accent) !important; }
+        #routine-list .text-indigo-600 {
+            color: var(--accent-ink) !important;
+            font-family: var(--f-mono) !important;
+        }
+        #routine-list input[type="checkbox"] {
+            accent-color: var(--ink) !important;
+        }
+        #routine-list p.text-amber-600 {
+            color: var(--warn) !important;
+            font-style: italic !important;
+            font-size: 11px !important;
+        }
+
+        /* ============================================
+           MODALS
+           ============================================ */
+        [id$="-modal"] .bg-white {
+            background: var(--bg-elev) !important;
+            border-radius: 14px !important;
+        }
+        [id$="-modal"] h3 {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 22px !important;
+            font-weight: 400 !important;
+            color: var(--ink) !important;
+        }
+        [id$="-modal"] label {
+            font-family: var(--f-mono) !important;
+            font-size: 10px !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase !important;
+            color: var(--ink-3) !important;
+            font-weight: 500 !important;
+        }
+        [id$="-modal"] input, [id$="-modal"] select, [id$="-modal"] textarea {
+            border: 1px solid var(--line) !important;
+            background: var(--bg) !important;
+            color: var(--ink) !important;
+            border-radius: 8px !important;
+            font-family: var(--f-sans) !important;
+            font-size: 13px !important;
+        }
+        [id$="-modal"] input:focus, [id$="-modal"] select:focus, [id$="-modal"] textarea:focus {
+            border-color: var(--accent) !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        [id$="-modal"] button.w-full.bg-blue-600,
+        [id$="-modal"] button.w-full.bg-indigo-600 {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-radius: 8px !important;
+            font-family: var(--f-sans) !important;
+        }
+        [id$="-modal"] button.w-full.bg-blue-600:hover,
+        [id$="-modal"] button.w-full.bg-indigo-600:hover {
+            background: var(--accent-ink) !important;
+        }
+
+        /* Report / Daily / Bulk output area */
+        #report-output, #daily-output {
+            background: var(--bg-sunk) !important;
+            border: 1px solid var(--line) !important;
+            color: var(--ink-2) !important;
+            font-family: var(--f-mono) !important;
+            font-size: 12.5px !important;
+            border-radius: 10px !important;
+        }
+        #btn-create-report, #btn-create-daily, #btn-bulk-parse {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-radius: 7px !important;
+        }
+        #btn-create-report:hover, #btn-create-daily:hover, #btn-bulk-parse:hover {
+            background: var(--accent-ink) !important;
+        }
+        [id$="-modal"] button.bg-slate-100 {
+            background: var(--bg-sunk) !important;
+            color: var(--ink-2) !important;
+            border: 1px solid var(--line) !important;
+        }
+        [id$="-modal"] button.bg-emerald-600 {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-radius: 7px !important;
+        }
+
+        /* ============================================
+           LOGIN SCREEN
+           ============================================ */
+        #login-screen {
+            background: var(--bg) !important;
+        }
+        #login-screen > div {
+            background: var(--bg-elev) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 40px rgba(50, 35, 20, 0.08) !important;
+        }
+        #login-screen h1 {
+            font-family: var(--f-serif) !important;
+            font-style: italic !important;
+            font-size: 28px !important;
+            font-weight: 400 !important;
+            color: var(--ink) !important;
+        }
+        #login-screen h1 i { color: var(--accent) !important; }
+        #login-screen p.text-sm { font-family: var(--f-mono) !important; font-size: 11px !important; letter-spacing: 0.08em !important; color: var(--ink-3) !important; }
+        #auth-email, #auth-password {
+            background: var(--bg) !important;
+            border: 1px solid var(--line) !important;
+            color: var(--ink) !important;
+            border-radius: 8px !important;
+        }
+        #auth-email:focus, #auth-password:focus {
+            border-color: var(--accent) !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        #btn-login {
+            background: var(--ink) !important;
+            color: var(--bg) !important;
+            border-radius: 8px !important;
+            font-family: var(--f-sans) !important;
+        }
+        #btn-login:hover { background: var(--accent-ink) !important; }
+        #btn-register {
+            background: transparent !important;
+            border: 1px solid var(--line) !important;
+            color: var(--ink-3) !important;
+            border-radius: 8px !important;
+            font-family: var(--f-sans) !important;
+        }
+        #btn-register:hover {
+            border-color: var(--ink-4) !important;
+            color: var(--ink) !important;
+        }
+
+        /* ============================================
+           TOAST
+           ============================================ */
+        #toast {
+            font-family: var(--f-sans) !important;
+            border-radius: 10px !important;
+        }
+        #toast.bg-slate-800 { background: var(--ink) !important; }
+        #toast.bg-red-600 { background: var(--danger) !important; }
+
+        /* ===== Misc fine-tuning ===== */
+        .rounded-xl { border-radius: 14px !important; }
+        .rounded-lg { border-radius: 10px !important; }
+        .rounded-md { border-radius: 8px !important; }
+
+        /* Hide rose/purple/emerald color backgrounds on action buttons in header */
+        header .bg-rose-500 { background: var(--bg-elev) !important; }
+        header .bg-rose-500:hover { background: var(--danger-soft) !important; border-color: var(--danger) !important; color: var(--danger) !important; }
+        header i[data-lucide="sun"] { color: var(--warn) !important; }
+        header i[data-lucide="file-output"] { color: var(--info) !important; }
+        header i[data-lucide="bot"] { color: var(--ok) !important; }
+        header i[data-lucide="plus"] { color: inherit !important; }
+
+        /* Empty state messages */
+        .text-slate-400.text-center {
+            font-family: var(--f-sans) !important;
+            color: var(--ink-3) !important;
         }
     </style>
 </head>
@@ -709,24 +1650,14 @@ async function loadAllData(uid) {
     unsubscribers = [];
 
     try {
-        // 1. 단일 컬렉션(tasks) 구독 및 데이터 3분할 (Routing)
         const qTasks = query(collection(db, "users", uid, "tasks"), orderBy("due", "asc"));
         unsubscribers.push(onSnapshot(qTasks, (snap) => {
             const allDocs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // 📌 진영님 지적사항 반영: 배열 오염을 막기 위해 처음부터 완벽히 분리
+            tasks = allDocs;
             routines = allDocs.filter(t => t.isRoutine === true || t.status === 'routine');
-            events   = allDocs.filter(t => t.isEvent === true || t.status === 'event');
-            tasks    = allDocs.filter(t => !t.isRoutine && !t.isEvent && t.status !== 'routine' && t.status !== 'event');
-
-            // 분리된 데이터로 각각 렌더링
-            renderTasks(); 
-            renderStats(); 
-            renderEvents(); 
-            renderRoutines();
+            renderTasks(); renderStats(); renderEvents(); renderRoutines();
         }));
 
-        // 2. 인박스 동기화 (그대로 유지)
         const qInbox = query(collection(db, "users", uid, "inbox"), where("status", "==", "pending"), limit(100));
         unsubscribers.push(onSnapshot(qInbox, (snap) => {
             inboxMails = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -734,13 +1665,11 @@ async function loadAllData(uid) {
             renderInboxList();
         }));
 
-        // 3. 고객사 동기화 (그대로 유지)
         unsubscribers.push(onSnapshot(collection(db, "users", uid, "clients"), (snap) => {
             clients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderClientNav(); renderClientSettings(); populateClientSelects();
         }));
 
-        // 4. 메모 동기화 (그대로 유지)
         unsubscribers.push(onSnapshot(collection(db, "users", uid, "memos"), (snap) => {
             const memos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const memoEl = document.getElementById('quick-memo');
@@ -962,7 +1891,8 @@ window.deleteClient = async function(id) {
 };
 
 function renderStats() {
-    const base   = currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === currentClientFilter);
+    const pureTasks = tasks.filter(t => !t.isEvent && !t.isRoutine && t.status !== 'event' && t.status !== 'routine');
+    const base   = currentClientFilter === 'all' ? pureTasks : pureTasks.filter(t => t.clientId === currentClientFilter);
     const active = base.filter(t => t.status !== 'done');
     const done   = base.filter(t => t.status === 'done');
     const d7     = new Date(); d7.setDate(d7.getDate() + 7);
@@ -974,6 +1904,8 @@ function renderStats() {
 
 function getFilteredTasks() {
     let filtered = tasks.filter(t => {
+        if (t.isEvent === true || t.isRoutine === true) return false;
+        if (t.status === 'event' || t.status === 'routine') return false;
         if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return false;
         if (currentFilter === 'active' && t.status === 'done')  return false;
         if (currentFilter === 'done'   && t.status !== 'done')  return false;
@@ -1157,33 +2089,17 @@ window.addHistory = async function() {
 };
 
 function renderEvents() {
-    const container = document.getElementById('event-list'); 
-    if(!container) return;
-    
+    const container = document.getElementById('event-list'); if(!container) return;
     const today = new Date(); today.setHours(0,0,0,0);
-    
-    // 📌 수정: tasks 배열이 아닌 분리된 events 전역 배열을 사용
-    const upcoming = events
-        .filter(e => e.due && new Date(e.due) >= today)
-        .sort((a, b) => a.due.localeCompare(b.due))
-        .slice(0, 5);
-
-    if (!upcoming.length) { 
-        container.innerHTML = '<p class="text-xs text-slate-400 px-2 py-4 text-center border border-dashed border-slate-200 rounded-lg">예정된 일정이 없습니다.</p>'; 
-        return; 
-    }
-    
+    const upcoming = tasks.filter(t => t.isEvent === true && t.due && new Date(t.due) >= today).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 5);
+    if (!upcoming.length) { container.innerHTML = '<p class="text-xs text-slate-400 px-2 py-4 text-center border border-dashed border-slate-200 rounded-lg">예정된 일정이 없습니다.</p>'; return; }
     container.innerHTML = upcoming.map(e => {
-        const d = new Date(e.due); const diff = Math.round((d - today) / 86400000); 
-        const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
+        const d = new Date(e.due); const diff = Math.round((d - today) / 86400000); const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
         const color = diff === 0 ? 'bg-red-100 text-red-700' : diff <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700';
-        
         return `<div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group"><span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span><div class="flex-1 min-w-0"><p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p><p class="text-[10px] text-slate-400">${escHtml(e.due)} ${e.time || ''}</p></div><button onclick="deleteTask('${escHtml(e.id)}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button></div>`;
     }).join('');
-    
     lucide.createIcons();
 }
-
 
 window.openAddEventModal = function() {
     const today = new Date().toISOString().split('T')[0];
