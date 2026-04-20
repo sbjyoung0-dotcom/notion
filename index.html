@@ -96,16 +96,20 @@ table.tasks tr.done { opacity: 0.55; }
 <body>
 
 <div id="login-screen" class="modal-backdrop on" style="background: var(--bg); z-index: 200;">
-  <div class="modal-card" style="max-width: 400px; text-align: center;">
-    <div class="brand-mark" style="justify-content: center; margin-bottom: 20px;">
-      <span class="dot"></span><span>PM<em>HQ</em></span>
-    </div>
+  <div class="modal-card" style="background:var(--bg-sunk); max-width:400px; margin: 0 auto;">
+    <div class="eyebrow"><span>Sign in · 로그인</span><span>Auth</span></div>
     <h4>Welcome back.</h4>
-    <div class="form-row text-left"><input type="email" id="auth-email" placeholder="이메일"></div>
-    <div class="form-row text-left"><input type="password" id="auth-password" placeholder="비밀번호" onkeypress="if(event.key==='Enter') loginUser()"></div>
-    <div style="display:flex; gap:8px; margin-top: 20px;">
-      <button onclick="registerUser()" class="btn ghost" style="flex:1; justify-content:center;">회원가입</button>
-      <button onclick="loginUser()" class="btn primary" style="flex:1; justify-content:center;">로그인</button>
+    <div class="form-row">
+      <label>Email · 이메일</label>
+      <input type="email" id="auth-email" class="input" placeholder="you@company.com">
+    </div>
+    <div class="form-row">
+      <label>Password · 비밀번호</label>
+      <input type="password" id="auth-password" class="input" placeholder="••••••••" onkeypress="if(event.key==='Enter') loginUser()">
+    </div>
+    <div style="display:flex; gap:8px; margin-top:24px;">
+      <button onclick="registerUser()" class="btn ghost" style="flex:1; justify-content:center;">Register · 회원가입</button>
+      <button onclick="loginUser()" class="btn primary" style="flex:1; justify-content:center;">Sign in · 로그인</button>
     </div>
     <p id="auth-error" style="color: var(--danger); font-size: 12px; margin-top: 10px;" class="hidden"></p>
   </div>
@@ -239,18 +243,26 @@ table.tasks tr.done { opacity: 0.55; }
 
 <div id="task-modal" class="modal-backdrop">
   <div class="modal-card">
-    <div class="eyebrow"><span>Task</span><button onclick="closeModal('task-modal')" class="btn ghost" style="padding:0;">×</button></div>
+    <div class="eyebrow"><span>New task · 새 업무</span><button onclick="closeModal('task-modal')" class="btn ghost" style="padding:0; border:none;">×</button></div>
     <h4 id="task-modal-title">Create a task.</h4>
     <input type="hidden" id="modal-task-id">
-    <div class="form-row"><label>Client</label><select id="modal-client"></select></div>
-    <div class="form-row"><label>Title</label><input type="text" id="modal-title"></div>
+    <div class="form-row"><label>Client · 고객사</label><select id="modal-client" class="input"></select></div>
+    <div class="form-row"><label>Title · 업무명</label><input type="text" id="modal-title" class="input"></div>
     <div class="form-grid">
-      <div class="form-row"><label>Start</label><input type="date" id="modal-start-date"></div>
-      <div class="form-row"><label>Due</label><input type="date" id="modal-due"></div>
+      <div class="form-row"><label>Start · 시작</label><input type="date" id="modal-start-date" class="input"></div>
+      <div class="form-row"><label>Due · 마감</label><input type="date" id="modal-due" class="input"></div>
     </div>
-    <div class="form-row"><label>Priority</label><select id="modal-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
-    <div class="form-row"><label>Notes</label><textarea id="modal-note" rows="3"></textarea></div>
-    <button onclick="saveTask()" id="modal-save-btn" class="btn primary" style="width:100%; justify-content:center;">Save task</button>
+    <div class="form-row">
+      <label>Priority · 우선순위</label>
+      <div class="pill-row" id="priority-pills">
+        <span class="pill-opt" data-val="low" onclick="selectPriority(this)">Low</span>
+        <span class="pill-opt on" data-val="medium" onclick="selectPriority(this)">Med</span>
+        <span class="pill-opt" data-val="high" onclick="selectPriority(this)">High</span>
+      </div>
+      <input type="hidden" id="modal-priority" value="medium">
+    </div>
+    <div class="form-row"><label>Notes · 상세</label><textarea id="modal-note" rows="3" class="input"></textarea></div>
+    <button onclick="saveTask()" id="modal-save-btn" class="btn primary" style="width:100%; justify-content:center; margin-top:4px;">Save task · 저장</button>
   </div>
 </div>
 
@@ -377,8 +389,7 @@ function loadAllData(uid) {
     }));
 }
 
-/* ================= RENDER FUNCTIONS ================= */
-/* ================= RENDER FUNCTIONS ================= */
+
 
 /* ================= RENDER FUNCTIONS ================= */
 
@@ -426,22 +437,6 @@ function renderTasks() {
     }).join('');
 }
 
-function renderKanbanView() {
-    const makeCard = t => {
-        const c = clients.find(x => x.id === t.clientId) || { name: t.clientId || 'Unknown', color: 'var(--ink-4)' };
-        const prio = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'med' : 'low';
-        return `<div data-id="${escHtml(t.id)}" class="kan-card cursor-grab">
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                <span class="client-pill" style="font-size:11px;">
-                    <span class="swatch" style="width:8px;height:8px;background:${c.color}"></span> ${escHtml(c.name)}
-                </span>
-                <span class="prio ${prio}"><span class="bar"></span></span>
-            </div>
-            <div class="t ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</div>
-            <div class="m"><span>📅 ${escHtml(t.due || '-')}</span></div>
-        </div>`;
-    };
-    
     document.getElementById('kanban-todo-col').innerHTML = tasks.filter(t => t.status !== 'done').map(makeCard).join('');
     document.getElementById('kanban-done-col').innerHTML = tasks.filter(t => t.status === 'done').map(makeCard).join('');
     
@@ -566,6 +561,31 @@ function renderClientNav() {
 
 /* ================= ACTIONS ================= */
 /* ================= MODAL & FORM LOGIC ================= */
+// 전역 필터 상태
+window.currentClientFilter = 'all';
+
+// 1. 고객사 클릭 필터링 함수
+window.filterByClient = (clientId) => {
+    window.currentClientFilter = clientId;
+    
+    // UI 전체 리렌더링 (필터 적용된 상태로)
+    renderClientNav(); 
+    renderTasks();
+    renderKanbanView();
+    renderStats();
+};
+
+// 2. 모달창 예쁜 우선순위 버튼(Pill) 클릭 로직
+window.selectPriority = (el) => {
+    document.querySelectorAll('#priority-pills .pill-opt').forEach(p => p.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('modal-priority').value = el.dataset.val;
+};
+
+// 3. 렌더링 함수들이 필터를 인식하도록 맨 윗줄 수정!
+// 📌 기존 renderTasks, renderKanbanView, renderStats 함수 내부에 아래 1줄을 맨 위에 추가하세요.
+// const targetTasks = currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === currentClientFilter);
+// (그리고 함수 내부의 tasks.map 을 targetTasks.map 으로 바꿔주면 필터링이 완벽하게 작동합니다)
 
 // 1. 공통: 고객사 드롭다운 채우기 (모달 열 때마다 최신화)
 function populateClientSelect(selectId) {
