@@ -396,9 +396,12 @@ function loadAllData(uid) {
 function renderTasks() {
     const body = document.getElementById('task-body');
     if(!body) return;
+
+    // 📌 필터 적용: 전체보기면 다 보여주고, 아니면 선택된 고객사만 필터링
+    const targetTasks = window.currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === window.currentClientFilter);
     
-    body.innerHTML = tasks.map((t, i) => {
-        const c = clients.find(x => x.id === t.clientId) || { name: t.clientName || t.clientId || 'Unknown', emoji: '🏢', color: 'oklch(0.88 0.08 150)' };
+    body.innerHTML = targetTasks.map((t, i) => {
+        const c = clients.find(x => x.id === t.clientId) || { name: t.clientName || t.clientId || 'Unknown', emoji: '🏢', color: 'var(--ink-4)' };
         const isDone = t.status === 'done';
         const isOverdue = t.due && new Date(t.due) < new Date() && !isDone;
         const prio = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'med' : 'low';
@@ -437,74 +440,10 @@ function renderTasks() {
     }).join('');
 }
 
-    document.getElementById('kanban-todo-col').innerHTML = tasks.filter(t => t.status !== 'done').map(makeCard).join('');
-    document.getElementById('kanban-done-col').innerHTML = tasks.filter(t => t.status === 'done').map(makeCard).join('');
-    
-    initSortable(document.getElementById('kanban-todo-col'), 'active');
-    initSortable(document.getElementById('kanban-done-col'), 'done');
-}
-
-function initSortable(el, newStatus) {
-    if(!el) return;
-    if(el.sortable) el.sortable.destroy();
-    el.sortable = new Sortable(el, { 
-        group: 'shared', 
-        animation: 150, 
-        ghostClass: 'bg-slate-50',
-        onAdd: async (evt) => {
-            try { 
-                await fnUpdateStatus({ id: evt.item.dataset.id, status: newStatus }); 
-                showToast('상태가 업데이트되었습니다.'); 
-            } catch(e) {
-                showToast('상태 변경 실패: ' + e.message, 'error');
-            }
-        }
-    });
-}
-
-function renderMails() {
-    const list = document.getElementById('mail-list');
-    if (!list) return;
-    list.innerHTML = inboxMails.length ? inboxMails.map(m => `
-    <div class="mail">
-        <div class="who">${escHtml((m.from || '?').substring(0,2).toUpperCase())}</div>
-        <div>
-            <div class="subject">${escHtml(m.subject)}</div>
-            <div class="snippet">${escHtml(m.bodyText || '').substring(0,60)}...</div>
-            ${m.aiSummary || m.suggestedTask ? `<div class="ai-draft"><span class="icon">✦ AI</span><span>${escHtml(m.suggestedTask?.title || m.aiSummary)}</span></div>` : ''}
-        </div>
-        <div class="right">
-            <div class="time">${m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleDateString() : ''}</div>
-            <div class="mail-actions">
-                <button onclick="rejectInboxMail('${escHtml(m.id)}')" class="icon-btn">✕</button>
-                <button onclick="approveInboxMail('${escHtml(m.id)}')" class="icon-btn" style="background:var(--ink); color:var(--bg);">✓</button>
-            </div>
-        </div>
-    </div>`).join('') : '<div style="padding:40px; text-align:center; color:var(--ink-4);">처리할 새 메일이 없습니다.</div>';
-}
-
-// 1. 스탯 박스 렌더링 (띄어쓰기 복구)
-function renderStats() {
-    const activeTasks = tasks.filter(t => t.status !== 'done');
-    const doneTasks = tasks.filter(t => t.status === 'done');
-    const urgentTasks = activeTasks.filter(t => {
-        if(!t.due) return false;
-        const d7 = new Date(); d7.setDate(d7.getDate() + 7);
-        return new Date(t.due) <= d7;
-    });
-
-    const statActive = document.getElementById('stat-active');
-    const statDone = document.getElementById('stat-done');
-    const statUrgent = document.getElementById('stat-urgent');
-    
-    // 📌 숫자와 <span class="unit"> 사이에 띄어쓰기 추가
-    if(statActive) statActive.innerHTML = `${activeTasks.length} <span class="unit">tasks</span>`;
-    if(statDone) statDone.innerHTML = `${doneTasks.length} <span class="unit">ytd</span>`;
-    if(statUrgent) statUrgent.innerHTML = `${urgentTasks.length} <span class="unit">tasks</span>`;
-}
-
-// 2. 칸반 보드 렌더링 (오리지널 디자인 복구)
 function renderKanbanView() {
+    // 📌 필터 적용
+    const targetTasks = window.currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === window.currentClientFilter);
+
     const makeCard = t => {
         const c = clients.find(x => x.id === t.clientId) || { name: t.clientId || 'Unknown', color: 'var(--ink-4)' };
         return `
@@ -517,39 +456,60 @@ function renderKanbanView() {
         </div>`;
     };
     
-    const todoCount = tasks.filter(t => t.status !== 'done').length;
-    const doneCount = tasks.filter(t => t.status === 'done').length;
+    const todoTasks = targetTasks.filter(t => t.status !== 'done');
+    const doneTasks = targetTasks.filter(t => t.status === 'done');
 
-    // 헤더 숫자 업데이트
     const todoHeader = document.querySelector('#view-kanban-container .kan-col:nth-child(1) h4');
     const doneHeader = document.querySelector('#view-kanban-container .kan-col:nth-child(2) h4');
-    if(todoHeader) todoHeader.innerHTML = `<span>In Progress</span><span>${todoCount}</span>`;
-    if(doneHeader) doneHeader.innerHTML = `<span>Done</span><span>${doneCount}</span>`;
+    if(todoHeader) todoHeader.innerHTML = `<span>In Progress</span><span>${todoTasks.length}</span>`;
+    if(doneHeader) doneHeader.innerHTML = `<span>Done</span><span>${doneTasks.length}</span>`;
 
-    document.getElementById('kanban-todo-col').innerHTML = tasks.filter(t => t.status !== 'done').map(makeCard).join('');
-    document.getElementById('kanban-done-col').innerHTML = tasks.filter(t => t.status === 'done').map(makeCard).join('');
+    document.getElementById('kanban-todo-col').innerHTML = todoTasks.map(makeCard).join('');
+    document.getElementById('kanban-done-col').innerHTML = doneTasks.map(makeCard).join('');
     
     initSortable(document.getElementById('kanban-todo-col'), 'active');
     initSortable(document.getElementById('kanban-done-col'), 'done');
 }
 
-// 3. 사이드바 고객사 렌더링 (컬러 스와치 복구)
+function renderStats() {
+    // 📌 필터 적용
+    const targetTasks = window.currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === window.currentClientFilter);
+
+    const activeTasks = targetTasks.filter(t => t.status !== 'done');
+    const doneTasks = targetTasks.filter(t => t.status === 'done');
+    const urgentTasks = activeTasks.filter(t => {
+        if(!t.due) return false;
+        const d7 = new Date(); d7.setDate(d7.getDate() + 7);
+        return new Date(t.due) <= d7;
+    });
+
+    const statActive = document.getElementById('stat-active');
+    const statDone = document.getElementById('stat-done');
+    const statUrgent = document.getElementById('stat-urgent');
+    
+    if(statActive) statActive.innerHTML = `${activeTasks.length} <span class="unit">tasks</span>`;
+    if(statDone) statDone.innerHTML = `${doneTasks.length} <span class="unit">ytd</span>`;
+    if(statUrgent) statUrgent.innerHTML = `${urgentTasks.length} <span class="unit">tasks</span>`;
+}
+
 function renderClientNav() {
     const nav = document.getElementById('client-nav');
     if(!nav) return;
     
+    // 📌 선택된 고객사에 스타일(active) 적용
     nav.innerHTML = `
-    <div class="client-item active" onclick="filterByClient('all')">
+    <div class="client-item ${window.currentClientFilter === 'all' ? 'active' : ''}" onclick="filterByClient('all')">
         <span class="client-swatch" style="background:var(--bg-sunk); color:var(--ink);">◎</span>
         <span>All Clients <span style="color:var(--ink-4); font-size:11px; margin-left:4px;">전체</span></span>
         <span class="client-count">${tasks.length}</span>
     </div>
     ` + clients.map(c => {
         const count = tasks.filter(t => t.clientId === c.id).length;
-        // 색상이 없으면 기본 색상 배정
         const bgColor = c.color || 'oklch(0.88 0.08 150)'; 
+        const isActive = window.currentClientFilter === c.id ? 'active' : '';
+        
         return `
-        <div class="client-item" onclick="filterByClient('${escHtml(c.id)}')">
+        <div class="client-item ${isActive}" onclick="filterByClient('${escHtml(c.id)}')">
             <span class="client-swatch" style="background:${bgColor}; font-size:10px; color:var(--ink); display:flex; align-items:center; justify-content:center;">
                 ${escHtml(c.name).substring(0,1).toUpperCase()}
             </span>
