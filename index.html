@@ -380,27 +380,23 @@ function loadAllData(uid) {
 /* ================= RENDER FUNCTIONS ================= */
 /* ================= RENDER FUNCTIONS ================= */
 
+/* ================= RENDER FUNCTIONS ================= */
+
 function renderTasks() {
     const body = document.getElementById('task-body');
     if(!body) return;
     
     body.innerHTML = tasks.map((t, i) => {
-        // 고객사 정보 매핑 (없으면 기본값 처리하여 undefined 방지)
         const c = clients.find(x => x.id === t.clientId) || { name: t.clientName || t.clientId || 'Unknown', emoji: '🏢', color: 'oklch(0.88 0.08 150)' };
-        
         const isDone = t.status === 'done';
         const isOverdue = t.due && new Date(t.due) < new Date() && !isDone;
         const prio = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'med' : 'low';
-        
-        // 인덱스 번호 01, 02 포맷팅
         const idx = String(i + 1).padStart(2, '0');
         
         return `
         <tr class="${isDone ? 'done' : ''}">
             <td class="row-idx">${idx}</td>
-            <td>
-                <span class="check ${isDone ? 'checked' : ''}" onclick="toggleStatus('${escHtml(t.id)}')"></span>
-            </td>
+            <td><span class="check ${isDone ? 'checked' : ''}" onclick="toggleStatus('${escHtml(t.id)}')"></span></td>
             <td>
                 <span class="client-pill">
                     <span class="swatch" style="background:${c.color || 'var(--ink-4)'}"></span>
@@ -417,9 +413,7 @@ function renderTasks() {
                 <span class="rel">${isOverdue ? '⚠ 지연' : isDone ? '완료' : ''}</span>
             </td>
             <td>
-                <span class="prio ${prio}">
-                    <span class="bar"></span>${prio.toUpperCase()}
-                </span>
+                <span class="prio ${prio}"><span class="bar"></span>${prio.toUpperCase()}</span>
             </td>
             <td>
                 <div class="row-actions">
@@ -432,6 +426,68 @@ function renderTasks() {
     }).join('');
 }
 
+function renderKanbanView() {
+    const makeCard = t => {
+        const c = clients.find(x => x.id === t.clientId) || { name: t.clientId || 'Unknown', color: 'var(--ink-4)' };
+        const prio = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'med' : 'low';
+        return `<div data-id="${escHtml(t.id)}" class="kan-card cursor-grab">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                <span class="client-pill" style="font-size:11px;">
+                    <span class="swatch" style="width:8px;height:8px;background:${c.color}"></span> ${escHtml(c.name)}
+                </span>
+                <span class="prio ${prio}"><span class="bar"></span></span>
+            </div>
+            <div class="t ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</div>
+            <div class="m"><span>📅 ${escHtml(t.due || '-')}</span></div>
+        </div>`;
+    };
+    
+    document.getElementById('kanban-todo-col').innerHTML = tasks.filter(t => t.status !== 'done').map(makeCard).join('');
+    document.getElementById('kanban-done-col').innerHTML = tasks.filter(t => t.status === 'done').map(makeCard).join('');
+    
+    initSortable(document.getElementById('kanban-todo-col'), 'active');
+    initSortable(document.getElementById('kanban-done-col'), 'done');
+}
+
+function initSortable(el, newStatus) {
+    if(!el) return;
+    if(el.sortable) el.sortable.destroy();
+    el.sortable = new Sortable(el, { 
+        group: 'shared', 
+        animation: 150, 
+        ghostClass: 'bg-slate-50',
+        onAdd: async (evt) => {
+            try { 
+                await fnUpdateStatus({ id: evt.item.dataset.id, status: newStatus }); 
+                showToast('상태가 업데이트되었습니다.'); 
+            } catch(e) {
+                showToast('상태 변경 실패: ' + e.message, 'error');
+            }
+        }
+    });
+}
+
+function renderMails() {
+    const list = document.getElementById('mail-list');
+    if (!list) return;
+    list.innerHTML = inboxMails.length ? inboxMails.map(m => `
+    <div class="mail">
+        <div class="who">${escHtml((m.from || '?').substring(0,2).toUpperCase())}</div>
+        <div>
+            <div class="subject">${escHtml(m.subject)}</div>
+            <div class="snippet">${escHtml(m.bodyText || '').substring(0,60)}...</div>
+            ${m.aiSummary || m.suggestedTask ? `<div class="ai-draft"><span class="icon">✦ AI</span><span>${escHtml(m.suggestedTask?.title || m.aiSummary)}</span></div>` : ''}
+        </div>
+        <div class="right">
+            <div class="time">${m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleDateString() : ''}</div>
+            <div class="mail-actions">
+                <button onclick="rejectInboxMail('${escHtml(m.id)}')" class="icon-btn">✕</button>
+                <button onclick="approveInboxMail('${escHtml(m.id)}')" class="icon-btn" style="background:var(--ink); color:var(--bg);">✓</button>
+            </div>
+        </div>
+    </div>`).join('') : '<div style="padding:40px; text-align:center; color:var(--ink-4);">처리할 새 메일이 없습니다.</div>';
+}
+
 function renderStats() {
     const activeTasks = tasks.filter(t => t.status !== 'done');
     const doneTasks = tasks.filter(t => t.status === 'done');
@@ -441,7 +497,6 @@ function renderStats() {
         return new Date(t.due) <= d7;
     });
 
-    // 화면의 4개 스탯 박스 업데이트
     const statActive = document.getElementById('stat-active');
     const statDone = document.getElementById('stat-done');
     const statUrgent = document.getElementById('stat-urgent');
@@ -452,7 +507,6 @@ function renderStats() {
 }
 
 function renderClientNav() {
-    // 사이드바 고객사 리스트 디자인 복구
     const nav = document.getElementById('client-nav');
     if(!nav) return;
     
