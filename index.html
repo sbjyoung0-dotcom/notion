@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PM Multi-Client HQ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="https://unpkg.com/lucide@0.460.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -218,8 +218,7 @@
                         </div>
                     </div>
                     <textarea id="quick-memo" rows="2"
-                        class="w-full bg-yellow-100/50 border-none rounded-lg text-sm text-slate-700
-                               placeholder-yellow-400/70 resize-none focus:ring-2 focus:ring-yellow-400 p-2"
+                        class="w-full bg-yellow-100/50 border-none rounded-lg text-sm text-slate-700 placeholder-yellow-400/70 resize-none focus:ring-2 focus:ring-yellow-400 p-2"
                         placeholder="급한 업무나 잊지 말아야 할 내용을 자유롭게 적으세요..."></textarea>
                 </section>
 
@@ -315,10 +314,10 @@
                             class="flex items-center gap-1.5 text-xs bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition shadow-sm">
                             <i data-lucide="refresh-cw" class="w-3 h-3"></i> 수집 + AI 분석
                         </button>
-			<button onclick="handleBulkDone()" id="btn-bulk-done"
-    			   class="flex items-center gap-1.5 text-xs bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition shadow-sm">
-    			   <i data-lucide="check-square" class="w-3 h-3"></i> 전체 완료 처리
-			</button>
+                        <button onclick="handleBulkDone()" id="btn-bulk-done"
+                            class="flex items-center gap-1.5 text-xs bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition shadow-sm">
+                            <i data-lucide="check-square" class="w-3 h-3"></i> 전체 완료 처리
+                        </button>
                     </div>
                 </div>
                 <div id="sync-progress" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -595,301 +594,736 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, limit, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, limit, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ",
-    authDomain: "notion-21aad.firebaseapp.com",
-    projectId: "notion-21aad",
-    storageBucket: "notion-21aad.firebasestorage.app",
+    apiKey:            "AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ",
+    authDomain:        "notion-21aad.firebaseapp.com",
+    projectId:         "notion-21aad",
+    storageBucket:     "notion-21aad.firebasestorage.app",
     messagingSenderId: "573285599188",
-    appId: "1:573285599188:web:6fd7721b8d9805a2037841"
+    appId:             "1:573285599188:web:6fd7721b8d9805a2037841"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const app       = initializeApp(firebaseConfig);
+const auth      = getAuth(app);
 const functions = getFunctions(app, 'asia-northeast3');
+const db        = getFirestore(app);
 
-const fnSaveTask = httpsCallable(functions, 'saveTask');
-const fnDeleteTask = httpsCallable(functions, 'deleteTask');
-const fnUpdateStatus = httpsCallable(functions, 'updateTaskStatus');
-const fnApproveDraft = httpsCallable(functions, 'approveDraft');
-const fnBulkDone = httpsCallable(functions, 'bulkApproveAsDone');
-const fnIngestGmail = httpsCallable(functions, 'ingestGmailToInbox');
-const fnAnalyzeMails = httpsCallable(functions, 'analyzeInboxMails');
+const fnSaveTask       = httpsCallable(functions, 'saveTask');
+const fnDeleteTask     = httpsCallable(functions, 'deleteTask');
+const fnUpdateStatus   = httpsCallable(functions, 'updateTaskStatus');
+const fnApproveDraft   = httpsCallable(functions, 'approveDraft');
+const fnBulkDone       = httpsCallable(functions, 'bulkApproveAsDone');
+const fnSaveClient     = httpsCallable(functions, 'saveClient');
+const fnDeleteClient   = httpsCallable(functions, 'deleteClient');
+const fnSaveMemo       = httpsCallable(functions, 'saveMemo');
+const fnIngestGmail    = httpsCallable(functions, 'ingestGmailToInbox', { timeout: 300000 });
+const fnAnalyzeMails   = httpsCallable(functions, 'analyzeInboxMails', { timeout: 300000 });
+const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
+const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
+const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
+const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
+const fnDeleteFromCalendar = httpsCallable(functions, 'deleteFromGoogleCalendar');
 
-let clients = [], tasks = [], inboxMails = [], routines = [];
-let unsubscribers = [];
-window.currentClientFilter = 'all';
+window.escHtml = function(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+};
 
-window.escHtml = str => str ? String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[m])) : '';
+let clients             = [];
+let tasks               = [];
+let events              = [];
+let routines            = [];
+let inboxMails          = [];
+let currentClientFilter = 'all';
+let currentFilter       = 'active';
+let currentViewMode     = 'list';
+let sortConfig          = { key: 'due', dir: 'asc' };
+let searchQuery         = '';
+let bulkParsedTasks     = [];
+let memoTimer           = null;
+let unsubscribers       = [];
 
-// 1. 안전한 로그인 감지기 (에러 방어 및 화면 토글 기능 추가)
 onAuthStateChanged(auth, user => {
     const loginScreen = document.getElementById('login-screen');
-    const appScreen = document.querySelector('.app'); // 메인 앱 화면
-
+    const appScreen   = document.getElementById('app-screen');
     if (user) {
-        // 로그인 성공 시 로그인 창 숨기고 메인 앱 보여주기
         if(loginScreen) loginScreen.classList.add('hidden');
         if(appScreen) appScreen.classList.remove('hidden');
-
-        // 📌 ?. (옵셔널 체이닝)을 추가하여 요소가 없어도 에러가 나며 죽지 않게 방어합니다.
-        const whoEl = document.querySelector('.who');
-        if(whoEl) whoEl.innerHTML = `<a href="#">${user.email}</a>`;
-        
-        const statusEl = document.querySelector('.status');
-        if(statusEl) statusEl.innerHTML = 'connected · 실시간 동기화';
-
+        const connText = document.getElementById('connection-text');
+        if(connText) connText.textContent = user.email;
+        initApp();
         loadAllData(user.uid);
     } else {
-        // 로그아웃 상태면 로그인 창 띄우기
         if(loginScreen) loginScreen.classList.remove('hidden');
         if(appScreen) appScreen.classList.add('hidden');
     }
 });
 
-// 2. 📌 지난번 제가 빼먹었던 로그인 / 회원가입 / 로그아웃 기능 복구
 window.loginUser = async function() {
-    const email = document.getElementById('auth-email')?.value.trim();
-    const password = document.getElementById('auth-password')?.value;
-    const errEl = document.getElementById('auth-error');
-    
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errEl    = document.getElementById('auth-error');
     if(errEl) errEl.classList.add('hidden');
-    
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch(e) {
-        if(errEl) {
-            errEl.textContent = '로그인 실패: ' + e.message;
-            errEl.classList.remove('hidden');
-        } else {
-            alert('로그인 실패: ' + e.message);
-        }
-    }
+    try { await signInWithEmailAndPassword(auth, email, password); } 
+    catch(e) { if(errEl) { errEl.textContent = '로그인 실패: ' + e.message; errEl.classList.remove('hidden'); } else alert('로그인 실패: ' + e.message); }
 };
 
 window.registerUser = async function() {
-    const email = document.getElementById('auth-email')?.value.trim();
-    const password = document.getElementById('auth-password')?.value;
-    const errEl = document.getElementById('auth-error');
-    
-    try {
-        // 회원가입용 Firebase 함수 (상단 import에 createUserWithEmailAndPassword 추가 필요)
-        import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert('회원가입 성공! 자동 로그인됩니다.');
-    } catch(e) {
-        if(errEl) {
-            errEl.textContent = '회원가입 실패: ' + e.message;
-            errEl.classList.remove('hidden');
-        } else {
-            alert('회원가입 실패: ' + e.message);
-        }
-    }
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errEl    = document.getElementById('auth-error');
+    if(errEl) errEl.classList.add('hidden');
+    if (!email || password.length < 6) { if(errEl) { errEl.textContent = '이메일과 6자 이상 비밀번호를 입력하세요.'; errEl.classList.remove('hidden'); } return; }
+    try { await createUserWithEmailAndPassword(auth, email, password); window.showToast('✅ 회원가입 완료! 자동 로그인됩니다.'); } 
+    catch(e) { if(errEl) { errEl.textContent = '회원가입 실패: ' + e.message; errEl.classList.remove('hidden'); } }
 };
 
 window.logoutUser = async function() {
     if (!confirm('로그아웃 하시겠습니까?')) return;
-    unsubscribers.forEach(u => u()); 
+    unsubscribers.forEach(u => u());
     await signOut(auth);
 };
 
-/* ================= 100% 오리지널 디자인 복원 렌더링 ================= */
+function initApp() {
+    const today = new Date();
+    document.getElementById('today-date').textContent = today.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+    const todayStr = today.toISOString().split('T')[0];
+    const reportMonth = document.getElementById('report-month');
+    if(reportMonth) reportMonth.value = todayStr.slice(0, 7);
+    const dailyDate = document.getElementById('daily-date');
+    if(dailyDate) dailyDate.value = todayStr;
+    loadMemo();
+    const searchInput = document.getElementById('search-input');
+    if(searchInput) { searchInput.addEventListener('input', e => { searchQuery = e.target.value.toLowerCase(); renderTasks(); }); }
+    lucide.createIcons();
+}
+
+async function loadAllData(uid) {
+    if (!uid) uid = auth.currentUser?.uid;
+    if (!uid) return;
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
+
+    try {
+        // 1. 단일 컬렉션(tasks) 구독 및 데이터 3분할 (Routing)
+        const qTasks = query(collection(db, "users", uid, "tasks"), orderBy("due", "asc"));
+        unsubscribers.push(onSnapshot(qTasks, (snap) => {
+            const allDocs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // 📌 진영님 지적사항 반영: 배열 오염을 막기 위해 처음부터 완벽히 분리
+            routines = allDocs.filter(t => t.isRoutine === true || t.status === 'routine');
+            events   = allDocs.filter(t => t.isEvent === true || t.status === 'event');
+            tasks    = allDocs.filter(t => !t.isRoutine && !t.isEvent && t.status !== 'routine' && t.status !== 'event');
+
+            // 분리된 데이터로 각각 렌더링
+            renderTasks(); 
+            renderStats(); 
+            renderEvents(); 
+            renderRoutines();
+        }));
+
+        // 2. 인박스 동기화 (그대로 유지)
+        const qInbox = query(collection(db, "users", uid, "inbox"), where("status", "==", "pending"), limit(100));
+        unsubscribers.push(onSnapshot(qInbox, (snap) => {
+            inboxMails = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            inboxMails.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            renderInboxList();
+        }));
+
+        // 3. 고객사 동기화 (그대로 유지)
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "clients"), (snap) => {
+            clients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderClientNav(); renderClientSettings(); populateClientSelects();
+        }));
+
+        // 4. 메모 동기화 (그대로 유지)
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "memos"), (snap) => {
+            const memos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const memoEl = document.getElementById('quick-memo');
+            if (memoEl && !memoEl.dataset.editing) {
+                const savedMemo = memos.find(m => m.id === 'quick-memo-doc');
+                memoEl.value = savedMemo ? savedMemo.content : '';
+            }
+        }));
+
+        setConnectionStatus(true);
+    } catch(e) {
+        window.showToast('실시간 연결 실패: ' + e.message, 'error');
+        setConnectionStatus(false);
+    }
+}
+
+// ================== 메인 로직 영역 ==================
+
+window.syncGmail = async function() {
+    const btn = document.getElementById('btn-sync-gmail');
+    btn.disabled = true;
+    try {
+        let totalCollected = 0, collectBatch = 1;
+        let totalAnalyzed = 0, analyzeBatch = 1;
+        
+        // 1. 수집 프로세스
+        let keepCollecting = true;
+        while(keepCollecting) {
+            setProgress(true, `Gmail 수집 중 (배치 ${collectBatch})...`, 30, `현재 ${totalCollected}건 수집됨...`);
+            const res = await fnIngestGmail();
+            const cnt = res.data?.count || 0;
+            totalCollected += cnt;
+            if (cnt === 0) keepCollecting = false;
+            else { collectBatch++; await new Promise(r => setTimeout(r, 1500)); }
+        }
+
+        // 2. 분석 프로세스
+        let keepAnalyzing = true;
+        while(keepAnalyzing) {
+            setProgress(true, `AI 분석 중 (배치 ${analyzeBatch})...`, 70, `수집 완료: ${totalCollected}건 / 분석 진행: ${totalAnalyzed}건`);
+            const res = await fnAnalyzeMails();
+            const cnt = res.data?.analyzed || 0;
+            totalAnalyzed += cnt;
+            if (cnt === 0) keepAnalyzing = false;
+            else { analyzeBatch++; await new Promise(r => setTimeout(r, 1000)); }
+        }
+
+        setProgress(true, '모든 동기화 완료!', 100, `총 수집: ${totalCollected}건 / 총 분석: ${totalAnalyzed}건`);
+        window.showToast(`✅ 동기화 완료: 수집 ${totalCollected}건, 분석 ${totalAnalyzed}건`);
+        await loadAllData(); // 강제 데이터 갱신
+    } catch(e) {
+        window.showToast('동기화 중 오류 발생: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => setProgress(false), 3000);
+    }
+};
+
+window.handleIngestGmail = async function(btn) {
+    btn.disabled = true;
+    try {
+        let totalCollected = 0; let keepCollecting = true; let collectBatch = 1;
+        while(keepCollecting) {
+            setProgress(true, `Gmail 단일 수집 중 (배치 ${collectBatch})...`, 20, `현재 ${totalCollected}건 수집됨...`);
+            const res = await fnIngestGmail();
+            const cnt = res.data?.count || 0;
+            totalCollected += cnt;
+            if (cnt === 0) keepCollecting = false; else { collectBatch++; await new Promise(r => setTimeout(r, 1500)); }
+        }
+        setProgress(true, `수집 완료: ${totalCollected}건`, 100);
+        window.showToast(`✅ 수집 완료: ${totalCollected}건`);
+        await loadAllData(); // 사각지대 방지용 강제 갱신
+    } catch(e) { window.showToast('수집 실패', 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
+};
+
+window.handleAnalyzeMails = async function(btn) {
+    btn.disabled = true;
+    try {
+        let totalAnalyzed = 0; let keepAnalyzing = true; let analyzeBatch = 1;
+        while(keepAnalyzing) {
+            setProgress(true, `AI 분석 중 (배치 ${analyzeBatch})...`, 60, `누적 ${totalAnalyzed}건`);
+            const res = await fnAnalyzeMails();
+            const cnt = res.data?.analyzed || 0;
+            totalAnalyzed += cnt;
+            if (cnt === 0) keepAnalyzing = false; else { analyzeBatch++; await new Promise(r => setTimeout(r, 1000)); }
+        }
+        setProgress(true, `분석 완료: ${totalAnalyzed}건`, 100);
+        window.showToast(`✅ 분석 완료: ${totalAnalyzed}건`);
+        await loadAllData(); // 강제 갱신
+    } catch(e) { window.showToast('분석 실패', 'error'); } finally { btn.disabled = false; setTimeout(() => setProgress(false), 2000); }
+};
+
+window.deleteTask = async function(id) {
+    if (!confirm('이 업무를 삭제하시겠습니까? (연동된 구글 일정까지 삭제됩니다)')) return;
+    const idx = tasks.findIndex(x => x.id === id);
+    if (idx === -1) return;
+
+    // 낙관적 UI 롤백 백업
+    const backup = tasks[idx];
+    tasks.splice(idx, 1);
+    renderTasks(); renderStats(); renderEvents();
+
+    try {
+        if(backup.calEventId) await fnDeleteFromCalendar({ eventId: id }).catch(e=>console.log(e));
+        await fnDeleteTask({ id });
+        window.showToast('🗑️ 삭제 완료');
+    } catch(e) { 
+        tasks.splice(idx, 0, backup); // 실패 시 복구
+        renderTasks(); renderStats(); renderEvents();
+        window.showToast('삭제 실패: ' + e.message, 'error'); 
+    }
+};
+
+window.toggleStatus = async function(id) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const oldSt = t.status;
+    const newSt = t.status === 'done' ? 'active' : 'done';
+    
+    // 낙관적 UI
+    t.status = newSt;
+    renderTasks(); renderStats();
+    
+    try { 
+        await fnUpdateStatus({ id, status: newSt }); 
+    } catch(e) { 
+        t.status = oldSt; // 복구
+        renderTasks(); renderStats(); 
+        window.showToast('상태 변경 실패: ' + e.message, 'error'); 
+    }
+};
+
+// ================== 유틸 및 렌더링 영역 ==================
+
+function setProgress(show, text = '', pct = 0, detail = '') {
+    const el = document.getElementById('sync-progress');
+    if(!el) return;
+    const txtEl = document.getElementById('sync-progress-text');
+    const barEl = document.getElementById('sync-progress-bar');
+    const detEl = document.getElementById('sync-progress-detail');
+    el.classList.toggle('hidden', !show);
+    if (show) { txtEl.textContent = text; barEl.style.width = pct + '%'; detEl.textContent = detail; }
+}
+
+function loadMemo() {
+    const memoEl = document.getElementById('quick-memo');
+    if (!memoEl) return;
+    memoEl.addEventListener('focus', () => { memoEl.dataset.editing = 'true'; });
+    memoEl.addEventListener('input', () => {
+        clearTimeout(memoTimer);
+        const statusEl = document.getElementById('memo-status');
+        if(statusEl) statusEl.textContent = '저장 중...';
+        memoTimer = setTimeout(async () => {
+            try {
+                await fnSaveMemo({ id: 'quick-memo-doc', content: memoEl.value });
+                if(statusEl) statusEl.textContent = '저장됨';
+            } catch(e) { window.showToast('메모 저장 실패', 'error'); }
+        }, 1200); 
+    });
+    memoEl.addEventListener('blur', () => { delete memoEl.dataset.editing; });
+}
+
+window.clearMemo = async function() {
+    if (!confirm('퀵메모를 초기화하시겠습니까?')) return;
+    const memoEl = document.getElementById('quick-memo');
+    if(memoEl) memoEl.value = '';
+    try { await fnSaveMemo({ id: 'quick-memo-doc', content: '' }); window.showToast('🗑️ 메모 초기화 완료'); const statusEl = document.getElementById('memo-status'); if(statusEl) statusEl.textContent = ''; } 
+    catch(e) { window.showToast('초기화 실패: ' + e.message, 'error'); }
+};
+
+function renderClientNav() {
+    const nav = document.getElementById('client-nav');
+    if(!nav) return;
+    nav.innerHTML = `<button onclick="filterByClient('all')" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentClientFilter === 'all' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">🏠 전체 현황</button>` +
+        clients.map(c => `<button onclick="filterByClient('${escHtml(c.id)}')" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentClientFilter === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">${c.emoji || '🏢'} ${escHtml(c.name)}</button>`).join('');
+}
+
+function renderClientSettings() {
+    const container = document.getElementById('client-settings-list');
+    if(!container) return;
+    container.innerHTML = clients.map(c => `<div class="flex items-center justify-between bg-slate-50 rounded px-2 py-1 text-xs text-slate-600 border border-slate-100"><span>${c.emoji || '🏢'} ${escHtml(c.name)}</span><button onclick="deleteClient('${escHtml(c.id)}')" class="text-red-400 hover:text-red-600 ml-2"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>`).join('');
+    lucide.createIcons();
+}
+
+function populateClientSelects() {
+    ['modal-client', 'routine-client', 'event-client-input'].forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        const prev = el.value; el.innerHTML = (id === 'event-client-input' ? '<option value="">고객사 선택 안함</option>' : '') + clients.map(c => `<option value="${c.id}">${c.emoji || '🏢'} ${c.name}</option>`).join('');
+        if (prev) el.value = prev;
+    });
+    ['report-client', 'daily-client'].forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        const prev = el.value; el.innerHTML = '<option value="all">전체 고객사</option>' + clients.map(c => `<option value="${c.id}">${c.emoji || '🏢'} ${c.name}</option>`).join('');
+        if (prev) el.value = prev;
+    });
+}
+
+window.filterByClient = function(clientId) {
+    currentClientFilter = clientId;
+    const headerTitle = document.getElementById('header-title');
+    const headerDesc  = document.getElementById('header-desc');
+    if (clientId === 'all') { if(headerTitle) headerTitle.textContent = '전체 현황 대시보드'; if(headerDesc) headerDesc.textContent  = '모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.'; } 
+    else { const c = clients.find(x => x.id === clientId); if(headerTitle) headerTitle.textContent = `${c?.emoji || '🏢'} ${c?.name || clientId}`; if(headerDesc) headerDesc.textContent  = `${c?.name || clientId} 전담 업무 현황입니다.`; }
+    renderClientNav(); renderTasks(); renderStats(); lucide.createIcons();
+};
+
+window.addClient = async function() {
+    const name = document.getElementById('new-client-name').value.trim(); const id = document.getElementById('new-client-id').value.trim();
+    if (!name || !id) { window.showToast('고객사명과 ID를 모두 입력하세요.', 'error'); return; }
+    if (clients.find(c => c.id === id)) { window.showToast('이미 존재하는 ID입니다.', 'error'); return; }
+    try { await fnSaveClient({ id, name, emoji: '🏢' }); document.getElementById('new-client-name').value = ''; document.getElementById('new-client-id').value = ''; window.showToast(`✅ ${name} 추가 완료!`); } 
+    catch(e) { window.showToast('추가 실패: ' + e.message, 'error'); }
+};
+
+window.deleteClient = async function(id) {
+    const c = clients.find(x => x.id === id);
+    if (!confirm(`'${c?.name || id}' 고객사를 삭제하시겠습니까?\n관련 업무 데이터는 유지됩니다.`)) return;
+    try { await fnDeleteClient({ id }); window.showToast('🗑️ 고객사 삭제 완료'); } catch(e) { window.showToast('삭제 실패: ' + e.message, 'error'); }
+};
+
+function renderStats() {
+    const base   = currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === currentClientFilter);
+    const active = base.filter(t => t.status !== 'done');
+    const done   = base.filter(t => t.status === 'done');
+    const d7     = new Date(); d7.setDate(d7.getDate() + 7);
+    const urgent = active.filter(t => t.due && new Date(t.due) <= d7);
+
+    const sAct = document.getElementById('stat-active'); const sDn = document.getElementById('stat-done'); const sUrg = document.getElementById('stat-urgent');
+    if(sAct) sAct.textContent = active.length; if(sDn) sDn.textContent = done.length; if(sUrg) sUrg.textContent = urgent.length;
+}
+
+function getFilteredTasks() {
+    let filtered = tasks.filter(t => {
+        if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return false;
+        if (currentFilter === 'active' && t.status === 'done')  return false;
+        if (currentFilter === 'done'   && t.status !== 'done')  return false;
+        if (searchQuery) { const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '')).toLowerCase(); if (!hay.includes(searchQuery)) return false; }
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let va = a[sortConfig.key] || ''; let vb = b[sortConfig.key] || '';
+        const pOrder = { high: 0, medium: 1, low: 2 };
+        if (sortConfig.key === 'priority') { va = pOrder[va] ?? 1; vb = pOrder[vb] ?? 1; }
+        if (va < vb) return sortConfig.dir === 'asc' ? -1 :  1;
+        if (va > vb) return sortConfig.dir === 'asc' ?  1 : -1;
+        return 0;
+    });
+    return filtered;
+}
 
 function renderTasks() {
-    const body = document.getElementById('task-body');
-    if(!body) return;
+    const filtered = getFilteredTasks();
+    if (currentViewMode === 'list') renderListView(filtered); else renderKanbanView(filtered);
+}
 
-    const targetTasks = window.currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === window.currentClientFilter);
-    
-    body.innerHTML = targetTasks.map((t, i) => {
-        const c = clients.find(x => x.id === t.clientId) || { name: t.clientId || 'Unknown', color: 'var(--ink-4)', ko: '' };
-        const isDone = t.status === 'done';
-        const isOverdue = t.due && new Date(t.due) < new Date() && !isDone;
-        const prio = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'med' : 'low';
-        const idx = String(i + 1).padStart(2, '0');
-        
-        // 오리지널 HTML 구조 완벽 복원
+function renderListView(filtered) {
+    const tbody = document.getElementById('task-table-body');
+    if(!tbody) return;
+    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-slate-400 text-sm"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i><p>표시할 업무가 없습니다.</p></td></tr>`; lucide.createIcons(); return; }
+    tbody.innerHTML = filtered.map(t => {
+        const client  = clients.find(c => c.id === t.clientId);
+        const overdue = isOverdue(t.due) && t.status !== 'done';
+        const histCnt = (t.history || []).length;
         return `
-        <tr class="${isDone ? 'done' : ''}">
-            <td class="row-idx">${idx}</td>
-            <td><span class="check ${isDone ? 'checked' : ''}" onclick="toggleStatus('${escHtml(t.id)}')"></span></td>
-            <td>
-                <span class="client-pill">
-                    <span class="swatch" style="background:${c.color || 'var(--ink-4)'}"></span>
-                    ${escHtml(c.name)} <span style="color:var(--ink-4); font-size:11px;">${escHtml(c.ko || '')}</span>
-                </span>
+        <tr class="hover:bg-slate-50 transition-colors ${t.status === 'done' ? 'opacity-60' : ''} ${overdue ? 'bg-red-50' : ''}">
+            <td class="px-6 py-4 text-center">
+                <button onclick="toggleStatus('${escHtml(t.id)}')" title="상태 토글" class="w-6 h-6 rounded-full border-2 flex items-center justify-center mx-auto transition-colors ${t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400 hover:bg-green-50'}">${t.status === 'done' ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}</button>
             </td>
-            <td class="title-cell">
-                <span class="t">${escHtml(t.title)}</span>
-                ${t.note ? `<span class="n">${escHtml(t.note)}</span>` : ''}
-            </td>
-            <td class="date-cell"><span>${escHtml(t.startDate || '-')}</span></td>
-            <td class="date-cell ${isOverdue ? 'overdue' : ''}">
-                <span>${escHtml(t.due || '-')}</span>
-                <span class="rel">${isOverdue ? '⚠ 지연' : isDone ? '완료' : ''}</span>
-            </td>
-            <td>
-                <span class="prio ${prio}"><span class="bar"></span>${prio.toUpperCase()}</span>
-            </td>
-            <td>
-                <div class="row-actions">
-                    <button class="icon-btn" title="Edit" onclick="alert('수정 기능 준비중')">✎</button>
-                    <button class="icon-btn" title="Delete" onclick="deleteTask('${escHtml(t.id)}')">×</button>
+            <td class="px-6 py-4"><span class="px-2 py-1 rounded-md text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}</span></td>
+            <td class="px-6 py-4"><p class="font-semibold text-slate-800 truncate ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>${t.note ? `<p class="text-xs text-slate-400 truncate mt-0.5">${escHtml(t.note)}</p>` : ''}${overdue ? '<span class="text-xs text-red-500 font-bold">⚠ 기한 초과</span>' : ''}</td>
+            <td class="px-6 py-4 text-sm text-slate-500">${escHtml(t.startDate || '-')}</td>
+            <td class="px-6 py-4 text-sm ${overdue ? 'text-red-600 font-bold' : 'text-slate-500'}">${escHtml(t.due || '-')}</td>
+            <td class="px-6 py-4">${getPriorityBadge(t.priority)}</td>
+            <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openHistoryModal('${escHtml(t.id)}')" title="이력" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"><i data-lucide="history" class="w-4 h-4"></i>${histCnt > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">${histCnt}</span>` : ''}</button>
+                    <button onclick="openEditTaskModal('${escHtml(t.id)}')" title="수정" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="deleteTask('${escHtml(t.id)}')" title="삭제" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </td>
         </tr>`;
     }).join('');
+    lucide.createIcons();
 }
 
-function renderKanbanView() {
-    const targetTasks = window.currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === window.currentClientFilter);
+function renderKanbanView(filtered) {
+    const todoCol = document.getElementById('kanban-todo-col'); const doneCol = document.getElementById('kanban-done-col');
+    if(!todoCol || !doneCol) return;
+    const todo = filtered.filter(t => t.status !== 'done'); const done = filtered.filter(t => t.status === 'done');
+    const tCount = document.getElementById('kanban-todo-count'); const dCount = document.getElementById('kanban-done-count');
+    if(tCount) tCount.textContent = todo.length; if(dCount) dCount.textContent = done.length;
 
     const makeCard = t => {
-        const c = clients.find(x => x.id === t.clientId) || { name: t.clientId || 'Unknown', color: 'var(--ink-4)' };
+        const client  = clients.find(c => c.id === t.clientId);
+        const overdue = isOverdue(t.due) && t.status !== 'done';
         return `
-        <div data-id="${escHtml(t.id)}" class="kan-card cursor-grab">
-            <div class="t ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</div>
-            <div class="m">
-                <span>${escHtml(c.name)}</span>
-                <span>${escHtml(t.due || '-')}</span>
+        <div data-id="${escHtml(t.id)}" class="kanban-card cursor-grab active:cursor-grabbing bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2 pointer-events-none">
+                <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}</span>
+                ${getPriorityBadge(t.priority)}
+            </div>
+            <p class="font-semibold text-slate-800 text-sm mb-1 pointer-events-none ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
+            ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2 pointer-events-none">${escHtml(t.note)}</p>` : ''}
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs pointer-events-none ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">📅 ${escHtml(t.due || '기한 없음')} ${overdue ? '⚠ 초과' : ''}</span>
+                <div class="flex gap-1 z-10">
+                    <button onclick="toggleStatus('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-green-600 rounded transition-colors"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+                    <button onclick="openHistoryModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"><i data-lucide="history" class="w-4 h-4"></i></button>
+                    <button onclick="openEditTaskModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="deleteTask('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
             </div>
         </div>`;
     };
-    
-    const todoTasks = targetTasks.filter(t => t.status !== 'done');
-    const doneTasks = targetTasks.filter(t => t.status === 'done');
 
-    // 오리지널 칸반 컬럼 삽입
-    const todoCol = document.querySelector('.kan-col:nth-child(1)');
-    const doneCol = document.querySelector('.kan-col:nth-child(2)');
-    
-    if(todoCol) {
-        todoCol.innerHTML = `<h4><span>In Progress · 진행중</span><span>${todoTasks.length}</span></h4>` + todoTasks.map(makeCard).join('');
-        initSortable(todoCol, 'active');
-    }
-    if(doneCol) {
-        doneCol.innerHTML = `<h4><span>Done · 완료</span><span>${doneTasks.length}</span></h4>` + doneTasks.map(makeCard).join('');
-        initSortable(doneCol, 'done');
-    }
+    todoCol.innerHTML = todo.length ? todo.map(makeCard).join('') : '<p class="text-xs text-slate-400 text-center py-8 pointer-events-none">진행 중인 업무가 없습니다.</p>';
+    doneCol.innerHTML = done.length ? done.map(makeCard).join('') : '<p class="text-xs text-slate-400 text-center py-8 pointer-events-none">완료된 업무가 없습니다.</p>';
+    lucide.createIcons();
+    initSortable(todoCol, 'active'); initSortable(doneCol, 'done');
 }
 
 function initSortable(el, newStatus) {
-    if(!el) return;
-    if(el.sortable) el.sortable.destroy();
-    el.sortable = new Sortable(el, { 
-        group: 'shared', animation: 150, 
-        onAdd: async (evt) => {
-            try { await fnUpdateStatus({ id: evt.item.dataset.id, status: newStatus }); } catch(e){}
+    if (!el) return;
+    if (el.sortable) el.sortable.destroy();
+    el.sortable = new Sortable(el, {
+        group: 'shared', animation: 150, ghostClass: 'bg-slate-50',
+        onAdd: async function (evt) {
+            const taskId = evt.item.dataset.id; if (!taskId) return;
+            const t = tasks.find(x => x.id === taskId);
+            if (!t) return;
+            
+            const oldStatus = t.status;
+            t.status = newStatus; // 📌 D&D 낙관적 UI
+            
+            try { 
+                await fnUpdateStatus({ id: taskId, status: newStatus }); 
+                window.showToast(`✅ 상태 업데이트 완료`); 
+            } catch(e) { 
+                t.status = oldStatus; // 롤백
+                renderTasks();
+                window.showToast('상태 변경 실패: ' + e.message, 'error'); 
+            }
         }
     });
 }
 
-function renderStats() {
-    const targetTasks = window.currentClientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === window.currentClientFilter);
-    const activeTasks = targetTasks.filter(t => t.status !== 'done');
-    const doneTasks = targetTasks.filter(t => t.status === 'done');
-    const urgentTasks = activeTasks.filter(t => t.due && new Date(t.due) <= new Date(new Date().setDate(new Date().getDate() + 7)));
-
-    // 오리지널 스탯 박스 100% 매핑
-    const statsDivs = document.querySelectorAll('.stat .value');
-    if(statsDivs.length >= 3) {
-        statsDivs[0].innerHTML = `${activeTasks.length}<span class="unit">tasks</span>`;
-        statsDivs[1].innerHTML = `${doneTasks.length}<span class="unit">ytd</span>`;
-        statsDivs[2].innerHTML = `${urgentTasks.length}<span class="unit">tasks</span>`;
-    }
-}
-
-function renderClientNav() {
-    const navSections = document.querySelectorAll('.nav-section');
-    if(navSections.length < 1) return;
-    const clientNavContainer = navSections[0]; // 첫번째 nav-section이 고객사 목록
-    
-    let html = `
-    <div class="nav-label">
-        <span><span class="en">Clients</span> <span class="ko">고객사</span></span>
-        <span>${clients.length + 1}</span>
-    </div>
-    <div class="client-item ${window.currentClientFilter === 'all' ? 'active' : ''}" onclick="filterByClient('all')">
-        <span class="client-swatch" style="background:var(--bg-sunk); color:var(--ink);">◎</span>
-        <span>All Clients <span style="color:var(--ink-4); font-size:11px; margin-left:4px;">전체</span></span>
-        <span class="client-count">${tasks.length}</span>
-    </div>`;
-
-    html += clients.map(c => {
-        const count = tasks.filter(t => t.clientId === c.id).length;
-        const isActive = window.currentClientFilter === c.id ? 'active' : '';
-        // 📌 임의로 넣었던 앞글자 삭제, 순정 디자인 복구
-        return `
-        <div class="client-item ${isActive}" onclick="filterByClient('${escHtml(c.id)}')">
-            <span class="client-swatch" style="background:${c.color || 'var(--ink-4)'};"></span>
-            <span>${escHtml(c.name)} <span style="color:var(--ink-4); font-size:11px;">${escHtml(c.ko || '')}</span></span>
-            <span class="client-count">${count > 9 ? count : '0'+count}</span>
-        </div>`;
-    }).join('');
-
-    clientNavContainer.innerHTML = html;
-}
-
-function renderMails() {
-    const list = document.querySelector('.mail-list');
-    if (!list) return;
-    list.innerHTML = inboxMails.map(m => `
-    <div class="mail">
-        <div class="who">${escHtml((m.from || '?').substring(0,2).toUpperCase())}</div>
-        <div>
-            <div class="subject">${escHtml(m.subject)} <span class="pill">MAIL</span></div>
-            <div class="snippet">From ${escHtml(m.from)} — ${escHtml(m.bodyText || '').substring(0,60)}...</div>
-            ${m.aiSummary ? `<div class="ai-draft"><span class="icon">✦ AI</span><span>${escHtml(m.aiSummary)}</span></div>` : ''}
-        </div>
-        <div class="right">
-            <div class="mail-actions">
-                <button class="icon-btn" onclick="alert('거절 처리')">✕</button>
-                <button class="icon-btn" style="background:var(--ink); color:var(--bg); border-color:var(--ink);" onclick="approveInboxMail('${escHtml(m.id)}')">✓</button>
-            </div>
-        </div>
-    </div>`).join('');
-}
-
-/* ================= ACTIONS & UI TOGGLES ================= */
-
-window.filterByClient = (id) => {
-    window.currentClientFilter = id;
-    renderClientNav(); renderTasks(); renderKanbanView(); renderStats();
+window.setViewMode = function(mode) {
+    currentViewMode = mode;
+    document.getElementById('view-list-container').classList.toggle('hidden', mode !== 'list');
+    document.getElementById('view-kanban-container').classList.toggle('hidden', mode !== 'kanban');
+    const btnList = document.getElementById('btn-view-list'); const btnKanban = document.getElementById('btn-view-kanban');
+    const baseClass = 'px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1';
+    if(btnList) btnList.className = baseClass + (mode === 'list' ? ' bg-slate-100 text-slate-800' : ' text-slate-500 hover:bg-slate-50 hover:text-slate-700');
+    if(btnKanban) btnKanban.className = baseClass + (mode === 'kanban' ? ' bg-slate-100 text-slate-800' : ' text-slate-500 hover:bg-slate-50 hover:text-slate-700');
+    renderTasks();
 };
 
-window.toggleStatus = async (id) => { const t = tasks.find(x=>x.id===id); if(t) await fnUpdateStatus({id, status: t.status==='done'?'active':'done'}); };
-window.deleteTask = async (id) => { if(confirm('삭제?')) await fnDeleteTask({id}); };
-window.approveInboxMail = async (id) => { await fnApproveDraft({id}); alert('승인 완료'); };
-
-// 탭 전환 오리지널 로직 연동
-document.querySelectorAll('.tab').forEach((t, i) => {
-    t.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-        t.classList.add('active');
-        document.querySelectorAll('.tab-panel').forEach((p, j) => p.classList.toggle('on', i === j));
+window.setFilter = function(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === f;
+        btn.className = `filter-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${active ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`;
     });
-});
+    renderTasks();
+};
 
-// 리스트/보드 토글 오리지널 로직 연동
-document.querySelectorAll('.toolbar .seg button').forEach(b => {
-    b.addEventListener('click', () => {
-        const seg = b.closest('.seg');
-        seg.querySelectorAll('button').forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        if (/Board/i.test(b.textContent)) {
-            document.querySelector('.kanban').classList.add('on');
-            document.querySelector('.table-wrap').classList.add('off');
-        } else if (/List/i.test(b.textContent)) {
-            document.querySelector('.kanban').classList.remove('on');
-            document.querySelector('.table-wrap').classList.remove('off');
-        }
-    });
-});
+window.sortBy = function(key) { sortConfig = (sortConfig.key === key) ? { key, dir: sortConfig.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }; renderTasks(); };
+
+window.openAddTaskModal = function() {
+    document.getElementById('task-modal-title').textContent  = '새 업무 추가'; document.getElementById('modal-task-id').value = ''; document.getElementById('modal-title').value = '';
+    document.getElementById('modal-note').value = ''; document.getElementById('modal-ref-doc').value = ''; document.getElementById('modal-due').value = '';
+    document.getElementById('modal-start-date').value = ''; document.getElementById('modal-priority').value = 'medium';
+    const mc = document.getElementById('modal-client'); if (currentClientFilter !== 'all' && mc) mc.value = currentClientFilter;
+    window.openModal('task-modal');
+};
+
+window.openEditTaskModal = function(id) {
+    const t = tasks.find(x => x.id === id); if (!t) return;
+    document.getElementById('task-modal-title').textContent  = '업무 수정'; document.getElementById('modal-task-id').value = t.id; document.getElementById('modal-title').value = t.title || '';
+    document.getElementById('modal-note').value = t.note || ''; document.getElementById('modal-ref-doc').value = t.refDoc || ''; document.getElementById('modal-due').value = t.due || '';
+    document.getElementById('modal-start-date').value = t.startDate || ''; document.getElementById('modal-priority').value = t.priority || 'medium'; document.getElementById('modal-client').value = t.clientId || '';
+    window.openModal('task-modal');
+};
+
+window.saveTask = async function() {
+    const id = document.getElementById('modal-task-id').value; const title = document.getElementById('modal-title').value.trim();
+    if (!title) { window.showToast('업무명을 입력하세요.', 'error'); return; }
+    const clientId = document.getElementById('modal-client').value || 'ALL'; const clientName = clients.find(c => c.id === clientId)?.name || '';
+    const payload = { id: id || undefined, clientId, clientName, title, note: document.getElementById('modal-note').value.trim(), refDoc: document.getElementById('modal-ref-doc').value.trim(), due: document.getElementById('modal-due').value, startDate: document.getElementById('modal-start-date').value, priority: document.getElementById('modal-priority').value, status: 'active' };
+    const btn = document.getElementById('modal-save-btn'); btn.disabled = true; btn.textContent = '저장 중...';
+    try { const res = await fnSaveTask(payload); window.closeModal('task-modal'); window.showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!'); } 
+    catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '저장하기'; }
+};
+
+window.openHistoryModal = function(taskId) {
+    const t = tasks.find(x => x.id === taskId); if (!t) return;
+    document.getElementById('history-target-task-id').value = taskId; document.getElementById('history-task-title').textContent = t.title;
+    renderHistoryList(t.history || []); window.openModal('history-modal');
+};
+
+function renderHistoryList(history) {
+    const container = document.getElementById('history-list-container');
+    if (!history.length) { container.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">아직 기록된 이력이 없습니다.</p>'; return; }
+    container.innerHTML = [...history].reverse().map(h => `<div class="flex gap-3 items-start"><div class="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div><div class="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-100"><p class="text-sm text-slate-700">${escHtml(h.text)}</p><p class="text-xs text-slate-400 mt-1">${formatDate(h.createdAt)}</p></div></div>`).join('');
+}
+
+window.addHistory = async function() {
+    const taskId = document.getElementById('history-target-task-id').value; const text = document.getElementById('history-input-text').value.trim();
+    if (!text) return; const t = tasks.find(x => x.id === taskId); if (!t) return;
+    const history = [...(t.history || []), { text, createdAt: new Date().toISOString() }]; const oldHistory = t.history; t.history = history;
+    document.getElementById('history-input-text').value = ''; renderHistoryList(history);
+    try { await fnSaveTask({ ...t, history }); window.showToast('✅ 이력 추가 완료!'); } catch(e) { t.history = oldHistory; renderHistoryList(oldHistory); window.showToast('추가 실패: ' + e.message, 'error'); }
+};
+
+function renderEvents() {
+    const container = document.getElementById('event-list'); 
+    if(!container) return;
+    
+    const today = new Date(); today.setHours(0,0,0,0);
+    
+    // 📌 수정: tasks 배열이 아닌 분리된 events 전역 배열을 사용
+    const upcoming = events
+        .filter(e => e.due && new Date(e.due) >= today)
+        .sort((a, b) => a.due.localeCompare(b.due))
+        .slice(0, 5);
+
+    if (!upcoming.length) { 
+        container.innerHTML = '<p class="text-xs text-slate-400 px-2 py-4 text-center border border-dashed border-slate-200 rounded-lg">예정된 일정이 없습니다.</p>'; 
+        return; 
+    }
+    
+    container.innerHTML = upcoming.map(e => {
+        const d = new Date(e.due); const diff = Math.round((d - today) / 86400000); 
+        const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
+        const color = diff === 0 ? 'bg-red-100 text-red-700' : diff <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700';
+        
+        return `<div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group"><span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span><div class="flex-1 min-w-0"><p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p><p class="text-[10px] text-slate-400">${escHtml(e.due)} ${e.time || ''}</p></div><button onclick="deleteTask('${escHtml(e.id)}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button></div>`;
+    }).join('');
+    
+    lucide.createIcons();
+}
+
+
+window.openAddEventModal = function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('event-title-input').value = ''; document.getElementById('event-date-input').value  = today; document.getElementById('event-time-input').value  = '09:00'; document.getElementById('event-client-input').value = '';
+    window.openModal('add-event-modal');
+};
+
+window.saveEvent = async function() {
+    const title = document.getElementById('event-title-input').value.trim(); const date = document.getElementById('event-date-input').value; const time = document.getElementById('event-time-input').value || '09:00'; const clientId = document.getElementById('event-client-input').value;
+    if (!title || !date) { window.showToast('일정명과 날짜를 입력하세요.', 'error'); return; }
+    const btn = document.getElementById('btn-save-event'); btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+        const payload = { title, due: date, time, duration: 60, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true };
+        const res = await fnSaveTask(payload); const eventId = res.data.id;
+        await fnAddToCalendar({ eventId, title, date, time, duration: 60 }).catch(e=>console.log("Calendar sync issue:", e));
+        window.closeModal('add-event-modal'); window.showToast('✅ 일정 추가 완료!');
+    } catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '일정 저장'; }
+};
+
+function renderRoutines() {
+    const container = document.getElementById('routine-list'); if(!container) return;
+    if (!routines.length) { container.innerHTML = `<div class="text-center py-16 text-slate-400"><i data-lucide="repeat" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i><p class="text-sm">등록된 루틴이 없습니다.</p></div>`; lucide.createIcons(); return; }
+    const grouped = routines.reduce((acc, r) => { const key = r.clientId || 'ALL'; if (!acc[key]) acc[key] = []; acc[key].push(r); return acc; }, {});
+    const typeColor = { Report: 'bg-purple-100 text-purple-700', Contract: 'bg-blue-100 text-blue-700', System: 'bg-green-100 text-green-700', Other: 'bg-slate-100 text-slate-600' };
+    const typeLabel = { Report: '월간보고', Contract: '계약관리', System: '시스템', Other: '기타' };
+
+    container.innerHTML = Object.entries(grouped).map(([clientId, rList]) => {
+        const client  = clients.find(c => c.id === clientId); const done = rList.filter(r => r.checked).length; const pct = Math.round((done / rList.length) * 100);
+        return `<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center"><div class="flex items-center gap-3"><span class="text-lg">${client?.emoji || '🏢'}</span><div><h4 class="font-bold text-slate-800">${escHtml(client?.name || clientId)}</h4><p class="text-xs text-slate-500">${done} / ${rList.length} 완료</p></div></div><div class="flex items-center gap-3"><div class="w-28 bg-slate-200 rounded-full h-1.5"><div class="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" style="width:${pct}%"></div></div><span class="text-sm font-bold text-indigo-600">${pct}%</span></div></div><div class="divide-y divide-slate-100">${rList.map(r => `<div class="flex items-start gap-4 px-5 py-3 hover:bg-slate-50 transition-colors"><input type="checkbox" ${r.checked ? 'checked' : ''} onchange="toggleRoutine('${escHtml(r.id)}', this.checked)" class="mt-1 w-4 h-4 rounded text-indigo-600 cursor-pointer accent-indigo-600 flex-shrink-0"><div class="flex-1 min-w-0"><div class="flex items-center gap-2 flex-wrap"><span class="text-xs px-2 py-0.5 rounded font-semibold ${typeColor[r.type] || typeColor.Other}">${escHtml(typeLabel[r.type] || r.type)}</span><p class="text-sm font-medium text-slate-800 ${r.checked ? 'line-through text-slate-400' : ''}">${escHtml(r.title)}</p></div>${r.caution ? `<p class="text-xs text-amber-600 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>${escHtml(r.caution)}</p>` : ''}</div><button onclick="deleteRoutine('${escHtml(r.id)}')" class="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('')}</div></div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+window.saveRoutine = async function() {
+    const clientId = document.getElementById('routine-client').value; const type = document.getElementById('routine-type').value; const title = document.getElementById('routine-title').value.trim(); const caution = document.getElementById('routine-caution').value.trim();
+    if (!title) { window.showToast('루틴명을 입력하세요.', 'error'); return; }
+    try { await fnSaveTask({ clientId: clientId || 'ALL', type, title, caution, status: 'routine', isRoutine: true, checked: false }); window.closeModal('routine-modal'); window.showToast('✅ 루틴 추가 완료!'); } catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); }
+};
+
+window.toggleRoutine = async function(id, checked) { const r = routines.find(x => x.id === id); if (!r) return; try { await fnUpdateStatus({ id, status: 'routine', checked }); } catch(e) { window.showToast('실패: ' + e.message, 'error'); } };
+window.deleteRoutine = async function(id) { if (!confirm('삭제하시겠습니까?')) return; try { await fnDeleteTask({ id }); window.showToast('🗑️ 삭제 완료'); } catch(e) { window.showToast('실패: ' + e.message, 'error'); } };
+window.resetRoutines = async function() { if (!confirm('모든 루틴을 미완료로 초기화하시겠습니까?')) return; try { await Promise.all(routines.map(r => fnUpdateStatus({ id: r.id, status: 'routine', checked: false }))); window.showToast('✅ 초기화 완료!'); } catch(e) { window.showToast('초기화 실패: ' + e.message, 'error'); } };
+
+function renderInboxList() {
+    const container = document.getElementById('inbox-list'); const badge = document.getElementById('inbox-badge'); if(!container) return;
+    if (!inboxMails.length) { if(badge) badge.classList.add('hidden'); container.innerHTML = `<div class="text-center py-16 text-slate-400"><i data-lucide="mail-open" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i><p class="text-sm">수집된 메일이 없습니다.</p></div>`; lucide.createIcons(); return; }
+    const pending = inboxMails.filter(m => m.status === 'pending' || !m.status);
+    if(badge) { badge.textContent = pending.length || ''; pending.length ? badge.classList.remove('hidden') : badge.classList.add('hidden'); }
+    container.innerHTML = inboxMails.map(mail => {
+        const isAnalyzed = mail.aiSummary || mail.suggestedTask; const isPending = mail.status === 'pending' || !mail.status; const isApproved = mail.status === 'approved'; const isRejected = mail.status === 'rejected';
+        return `<div class="bg-white rounded-xl border ${isApproved ? 'border-green-200 bg-green-50/30' : isRejected ? 'border-slate-200 opacity-50' : isAnalyzed ? 'border-blue-200' : 'border-slate-200'} shadow-sm p-5"><div class="flex justify-between items-start gap-4"><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1 flex-wrap">${isApproved ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">✅ 승인됨</span>' : isRejected ? '<span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">❌ 거절됨</span>' : '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">📥 대기중</span>'}<h4 class="font-semibold text-slate-800 text-sm truncate">${escHtml(mail.subject || '(제목 없음)')}</h4></div><p class="text-xs text-slate-500 mb-2">From: ${escHtml(mail.from || '알 수 없음')} · ${mail.receivedAt ? new Date(mail.receivedAt).toLocaleString('ko-KR') : ''}</p><p class="text-xs text-slate-600 bg-slate-50 rounded p-2 line-clamp-2">${escHtml(mail.bodyText || mail.body || '(내용 없음)')}</p>${isAnalyzed ? `<div class="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3"><p class="text-xs font-bold text-blue-700 mb-1 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i> AI 분석 결과</p>${mail.aiSummary ? `<p class="text-xs text-blue-800 mb-1">📋 ${escHtml(mail.aiSummary)}</p>` : ''}${mail.suggestedTask ? `<div class="bg-white rounded p-2 border border-blue-100 mt-1 space-y-0.5"><p class="text-xs font-semibold text-slate-700">📌 ${escHtml(mail.suggestedTask.title || '')}</p><p class="text-xs text-slate-500">마감: ${escHtml(mail.suggestedTask.due || '-')} · 우선순위: ${escHtml(mail.suggestedTask.priority || 'medium')} · 고객사 ${escHtml(mail.suggestedTask.clientId || '-')}</p></div>` : ''}</div>` : ''}</div>${isPending ? `<div class="flex flex-col gap-2 flex-shrink-0">${isAnalyzed ? `<button onclick="approveInboxMail('${escHtml(mail.id)}')" class="flex items-center justify-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition shadow-sm"><i data-lucide="check" class="w-3 h-3"></i> 승인</button>` : ''}<button onclick="rejectInboxMail('${escHtml(mail.id)}')" class="flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-300 transition"><i data-lucide="x" class="w-3 h-3"></i> 거절</button></div>` : ''}</div></div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+window.approveInboxMail = async function(id) { try { await fnApproveDraft({ id }); window.showToast('✅ 승인 완료! Tasks에 추가되었습니다.'); } catch(e) { window.showToast('승인 실패: ' + e.message, 'error'); } };
+window.rejectInboxMail = async function(id) { try { await fnUpdateStatus({ id, status: 'rejected' }); window.showToast('❌ 거절 처리 완료'); } catch(e) { window.showToast('거절 실패: ' + e.message, 'error'); } };
+window.handleBulkDone = async function() { if(!confirm("일괄 완료 처리하시겠습니까?")) return; try { const res = await fnBulkDone(); window.showToast(`✅ ${res.data.count}건 완료!`); } catch(e) { window.showToast('실패: ' + e.message, 'error'); } };
+
+window.createReport = async function() {
+    const clientId = document.getElementById('report-client').value; const month = document.getElementById('report-month').value; const output = document.getElementById('report-output'); const btn = document.getElementById('btn-create-report');
+    if (!month) { window.showToast('연월을 선택하세요.', 'error'); return; }
+    output.textContent = '⏳ AI가 리포트를 생성 중입니다...'; btn.disabled = true;
+    try { const res = await fnMonthlySummary({ clientId, yearMonth: month }); output.textContent = res.data?.rawText || res.data?.text || '결과 없음'; } catch(e) { output.textContent = '생성 실패: ' + e.message; } finally { btn.disabled = false; }
+};
+window.copyReport = function() { navigator.clipboard.writeText(document.getElementById('report-output').textContent).then(() => window.showToast('📋 복사 완료!')); };
+
+window.openDailyModal = function() { document.getElementById('daily-date').value = new Date().toISOString().split('T')[0]; document.getElementById('daily-output').textContent = '버튼을 클릭하세요.'; window.openModal('daily-modal'); };
+window.createDailyReport = async function() {
+    const clientId = document.getElementById('daily-client').value; const date = document.getElementById('daily-date').value; const output = document.getElementById('daily-output'); const btn = document.getElementById('btn-create-daily');
+    output.textContent = '⏳ AI가 보고를 생성 중입니다...'; btn.disabled = true;
+    try { const res = await fnDailySummary({ clientId, date }); output.textContent = res.data?.rawText || res.data?.text || '결과 없음'; } catch(e) { output.textContent = '생성 실패: ' + e.message; } finally { btn.disabled = false; }
+};
+window.copyDaily = function() { navigator.clipboard.writeText(document.getElementById('daily-output').textContent).then(() => window.showToast('📋 복사 완료!')); };
+
+window.openBulkModal = function() { document.getElementById('bulk-input').value = ''; document.getElementById('bulk-result').innerHTML = ''; document.getElementById('bulk-confirm-area').classList.add('hidden'); bulkParsedTasks = []; window.openModal('bulk-modal'); };
+window.runBulkParse = async function() {
+    const text = document.getElementById('bulk-input').value.trim(); const btn = document.getElementById('btn-bulk-parse'); const res = document.getElementById('bulk-result'); const area = document.getElementById('bulk-confirm-area');
+    if (!text) { window.showToast('텍스트를 입력하세요.', 'error'); return; }
+    res.innerHTML = `<div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl"><div class="loader"></div><p class="text-sm text-emerald-700">파싱 중...</p></div>`; area.classList.add('hidden'); btn.disabled = true;
+    try {
+        const result = await fnParseTasksAI({ text }); bulkParsedTasks = result.data?.tasks || [];
+        if (!bulkParsedTasks.length) { res.innerHTML = '<p class="text-sm text-slate-500 p-4">결과가 없습니다.</p>'; return; }
+        res.innerHTML = bulkParsedTasks.map((t, i) => `<div class="bg-white border border-emerald-200 rounded-xl p-4 shadow-sm"><div class="flex items-start justify-between gap-2 mb-2"><span class="text-sm font-semibold text-slate-800">#${i+1} ${escHtml(t.title)}</span>${getPriorityBadge(t.priority)}</div><div class="text-xs text-slate-500">🏢 ${escHtml(t.clientId||'-')} · 📅 ${escHtml(t.due||'-')}</div></div>`).join('');
+        area.classList.remove('hidden');
+    } catch(e) { res.innerHTML = `<p class="text-sm text-red-500 p-4">실패: ${e.message}</p>`; } finally { btn.disabled = false; }
+};
+window.confirmBulkTasks = async function() {
+    if (!bulkParsedTasks.length) return; const btn = document.querySelector('#bulk-confirm-area button:last-child'); btn.disabled = true; btn.textContent = '저장 중...';
+    try { await Promise.all(bulkParsedTasks.map(t => fnSaveTask({ ...t, status: 'active' }))); window.closeModal('bulk-modal'); window.showToast(`✅ 저장 완료!`); await loadAllData(); } catch(e) { window.showToast('실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '승인 및 저장'; }
+};
+
+window.switchTab = function(tab) {
+    document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden')); const target = document.getElementById('view-' + tab); if (target) target.classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(btn => { if (btn.dataset.tab === tab) { btn.classList.add('tab-active', 'text-blue-600', 'font-semibold'); btn.classList.remove('tab-inactive', 'text-slate-500'); } else { btn.classList.add('tab-inactive', 'text-slate-500'); btn.classList.remove('tab-active', 'text-blue-600', 'font-semibold'); } });
+    if (tab === 'inbox') { renderInboxList(); lucide.createIcons(); document.getElementById('add-task-btn').classList.add('hidden'); document.getElementById('add-routine-btn').classList.add('hidden'); }
+    if (tab === 'dashboard') { document.getElementById('add-task-btn').classList.remove('hidden'); document.getElementById('add-routine-btn').classList.add('hidden'); }
+    if (tab === 'routine') { document.getElementById('add-task-btn').classList.add('hidden'); document.getElementById('add-routine-btn').classList.remove('hidden'); renderRoutines(); }
+};
+
+window.openModal = function(id) { const el = document.getElementById(id); if(el) { el.classList.remove('hidden'); document.body.style.overflow = 'hidden'; } };
+window.closeModal = function(id) { const el = document.getElementById(id); if(el) { el.classList.add('hidden'); document.body.style.overflow = ''; } };
+
+function setConnectionStatus(online) {
+    const dot = document.getElementById('connection-dot'); const text = document.getElementById('connection-status-text');
+    if(dot && text) { if(online) { dot.className = 'w-2 h-2 rounded-full bg-green-400'; text.textContent = '연결됨'; text.className = 'text-xs text-green-600 font-medium'; } else { dot.className = 'w-2 h-2 rounded-full bg-red-400'; text.textContent = '연결 끊김'; text.className = 'text-xs text-red-500 font-medium'; } }
+}
+
+function isOverdue(due) { if (!due) return false; const today = new Date(); today.setHours(0,0,0,0); return new Date(due) < today; }
+function formatDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return iso; } }
+function getPriorityBadge(priority) { const map = { high: { cls: 'bg-red-100 text-red-700', label: '🔴 High' }, medium: { cls: 'bg-yellow-100 text-yellow-700', label: '🟡 Med' }, low: { cls: 'bg-green-100 text-green-700', label: '🟢 Low' } }; const p = map[(priority || '').toLowerCase()] || map.medium; return `<span class="px-2 py-0.5 rounded text-xs font-bold ${p.cls}">${p.label}</span>`; }
+
+window.showToast = function(msg, type = 'success') {
+    const toast = document.getElementById('toast'); const msgEl = document.getElementById('toast-msg'); const iconEl = document.getElementById('toast-icon'); if(!toast) return;
+    const s = { success: { bg: 'bg-slate-800', icon: 'check-circle' }, error: { bg: 'bg-red-600', icon: 'alert-circle' }, info: { bg: 'bg-blue-600', icon: 'info' } }[type] || { bg: 'bg-slate-800', icon: 'check-circle' };
+    toast.className = `fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium text-white transition-all duration-300 flex items-center gap-2 max-w-sm ${s.bg}`;
+    msgEl.textContent = msg; iconEl.dataset.lucide = s.icon; lucide.createIcons({ attrs: { class: 'w-4 h-4 flex-shrink-0' } });
+    toast.classList.remove('hidden'); toast.style.opacity = '1'; toast.style.transform = 'translateY(0)';
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(8px)'; setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
+};
+
+window.forceSeed = async function() {
+    if (!confirm('⚠️ 전체 데이터를 초기화합니다.\n계속하시겠습니까?')) return;
+    const btn = document.getElementById('btn-force-seed'); if (btn) { btn.disabled = true; btn.textContent = '초기화 중...'; }
+    try { const fnForceSeed = httpsCallable(functions, 'forceSeed'); await fnForceSeed(); window.showToast('✅ 초기화 완료!'); await loadAllData(); } catch(e) { window.showToast('실패: ' + e.message, 'error'); } finally { if (btn) { btn.disabled = false; btn.textContent = '전체 초기화 & 재설치'; } }
+};
+
+// 📌 6번: 마이그레이션 함수 복구
+window.runMigration = async function() { 
+    const targets = tasks.filter(t => t.status === 'pending'); 
+    if(targets.length === 0) { alert("변환할 데이터가 없습니다."); return; } 
+    console.log(`총 ${targets.length}개 데이터 변환 시작...`); 
+    let count = 0; 
+    for(const t of targets) { 
+        try { await fnUpdateStatus({ id: t.id, status: 'active', collection: 'tasks' }); count++; } 
+        catch(e) { console.error(t.id + " 변환 실패", e); } 
+    } 
+    alert(`마이그레이션 완료. 총 ${count}개 복구됨.`); 
+    location.reload(); 
+};
 </script>
 </body>
 </html>
