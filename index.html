@@ -528,6 +528,121 @@ function renderClientNav() {
 }
 
 /* ================= ACTIONS ================= */
+/* ================= MODAL & FORM LOGIC ================= */
+
+// 1. 공통: 고객사 드롭다운 채우기 (모달 열 때마다 최신화)
+function populateClientSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if(!sel) return;
+    sel.innerHTML = `<option value="ALL">All Clients / 전체·내부 업무</option>` + 
+        clients.map(c => `<option value="${escHtml(c.id)}">${escHtml(c.name)}</option>`).join('');
+}
+
+// 2. 새 업무 추가 모달 열기 (초기화)
+window.openAddTaskModal = () => {
+    document.getElementById('modal-task-id').value = '';
+    document.getElementById('modal-title').value = '';
+    document.getElementById('modal-start-date').value = '';
+    document.getElementById('modal-due').value = '';
+    document.getElementById('modal-note').value = '';
+    document.getElementById('modal-priority').value = 'medium';
+    
+    document.getElementById('task-modal-title').textContent = 'Create a task.';
+    populateClientSelect('modal-client');
+    openModal('task-modal');
+};
+
+// 3. 업무 수정 모달 열기 (기존 데이터 불러오기)
+window.openEditTaskModal = (id) => {
+    const t = tasks.find(x => x.id === id);
+    if(!t) return;
+    
+    populateClientSelect('modal-client');
+    document.getElementById('task-modal-title').textContent = 'Edit task.';
+    
+    document.getElementById('modal-task-id').value = t.id;
+    document.getElementById('modal-client').value = t.clientId || 'ALL';
+    document.getElementById('modal-title').value = t.title || '';
+    document.getElementById('modal-start-date').value = t.startDate || '';
+    document.getElementById('modal-due').value = t.due || '';
+    document.getElementById('modal-priority').value = t.priority || 'medium';
+    document.getElementById('modal-note').value = t.note || '';
+    
+    openModal('task-modal');
+};
+
+// 4. [핵심] 업무 저장 실행 (Create & Update)
+window.saveTask = async () => {
+    const btn = document.getElementById('modal-save-btn');
+    const title = document.getElementById('modal-title').value.trim();
+    
+    if(!title) return showToast('업무명을 입력해주세요.', 'error');
+
+    const payload = {
+        id: document.getElementById('modal-task-id').value || null,
+        clientId: document.getElementById('modal-client').value,
+        title: title,
+        startDate: document.getElementById('modal-start-date').value,
+        due: document.getElementById('modal-due').value,
+        priority: document.getElementById('modal-priority').value,
+        note: document.getElementById('modal-note').value,
+        status: 'active'
+    };
+
+    // 로딩 UI 처리
+    btn.disabled = true;
+    btn.innerHTML = '저장 중...';
+
+    try {
+        await fnSaveTask(payload);
+        closeModal('task-modal');
+        showToast('✅ 성공적으로 저장되었습니다.');
+        // onSnapshot 덕분에 화면 갱신 코드는 필요 없습니다!
+    } catch(e) {
+        showToast('저장 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Save task';
+    }
+};
+
+// 5. 데일리 리포트 모달 & AI 생성
+window.openDailyModal = () => {
+    populateClientSelect('daily-client');
+    document.getElementById('daily-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('daily-output').value = '';
+    openModal('daily-modal');
+};
+
+window.createDailyReport = async () => {
+    const btn = document.getElementById('btn-create-daily');
+    btn.disabled = true;
+    btn.innerHTML = '✦ 생성 중... (AI 분석)';
+    
+    try {
+        const res = await fnDailySummary({
+            clientId: document.getElementById('daily-client').value,
+            date: document.getElementById('daily-date').value
+        });
+        // 백엔드 리턴값 구조에 맞춰 출력 (res.data.text 또는 res.data.summary 등)
+        document.getElementById('daily-output').value = res.data.text || res.data;
+        showToast('✅ 데일리 리포트 생성 완료');
+    } catch(e) {
+        showToast('생성 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '✦ Generate';
+    }
+};
+
+// 클립보드 복사 유틸리티
+window.copyDaily = () => {
+    const text = document.getElementById('daily-output').value;
+    if(!text) return;
+    navigator.clipboard.writeText(text);
+    showToast('클립보드에 복사되었습니다.');
+};
+
 window.toggleStatus = async (id) => { const t = tasks.find(x=>x.id===id); if(t) await fnUpdateStatus({id, status: t.status==='done'?'active':'done'}); };
 window.deleteTask = async (id) => { if(confirm('삭제?')) await fnDeleteTask({id}); };
 window.approveInboxMail = async (id) => { await fnApproveDraft({id}); showToast('승인 완료'); };
