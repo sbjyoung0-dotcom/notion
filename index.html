@@ -1552,6 +1552,8 @@ const app       = initializeApp(firebaseConfig);
 const auth      = getAuth(app);
 const functions = getFunctions(app, 'asia-northeast3');
 const db        = getFirestore(app);
+window.httpsCallable = httpsCallable;
+window.functions = functions;
 
 const fnSaveTask       = httpsCallable(functions, 'saveTask');
 const fnDeleteTask     = httpsCallable(functions, 'deleteTask');
