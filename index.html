@@ -1578,6 +1578,74 @@
     </div>
 </div>
 
+<div id="backfill-scope-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col">
+        <div class="flex justify-between items-center px-6 pt-5 pb-3 flex-shrink-0">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-5 h-5 text-blue-600"></i> AI 프로젝트 태그 분석
+            </h3>
+            <button onclick="closeModal('backfill-scope-modal')" class="text-gray-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="px-6 pb-3 space-y-3">
+            <p class="text-xs text-slate-500">분석할 업무의 범위를 선택하세요. AI가 본문/제목을 보고 일관된 프로젝트 태그를 자동으로 부여합니다.</p>
+            
+            <button onclick="confirmBackfillScope('active')" class="w-full text-left p-3 rounded-lg border-2 border-blue-100 bg-blue-50 hover:border-blue-300 hover:bg-blue-100 transition group">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-blue-700 flex items-center gap-1">
+                            🔵 활성 업무만
+                            <span class="text-[10px] font-normal text-blue-500 bg-blue-100 px-1.5 py-0.5 rounded ml-1">권장</span>
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">진행/대기 상태 업무. 빠르고 비용 적음.</p>
+                        <p class="text-[11px] text-blue-500 mt-1" id="backfill-active-count">예상 대상: 계산 중...</p>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition"></i>
+                </div>
+            </button>
+            
+            <button onclick="confirmBackfillScope('done')" class="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-amber-300 hover:bg-amber-50 transition group">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            ✅ 완료 업무만
+                        </p>
+                        <p class="text-xs text-slate-500 mt-1">히스토리 정리용. 한 번만 실행하시면 됩니다.</p>
+                        <p class="text-[11px] text-slate-400 mt-1" id="backfill-done-count">예상 대상: 계산 중...</p>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition"></i>
+                </div>
+            </button>
+            
+            <button onclick="confirmBackfillScope('all')" class="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition group">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            🌐 전체 업무
+                            <span class="text-[10px] font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded ml-1">비용 큼</span>
+                        </p>
+                        <p class="text-xs text-slate-500 mt-1">활성 + 완료 모두. AI 호출 비용이 많이 발생합니다.</p>
+                        <p class="text-[11px] text-slate-400 mt-1" id="backfill-all-count">예상 대상: 계산 중...</p>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition"></i>
+                </div>
+            </button>
+            
+            <label class="flex items-start gap-2 mt-2 px-1 cursor-pointer">
+                <input type="checkbox" id="backfill-overwrite" onchange="updateBackfillCounts()" class="mt-0.5">
+                <span class="text-xs text-slate-600">
+                    <span class="font-medium">강제 재분석</span> — 이미 태그가 있는 업무도 다시 분석합니다.
+                    <span class="block text-[10px] text-slate-400 mt-0.5">예: 태그가 일관되지 않게 분리되어 통일이 필요한 경우</span>
+                </span>
+            </label>
+        </div>
+        <div class="flex justify-end gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-xl flex-shrink-0">
+            <button onclick="closeModal('backfill-scope-modal')" class="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-100 transition">취소</button>
+        </div>
+    </div>
+</div>
+
 <div id="review-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 flex flex-col" style="max-height: 90vh;">
         <div class="flex justify-between items-center mb-3 flex-shrink-0">
@@ -2239,25 +2307,106 @@ window.untagProject = async function(tag) {
     }
 };
 
-window.runBackfillProjectTags = async function(btn) {
-    if (!confirm('기존 모든 활성 업무를 AI가 분석하여 프로젝트 태그를 자동 부여합니다.\n\n시간이 다소 소요될 수 있고 (수십 초~수 분), AI 호출 비용이 발생합니다.\n계속하시겠습니까?')) return;
+// 사이드바 ✨ 버튼이 누르면 호출됨 — 범위 선택 모달을 띄움
+window.runBackfillProjectTags = function(btn) {
+    // 모달의 예상 대상 카운트 계산
+    const overwriteEl = document.getElementById('backfill-overwrite');
+    if (overwriteEl) overwriteEl.checked = false;  // 항상 초기화
+    
+    updateBackfillCounts();
+    window.openModal('backfill-scope-modal');
+};
 
-    const originalIcon = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>';
-    btn.disabled = true;
-    lucide.createIcons();
+// 모달 내 카운트 갱신 (overwrite 체크박스 변화에도 대응 가능)
+function updateBackfillCounts() {
+    const overwrite = document.getElementById('backfill-overwrite')?.checked || false;
+    
+    const isUntagged = (t) => !t.projectTag || t.projectTag.trim() === '';
+    const filterFn = overwrite ? () => true : isUntagged;
+    
+    const activeTasks = tasks.filter(t => 
+        !t.isEvent && !t.isRoutine && t.status !== 'event' && t.status !== 'routine'
+        && (t.status === 'active' || t.status === 'pending')
+    ).filter(filterFn);
+    const doneTasks = tasks.filter(t => 
+        !t.isEvent && !t.isRoutine && t.status === 'done'
+    ).filter(filterFn);
+    
+    const activeEl = document.getElementById('backfill-active-count');
+    const doneEl = document.getElementById('backfill-done-count');
+    const allEl = document.getElementById('backfill-all-count');
+    
+    if (activeEl) activeEl.textContent = `예상 대상: ${activeTasks.length}건`;
+    if (doneEl) doneEl.textContent = `예상 대상: ${doneTasks.length}건`;
+    if (allEl) allEl.textContent = `예상 대상: ${activeTasks.length + doneTasks.length}건`;
+}
 
+// 사용자가 모달에서 범위(active/done/all) 선택 시 실행
+window.confirmBackfillScope = async function(scope) {
+    const overwrite = document.getElementById('backfill-overwrite')?.checked || false;
+    
+    // 예상 대상 건수 다시 확인
+    const isUntagged = (t) => !t.projectTag || t.projectTag.trim() === '';
+    const filterFn = overwrite ? () => true : isUntagged;
+    
+    let candidates;
+    if (scope === 'active') {
+        candidates = tasks.filter(t => 
+            !t.isEvent && !t.isRoutine && (t.status === 'active' || t.status === 'pending')
+        ).filter(filterFn);
+    } else if (scope === 'done') {
+        candidates = tasks.filter(t => 
+            !t.isEvent && !t.isRoutine && t.status === 'done'
+        ).filter(filterFn);
+    } else {
+        candidates = tasks.filter(t => 
+            !t.isEvent && !t.isRoutine && t.status !== 'event' && t.status !== 'routine'
+            && (t.status === 'active' || t.status === 'pending' || t.status === 'done')
+        ).filter(filterFn);
+    }
+    
+    if (candidates.length === 0) {
+        const scopeLabel = scope === 'active' ? '활성 업무' : scope === 'done' ? '완료 업무' : '전체 업무';
+        window.showToast(`${scopeLabel} 중 분석할 대상이 없습니다.${!overwrite ? ' (강제 재분석을 켜면 기존 태그도 다시 분석됩니다)' : ''}`, 'error');
+        return;
+    }
+    
+    // 비용 경고 — 200건 이상이면 추가 확인
+    if (candidates.length >= 200) {
+        const cost = (candidates.length / 20 * 0.01).toFixed(2);  // 대략적 비용 (USD, Gemini Flash 기준)
+        const msg = `${candidates.length}건의 업무를 분석합니다.\n\n` +
+                    `예상 AI 호출: 약 ${Math.ceil(candidates.length / 20)}회\n` +
+                    `예상 비용: 약 $${cost} (USD, Gemini Flash 기준 추정치)\n` +
+                    `예상 시간: 약 ${Math.ceil(candidates.length / 20 * 3)}초\n\n` +
+                    `계속하시겠습니까?`;
+        if (!confirm(msg)) return;
+    }
+    
+    // 모달 닫고 진행
+    window.closeModal('backfill-scope-modal');
+    
+    const sidebarBtn = document.querySelector('[onclick^="runBackfillProjectTags"]');
+    let originalIcon = null;
+    if (sidebarBtn) {
+        originalIcon = sidebarBtn.innerHTML;
+        sidebarBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>';
+        sidebarBtn.disabled = true;
+        lucide.createIcons();
+    }
+    
     try {
-        window.showToast('🤖 AI가 프로젝트 태그를 분석 중입니다...');
-        const res = await fnBackfillProjectTags();
+        window.showToast(`🤖 AI가 ${candidates.length}건의 업무를 분석 중입니다... (수십 초~수 분 소요)`);
+        const res = await fnBackfillProjectTags({ scope, overwrite });
         const data = res.data || {};
         window.showToast(`✅ ${data.message || '완료되었습니다.'}`);
     } catch (e) {
         window.showToast('태그 분석 실패: ' + e.message, 'error');
     } finally {
-        btn.innerHTML = originalIcon;
-        btn.disabled = false;
-        lucide.createIcons();
+        if (sidebarBtn) {
+            sidebarBtn.innerHTML = originalIcon;
+            sidebarBtn.disabled = false;
+            lucide.createIcons();
+        }
     }
 };
 
