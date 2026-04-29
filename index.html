@@ -1027,6 +1027,25 @@
                     </button>
                 </div>
             </div>
+            
+            <!-- 📌 진행 바: backfill 작업 중일 때만 표시 -->
+            <div id="backfill-progress-bar" class="hidden mx-2 mb-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[11px] font-medium text-blue-700 flex items-center gap-1">
+                        <i data-lucide="loader" class="w-3 h-3 animate-spin"></i>
+                        <span id="backfill-progress-label">분석 중...</span>
+                    </span>
+                    <button onclick="cancelBackfillTask()" title="취소" id="backfill-cancel-btn"
+                        class="text-[10px] text-blue-500 hover:text-red-600 underline transition-colors">
+                        취소
+                    </button>
+                </div>
+                <div class="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
+                    <div id="backfill-progress-fill" class="bg-blue-500 h-1.5 rounded-full transition-all" style="width: 0%"></div>
+                </div>
+                <p id="backfill-progress-detail" class="text-[10px] text-blue-500 mt-1 font-mono"></p>
+            </div>
+            
             <div id="pending-project-input" class="hidden px-2 mb-2 space-y-1">
                 <input type="text" id="new-project-tag" placeholder="새 프로젝트 태그명"
                     class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -1707,7 +1726,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, limit, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, limit, where, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey:            "AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ",
@@ -1741,6 +1760,7 @@ const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
 const fnDeleteFromCalendar = httpsCallable(functions, 'deleteFromGoogleCalendar');
 const fnBackfillProjectTags = httpsCallable(functions, 'backfillProjectTags', { timeout: 540000 });
+const fnCancelBackfill = httpsCallable(functions, 'cancelBackfillProjectTags');
 const fnMergeDuplicates = httpsCallable(functions, 'mergeDuplicateTasks', { timeout: 300000 });
 
 window.escHtml = function(str) {
@@ -1855,6 +1875,30 @@ async function loadAllData(uid) {
                 memoEl.value = savedMemo ? savedMemo.content : '';
             }
         }));
+
+        // 📌 backfill 진행 상황 실시간 구독
+        unsubscribers.push(onSnapshot(
+            doc(db, "users", uid, "meta", "backfill"),
+            (snap) => {
+                if (!snap.exists()) {
+                    hideBackfillProgress();
+                    return;
+                }
+                const data = snap.data();
+                if (data.status === "running") {
+                    showBackfillProgress(data);
+                } else {
+                    // 완료/취소된 경우 잠깐 보여주고 자동 숨김
+                    if (data.processed > 0 || data.cancelled) {
+                        showBackfillProgress(data, true);
+                        setTimeout(() => hideBackfillProgress(), 5000);
+                    } else {
+                        hideBackfillProgress();
+                    }
+                }
+            },
+            (err) => console.warn('backfill snapshot 에러:', err.message)
+        ));
 
         setConnectionStatus(true);
     } catch(e) {
@@ -2409,6 +2453,126 @@ window.confirmBackfillScope = async function(scope) {
         }
     }
 };
+
+// ============================================================
+// backfill 진행 바 + 취소
+// ============================================================
+let __backfillStartTimeMs = null;
+
+function showBackfillProgress(data, isFinishedShortly = false) {
+    const bar = document.getElementById('backfill-progress-bar');
+    const label = document.getElementById('backfill-progress-label');
+    const fill = document.getElementById('backfill-progress-fill');
+    const detail = document.getElementById('backfill-progress-detail');
+    const cancelBtn = document.getElementById('backfill-cancel-btn');
+    if (!bar || !label || !fill || !detail) return;
+
+    bar.classList.remove('hidden');
+
+    const pct = data.total > 0 ? Math.round((data.processed / data.total) * 100) : 0;
+    fill.style.width = `${pct}%`;
+
+    const scopeLabelStr = data.scopeLabel || data.scope || '업무';
+
+    if (isFinishedShortly) {
+        // 완료된 상태로 잠깐 표시
+        if (data.cancelled) {
+            label.innerHTML = `<i data-lucide="x-circle" class="w-3 h-3"></i> 취소됨`;
+            fill.style.background = '#94a3b8';  // slate-400
+        } else {
+            label.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3"></i> 완료`;
+            fill.style.background = '#10b981';  // emerald-500
+        }
+        detail.textContent = `${data.scopeLabel || ''} ${data.processed}/${data.total} (${pct}%) 처리됨`;
+        if (cancelBtn) cancelBtn.style.display = 'none';
+    } else {
+        // 진행 중
+        label.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> ${scopeLabelStr} 분석 중...`;
+        fill.style.background = '';  // CSS 기본값(blue-500) 사용
+        
+        // 시작 시간 기억
+        if (data.startedAt) {
+            __backfillStartTimeMs = data.startedAt.toMillis ? data.startedAt.toMillis() : Date.now();
+        } else if (!__backfillStartTimeMs) {
+            __backfillStartTimeMs = Date.now();
+        }
+        
+        const elapsedSec = __backfillStartTimeMs ? Math.floor((Date.now() - __backfillStartTimeMs) / 1000) : 0;
+        const elapsedStr = formatElapsed(elapsedSec);
+        
+        // 남은 시간 추정 (이미 처리된 비율 기반)
+        let etaStr = '';
+        if (data.processed > 0 && elapsedSec > 5) {
+            const remaining = Math.round((elapsedSec / data.processed) * (data.total - data.processed));
+            etaStr = ` · 남은 시간 약 ${formatElapsed(remaining)}`;
+        }
+        
+        detail.textContent = `${data.processed} / ${data.total} (${pct}%) · 경과 ${elapsedStr}${etaStr}`;
+        
+        if (cancelBtn) {
+            cancelBtn.style.display = data.cancelRequested ? 'none' : '';
+            if (data.cancelRequested) {
+                label.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> 취소 처리 중...`;
+            }
+        }
+    }
+    
+    lucide.createIcons();
+}
+
+function hideBackfillProgress() {
+    const bar = document.getElementById('backfill-progress-bar');
+    if (bar) bar.classList.add('hidden');
+    __backfillStartTimeMs = null;
+}
+
+function formatElapsed(seconds) {
+    if (seconds < 60) return `${seconds}초`;
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}분 ${sec}초`;
+}
+
+window.cancelBackfillTask = async function() {
+    if (!confirm('진행 중인 분석 작업을 취소하시겠습니까?\n\n현재 처리 중인 배치까지는 완료된 후 중단됩니다.\n이미 분석된 태스크의 태그는 유지됩니다.')) return;
+    
+    const cancelBtn = document.getElementById('backfill-cancel-btn');
+    if (cancelBtn) cancelBtn.disabled = true;
+    
+    try {
+        const res = await fnCancelBackfill();
+        const data = res.data || {};
+        if (data.ok) {
+            window.showToast(`⏹ ${data.message}`);
+        } else {
+            window.showToast(data.message || '취소할 작업이 없습니다.', 'error');
+        }
+    } catch (e) {
+        window.showToast('취소 요청 실패: ' + e.message, 'error');
+        if (cancelBtn) cancelBtn.disabled = false;
+    }
+};
+
+// 1초마다 진행 바의 경과 시간을 업데이트 (UI만 갱신, 데이터 호출 없음)
+setInterval(() => {
+    const bar = document.getElementById('backfill-progress-bar');
+    if (bar && !bar.classList.contains('hidden') && __backfillStartTimeMs) {
+        const detail = document.getElementById('backfill-progress-detail');
+        const fill = document.getElementById('backfill-progress-fill');
+        if (detail && fill) {
+            // 현재 표시된 진행률 유지하며 경과 시간만 업데이트
+            const pctText = (fill.style.width || '0%').replace('%', '');
+            const currentText = detail.textContent;
+            const m = currentText.match(/^(\d+ \/ \d+ \(\d+%\))/);
+            if (m) {
+                const elapsedSec = Math.floor((Date.now() - __backfillStartTimeMs) / 1000);
+                const elapsedStr = formatElapsed(elapsedSec);
+                detail.textContent = `${m[1]} · 경과 ${elapsedStr}`;
+            }
+        }
+    }
+}, 1000);
+
 
 // ============================================================
 // 유사 태스크 검토 모달
