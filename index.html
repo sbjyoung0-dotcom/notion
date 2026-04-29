@@ -1017,6 +1017,14 @@
             <nav id="client-nav" class="space-y-0.5 px-2"></nav>
 
             <div class="mt-6 px-4 mb-2 flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-400 uppercase">Projects</span>
+                <button onclick="runBackfillProjectTags(this)" title="기존 업무에 AI로 프로젝트 태그 자동 부여" class="text-slate-400 hover:text-blue-600 transition-colors">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <nav id="project-nav" class="space-y-0.5 px-2"></nav>
+
+            <div class="mt-6 px-4 mb-2 flex justify-between items-center">
                 <span class="text-xs font-bold text-slate-400 uppercase">Upcoming Events</span>
                 <button onclick="openAddEventModal()" class="text-slate-400 hover:text-blue-600 transition-colors">
                     <i data-lucide="plus" class="w-4 h-4"></i>
@@ -1079,6 +1087,10 @@
                     <button onclick="openModal('report-modal')"
                         class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition shadow-sm">
                         <i data-lucide="file-output" class="w-4 h-4"></i> 월간 리포트
+                    </button>
+                    <button onclick="openReviewModal()"
+                        class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition shadow-sm">
+                        <i data-lucide="search" class="w-4 h-4"></i> 유사 검토
                     </button>
                     <button onclick="openBulkModal()"
                         class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition shadow-sm">
@@ -1338,6 +1350,12 @@
                     <option value="low">Low</option>
                 </select>
             </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">프로젝트 태그 <span class="font-normal text-slate-400">(선택)</span></label>
+                <input type="text" id="modal-project-tag" list="project-tag-list" placeholder="예: SkyHigh Memory FI, 깨끗한나라 월간보고서"
+                    class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <datalist id="project-tag-list"></datalist>
+            </div>
             <button onclick="saveTask()" id="modal-save-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition">저장하기</button>
         </div>
     </div>
@@ -1494,6 +1512,24 @@
     </div>
 </div>
 
+<div id="review-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 flex flex-col" style="max-height: 90vh;">
+        <div class="flex justify-between items-center mb-3 flex-shrink-0">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="search" class="w-5 h-5 text-amber-600"></i> 유사 태스크 검토
+            </h3>
+            <button onclick="closeModal('review-modal')" class="text-gray-400 hover:text-slate-600"><i data-lucide="x"></i></button>
+        </div>
+        <p class="text-xs text-slate-500 mb-3 flex-shrink-0">같은 프로젝트 또는 제목이 비슷한 업무를 그룹으로 모았습니다. 그룹 안에서 통합/완료/삭제할 업무를 선택하세요.</p>
+        <div class="flex gap-2 mb-3 flex-shrink-0">
+            <button onclick="runMergeDuplicates(this)" class="flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition border border-amber-200">
+                <i data-lucide="merge" class="w-4 h-4"></i> 자동 중복 병합 (본문 유사)
+            </button>
+        </div>
+        <div id="review-list" class="flex-1 overflow-y-auto space-y-4 border-t border-slate-200 pt-3 min-h-[100px]"></div>
+    </div>
+</div>
+
 <div id="add-event-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
         <div class="flex justify-between items-center mb-4">
@@ -1570,6 +1606,8 @@ const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
 const fnDeleteFromCalendar = httpsCallable(functions, 'deleteFromGoogleCalendar');
+const fnBackfillProjectTags = httpsCallable(functions, 'backfillProjectTags', { timeout: 540000 });
+const fnMergeDuplicates = httpsCallable(functions, 'mergeDuplicateTasks', { timeout: 300000 });
 
 window.escHtml = function(str) {
     if (!str || typeof str !== 'string') return '';
@@ -1582,6 +1620,7 @@ let events              = [];
 let routines            = [];
 let inboxMails          = [];
 let currentClientFilter = 'all';
+let currentProjectFilter= 'all';
 let currentFilter       = 'active';
 let currentViewMode     = 'list';
 let sortConfig          = { key: 'due', dir: 'asc' };
@@ -1657,7 +1696,7 @@ async function loadAllData(uid) {
             const allDocs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             tasks = allDocs;
             routines = allDocs.filter(t => t.isRoutine === true || t.status === 'routine');
-            renderTasks(); renderStats(); renderEvents(); renderRoutines();
+            renderTasks(); renderStats(); renderEvents(); renderRoutines(); renderProjectNav();
         }));
 
         const qInbox = query(collection(db, "users", uid, "inbox"), where("status", "==", "pending"), limit(100));
@@ -1875,8 +1914,349 @@ window.filterByClient = function(clientId) {
     const headerDesc  = document.getElementById('header-desc');
     if (clientId === 'all') { if(headerTitle) headerTitle.textContent = '전체 현황 대시보드'; if(headerDesc) headerDesc.textContent  = '모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.'; } 
     else { const c = clients.find(x => x.id === clientId); if(headerTitle) headerTitle.textContent = `${c?.emoji || '🏢'} ${c?.name || clientId}`; if(headerDesc) headerDesc.textContent  = `${c?.name || clientId} 전담 업무 현황입니다.`; }
-    renderClientNav(); renderTasks(); renderStats(); lucide.createIcons();
+    renderClientNav(); renderProjectNav(); renderTasks(); renderStats(); lucide.createIcons();
 };
+
+// ============================================================
+// 프로젝트 그룹핑 — 사이드바 nav, 필터, 일괄 분석
+// ============================================================
+function getProjectGroups() {
+    const map = new Map();
+    let untaggedCount = 0;
+    tasks.forEach(t => {
+        if (t.status === 'done' || t.isEvent || t.isRoutine) return;
+        if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return;
+        if (t.projectTag && t.projectTag.trim()) {
+            const tag = t.projectTag.trim();
+            map.set(tag, (map.get(tag) || 0) + 1);
+        } else {
+            untaggedCount++;
+        }
+    });
+    const groups = Array.from(map.entries()).map(([tag, count]) => ({ tag, count }));
+    groups.sort((a, b) => b.count - a.count);
+    return { groups, untaggedCount };
+}
+
+function renderProjectNav() {
+    const nav = document.getElementById('project-nav');
+    if (!nav) return;
+    const { groups, untaggedCount } = getProjectGroups();
+
+    if (groups.length === 0 && untaggedCount === 0) {
+        nav.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400 italic">아직 프로젝트 태그가 없습니다.<br>✨ 버튼으로 일괄 분석하세요.</div>`;
+        return;
+    }
+
+    let html = `<button onclick="filterByProject('all')"
+        class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
+        ${currentProjectFilter === 'all' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">
+        <span>🌐 전체 프로젝트</span>
+        <span class="text-slate-400">${groups.reduce((s, g) => s + g.count, 0) + untaggedCount}</span>
+    </button>`;
+
+    groups.forEach(g => {
+        const safeTag = escHtml(g.tag);
+        const isActive = currentProjectFilter === g.tag;
+        const tagJsonEscaped = JSON.stringify(g.tag).replace(/"/g, '&quot;');
+        html += `<button onclick="filterByProject(${tagJsonEscaped})"
+            class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
+            ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}"
+            title="${safeTag}">
+            <span class="truncate">📁 ${safeTag}</span>
+            <span class="text-slate-400 flex-shrink-0 ml-2">${g.count}</span>
+        </button>`;
+    });
+
+    if (untaggedCount > 0) {
+        const isActive = currentProjectFilter === '__none__';
+        html += `<button onclick="filterByProject('__none__')"
+            class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
+            ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">
+            <span>❓ 미분류</span>
+            <span class="text-slate-400">${untaggedCount}</span>
+        </button>`;
+    }
+    nav.innerHTML = html;
+}
+
+window.filterByProject = function(tag) {
+    currentProjectFilter = tag;
+    const headerTitle = document.getElementById('header-title');
+    const headerDesc  = document.getElementById('header-desc');
+    if (tag === 'all') {
+        if (currentClientFilter === 'all' && headerTitle && headerDesc) {
+            headerTitle.textContent = '전체 현황 대시보드';
+            headerDesc.textContent  = '모든 고객사의 주요 이슈와 할 일을 한눈에 확인합니다.';
+        }
+    } else if (tag === '__none__') {
+        if (headerTitle) headerTitle.textContent = '📌 미분류 업무';
+        if (headerDesc)  headerDesc.textContent  = '프로젝트 태그가 없는 업무들입니다.';
+    } else {
+        if (headerTitle) headerTitle.textContent = `📁 ${tag}`;
+        if (headerDesc)  headerDesc.textContent  = `${tag} 프로젝트 관련 업무입니다.`;
+    }
+    renderProjectNav(); renderTasks(); renderStats(); lucide.createIcons();
+};
+
+window.runBackfillProjectTags = async function(btn) {
+    if (!confirm('기존 모든 활성 업무를 AI가 분석하여 프로젝트 태그를 자동 부여합니다.\n\n시간이 다소 소요될 수 있고 (수십 초~수 분), AI 호출 비용이 발생합니다.\n계속하시겠습니까?')) return;
+
+    const originalIcon = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>';
+    btn.disabled = true;
+    lucide.createIcons();
+
+    try {
+        window.showToast('🤖 AI가 프로젝트 태그를 분석 중입니다...');
+        const res = await fnBackfillProjectTags();
+        const data = res.data || {};
+        window.showToast(`✅ ${data.message || '완료되었습니다.'}`);
+    } catch (e) {
+        window.showToast('태그 분석 실패: ' + e.message, 'error');
+    } finally {
+        btn.innerHTML = originalIcon;
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+};
+
+// ============================================================
+// 유사 태스크 검토 모달
+// ============================================================
+window.openReviewModal = function() {
+    renderReviewGroups();
+    openModal('review-modal');
+};
+
+function renderReviewGroups() {
+    const container = document.getElementById('review-list');
+    if (!container) return;
+
+    // 활성 태스크만 (완료/이벤트/루틴 제외)
+    const candidates = tasks.filter(t => 
+        t.status !== 'done' && !t.isEvent && !t.isRoutine && t.status !== 'event' && t.status !== 'routine'
+    );
+
+    if (candidates.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-400 py-8">검토할 업무가 없습니다.</div>';
+        return;
+    }
+
+    // 1차: projectTag별 그룹
+    const projectMap = new Map();
+    const untagged = [];
+    candidates.forEach(t => {
+        if (t.projectTag && t.projectTag.trim()) {
+            const tag = t.projectTag.trim();
+            if (!projectMap.has(tag)) projectMap.set(tag, []);
+            projectMap.get(tag).push(t);
+        } else {
+            untagged.push(t);
+        }
+    });
+
+    // 2개 이상인 그룹만 검토 대상
+    const groups = Array.from(projectMap.entries())
+        .filter(([_, arr]) => arr.length >= 2)
+        .map(([tag, arr]) => ({ tag, items: arr, type: 'project' }));
+
+    // 미분류는 제목 키워드로 묶기 (간단 유사도)
+    if (untagged.length >= 2) {
+        const keywordGroups = groupByTitleKeywords(untagged);
+        keywordGroups.forEach(g => {
+            if (g.items.length >= 2) groups.push({ tag: `(키워드) ${g.tag}`, items: g.items, type: 'keyword' });
+        });
+    }
+
+    if (groups.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-400 py-8">유사한 업무 그룹을 찾지 못했습니다.<br><span class="text-xs">프로젝트 태그가 부여되어 있어야 그룹핑됩니다. ✨ 버튼으로 일괄 분석을 먼저 실행해보세요.</span></div>';
+        return;
+    }
+
+    groups.sort((a, b) => b.items.length - a.items.length);
+
+    container.innerHTML = groups.map((g, gIdx) => `
+        <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
+            <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    ${g.type === 'project' ? '📁' : '🔤'} ${escHtml(g.tag)}
+                    <span class="text-xs font-normal text-slate-400">(${g.items.length}건)</span>
+                </h4>
+                <div class="flex gap-1">
+                    <button onclick="reviewGroupAction(${gIdx}, 'merge')" class="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200" title="선택한 업무들을 1개로 통합">
+                        🔄 통합
+                    </button>
+                    <button onclick="reviewGroupAction(${gIdx}, 'done')" class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200" title="선택한 업무를 완료 처리">
+                        ✅ 완료
+                    </button>
+                    <button onclick="reviewGroupAction(${gIdx}, 'delete')" class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200" title="선택한 업무 삭제">
+                        🗑️ 삭제
+                    </button>
+                </div>
+            </div>
+            <div class="space-y-1.5">
+                ${g.items.map((t) => `
+                    <label class="flex items-start gap-2 p-2 bg-white border border-slate-100 rounded hover:border-slate-300 cursor-pointer text-xs">
+                        <input type="checkbox" data-group="${gIdx}" data-task-id="${escHtml(t.id)}" class="mt-0.5 review-checkbox">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-slate-700 truncate">${escHtml(t.title || '(제목 없음)')}</div>
+                            <div class="text-slate-400 mt-0.5 truncate">
+                                ${t.due ? `📅 ${t.due}` : ''}
+                                ${t.priority ? ` · ${t.priority.toUpperCase()}` : ''}
+                                ${t.clientId ? ` · ${escHtml(t.clientId)}` : ''}
+                            </div>
+                            ${t.note ? `<div class="text-slate-500 mt-1 line-clamp-2">${escHtml(t.note.slice(0, 150))}</div>` : ''}
+                        </div>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    window.__reviewGroups = groups;
+}
+
+function groupByTitleKeywords(items) {
+    const stopWords = new Set(['및', '관련', '확인', '진행', '검토', '요청', '안내', '협조', '회신', '전달', '대한', '여부', '내용', '있는', '없는', '하기', '하는', '됩니다', '입니다', '있습니다', 'the', 'and', 'for', 'is']);
+
+    function extractKeywords(title) {
+        return (title || '').toLowerCase()
+            .replace(/[^\w가-힣\s]/g, ' ')
+            .split(/\s+/)
+            .filter(w => w.length >= 2 && !stopWords.has(w));
+    }
+
+    const groups = [];
+    const used = new Set();
+
+    for (let i = 0; i < items.length; i++) {
+        if (used.has(items[i].id)) continue;
+        const kwA = extractKeywords(items[i].title);
+        if (kwA.length === 0) continue;
+        const setA = new Set(kwA);
+
+        const group = [items[i]];
+        used.add(items[i].id);
+
+        for (let j = i + 1; j < items.length; j++) {
+            if (used.has(items[j].id)) continue;
+            const kwB = extractKeywords(items[j].title);
+            if (kwB.length === 0) continue;
+            const setB = new Set(kwB);
+            const intersection = [...setA].filter(w => setB.has(w)).length;
+            const minLen = Math.min(setA.size, setB.size);
+            if (minLen > 0 && intersection / minLen >= 0.6) {
+                group.push(items[j]);
+                used.add(items[j].id);
+            }
+        }
+
+        if (group.length >= 2) {
+            const tagWord = kwA[0] || '유사 그룹';
+            groups.push({ tag: tagWord, items: group });
+        }
+    }
+    return groups;
+}
+
+window.reviewGroupAction = async function(gIdx, action) {
+    const groups = window.__reviewGroups || [];
+    const group = groups[gIdx];
+    if (!group) return;
+
+    const checkboxes = document.querySelectorAll(`.review-checkbox[data-group="${gIdx}"]:checked`);
+    const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.taskId);
+
+    if (selectedIds.length === 0) {
+        window.showToast('체크박스로 대상 업무를 선택하세요.', 'error');
+        return;
+    }
+
+    const selectedTasks = group.items.filter(t => selectedIds.includes(t.id));
+
+    if (action === 'merge') {
+        if (selectedTasks.length < 2) {
+            window.showToast('통합하려면 2개 이상 선택하세요.', 'error');
+            return;
+        }
+        if (!confirm(`선택한 ${selectedTasks.length}건의 업무를 1개로 통합합니다.\n첫 번째 업무를 대표로 하고, 나머지의 정보는 본문에 합쳐집니다.\n계속하시겠습니까?`)) return;
+
+        try {
+            const winner = selectedTasks[0];
+            const losers = selectedTasks.slice(1);
+            const mergeLines = losers.map(l => `- ${l.title}${l.due ? ` (${l.due})` : ''}`).join('\n');
+            const newNote = (winner.note || '') + '\n\n--- 🔄 수동 통합된 업무 ---\n' + mergeLines;
+
+            await fnSaveTask({
+                id: winner.id, collection: 'tasks',
+                ...winner,
+                note: newNote.slice(0, 5000)
+            });
+            for (const l of losers) {
+                await fnDeleteTask({ id: l.id, collection: 'tasks' });
+            }
+            window.showToast(`✅ ${selectedTasks.length}건 → 1건으로 통합 완료`);
+            closeModal('review-modal');
+        } catch (e) {
+            window.showToast('통합 실패: ' + e.message, 'error');
+        }
+    }
+    else if (action === 'done') {
+        if (!confirm(`선택한 ${selectedTasks.length}건의 업무를 완료 처리하시겠습니까?`)) return;
+        try {
+            for (const t of selectedTasks) {
+                await fnUpdateStatus({ id: t.id, collection: 'tasks', status: 'done' });
+            }
+            window.showToast(`✅ ${selectedTasks.length}건 완료 처리`);
+            renderReviewGroups();
+        } catch (e) {
+            window.showToast('완료 처리 실패: ' + e.message, 'error');
+        }
+    }
+    else if (action === 'delete') {
+        if (!confirm(`선택한 ${selectedTasks.length}건의 업무를 영구 삭제하시겠습니까?\n복구할 수 없습니다.`)) return;
+        try {
+            for (const t of selectedTasks) {
+                await fnDeleteTask({ id: t.id, collection: 'tasks' });
+            }
+            window.showToast(`🗑️ ${selectedTasks.length}건 삭제 완료`);
+            renderReviewGroups();
+        } catch (e) {
+            window.showToast('삭제 실패: ' + e.message, 'error');
+        }
+    }
+};
+
+window.runMergeDuplicates = async function(btn) {
+    if (!confirm('본문 내용이 유사한 업무를 자동으로 묶어서 1개로 통합합니다.\n(같은 메일 답장 체인에서 분리된 중복 등)\n계속하시겠습니까?')) return;
+
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> 분석 중...';
+    lucide.createIcons();
+
+    try {
+        const res = await fnMergeDuplicates();
+        const data = res.data || {};
+        window.showToast(`✅ ${data.message || '완료'}`);
+        closeModal('review-modal');
+    } catch (e) {
+        window.showToast('자동 병합 실패: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        lucide.createIcons();
+    }
+};
+
+function populateProjectTagDatalist() {
+    const dl = document.getElementById('project-tag-list');
+    if (!dl) return;
+    const tags = new Set();
+    tasks.forEach(t => { if (t.projectTag && t.projectTag.trim()) tags.add(t.projectTag.trim()); });
+    dl.innerHTML = Array.from(tags).sort().map(tag => `<option value="${escHtml(tag)}">`).join('');
+}
 
 window.addClient = async function() {
     const name = document.getElementById('new-client-name').value.trim(); const id = document.getElementById('new-client-id').value.trim();
@@ -1909,9 +2289,14 @@ function getFilteredTasks() {
         if (t.isEvent === true || t.isRoutine === true) return false;
         if (t.status === 'event' || t.status === 'routine') return false;
         if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return false;
+        if (currentProjectFilter !== 'all') {
+            if (currentProjectFilter === '__none__') {
+                if (t.projectTag) return false;
+            } else if (t.projectTag !== currentProjectFilter) return false;
+        }
         if (currentFilter === 'active' && t.status === 'done')  return false;
         if (currentFilter === 'done'   && t.status !== 'done')  return false;
-        if (searchQuery) { const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '')).toLowerCase(); if (!hay.includes(searchQuery)) return false; }
+        if (searchQuery) { const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '') + ' ' + (t.projectTag || '')).toLowerCase(); if (!hay.includes(searchQuery)) return false; }
         return true;
     });
 
@@ -1945,7 +2330,7 @@ function renderListView(filtered) {
                 <button onclick="toggleStatus('${escHtml(t.id)}')" title="상태 토글" class="w-6 h-6 rounded-full border-2 flex items-center justify-center mx-auto transition-colors ${t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400 hover:bg-green-50'}">${t.status === 'done' ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}</button>
             </td>
             <td class="px-6 py-4"><span class="px-2 py-1 rounded-md text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}</span></td>
-            <td class="px-6 py-4"><p class="font-semibold text-slate-800 truncate ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>${t.note ? `<p class="text-xs text-slate-400 truncate mt-0.5">${escHtml(t.note)}</p>` : ''}${overdue ? '<span class="text-xs text-red-500 font-bold">⚠ 기한 초과</span>' : ''}</td>
+            <td class="px-6 py-4"><p class="font-semibold text-slate-800 truncate ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>${t.projectTag ? `<span class="inline-block mt-1 mr-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">📁 ${escHtml(t.projectTag)}</span>` : ''}${t.note ? `<p class="text-xs text-slate-400 truncate mt-0.5">${escHtml(t.note)}</p>` : ''}${overdue ? '<span class="text-xs text-red-500 font-bold">⚠ 기한 초과</span>' : ''}</td>
             <td class="px-6 py-4 text-sm text-slate-500">${escHtml(t.startDate || '-')}</td>
             <td class="px-6 py-4 text-sm ${overdue ? 'text-red-600 font-bold' : 'text-slate-500'}">${escHtml(t.due || '-')}</td>
             <td class="px-6 py-4">${getPriorityBadge(t.priority)}</td>
@@ -2048,6 +2433,8 @@ window.openAddTaskModal = function() {
     document.getElementById('task-modal-title').textContent  = '새 업무 추가'; document.getElementById('modal-task-id').value = ''; document.getElementById('modal-title').value = '';
     document.getElementById('modal-note').value = ''; document.getElementById('modal-ref-doc').value = ''; document.getElementById('modal-due').value = '';
     document.getElementById('modal-start-date').value = ''; document.getElementById('modal-priority').value = 'medium';
+    const ptIn = document.getElementById('modal-project-tag'); if (ptIn) ptIn.value = '';
+    populateProjectTagDatalist();
     const mc = document.getElementById('modal-client'); if (currentClientFilter !== 'all' && mc) mc.value = currentClientFilter;
     window.openModal('task-modal');
 };
@@ -2057,6 +2444,8 @@ window.openEditTaskModal = function(id) {
     document.getElementById('task-modal-title').textContent  = '업무 수정'; document.getElementById('modal-task-id').value = t.id; document.getElementById('modal-title').value = t.title || '';
     document.getElementById('modal-note').value = t.note || ''; document.getElementById('modal-ref-doc').value = t.refDoc || ''; document.getElementById('modal-due').value = t.due || '';
     document.getElementById('modal-start-date').value = t.startDate || ''; document.getElementById('modal-priority').value = t.priority || 'medium'; document.getElementById('modal-client').value = t.clientId || '';
+    const ptIn = document.getElementById('modal-project-tag'); if (ptIn) ptIn.value = t.projectTag || '';
+    populateProjectTagDatalist();
     window.openModal('task-modal');
 };
 
@@ -2064,7 +2453,9 @@ window.saveTask = async function() {
     const id = document.getElementById('modal-task-id').value; const title = document.getElementById('modal-title').value.trim();
     if (!title) { window.showToast('업무명을 입력하세요.', 'error'); return; }
     const clientId = document.getElementById('modal-client').value || 'ALL'; const clientName = clients.find(c => c.id === clientId)?.name || '';
-    const payload = { id: id || undefined, clientId, clientName, title, note: document.getElementById('modal-note').value.trim(), refDoc: document.getElementById('modal-ref-doc').value.trim(), due: document.getElementById('modal-due').value, startDate: document.getElementById('modal-start-date').value, priority: document.getElementById('modal-priority').value, status: 'active' };
+    const ptIn = document.getElementById('modal-project-tag');
+    const projectTag = ptIn ? (ptIn.value.trim() || null) : null;
+    const payload = { id: id || undefined, clientId, clientName, title, note: document.getElementById('modal-note').value.trim(), refDoc: document.getElementById('modal-ref-doc').value.trim(), due: document.getElementById('modal-due').value, startDate: document.getElementById('modal-start-date').value, priority: document.getElementById('modal-priority').value, projectTag, status: 'active' };
     const btn = document.getElementById('modal-save-btn'); btn.disabled = true; btn.textContent = '저장 중...';
     try { const res = await fnSaveTask(payload); window.closeModal('task-modal'); window.showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!'); } 
     catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '저장하기'; }
