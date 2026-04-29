@@ -1046,6 +1046,20 @@
                 <p id="backfill-progress-detail" class="text-[10px] text-blue-500 mt-1 font-mono"></p>
             </div>
             
+            <!-- 📌 프로젝트 검색창 -->
+            <div class="px-2 mb-2">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none"></i>
+                    <input type="text" id="project-search" oninput="onProjectSearchInput(this.value)" 
+                        placeholder="프로젝트 검색..."
+                        class="w-full pl-7 pr-7 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    <button id="project-search-clear" onclick="clearProjectSearch()" 
+                        class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+            
             <div id="pending-project-input" class="hidden px-2 mb-2 space-y-1">
                 <input type="text" id="new-project-tag" placeholder="새 프로젝트 태그명"
                     class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -1784,6 +1798,9 @@ let memoTimer           = null;
 let unsubscribers       = [];
 // 사용자가 사이드바 + 버튼으로 미리 등록한 빈 프로젝트 태그들 (자동완성용)
 let pendingProjectTags  = [];
+// 프로젝트 사이드바 상태
+let projectSearchQuery  = '';
+let projectsExpanded    = false;
 
 onAuthStateChanged(auth, user => {
     const loginScreen = document.getElementById('login-screen');
@@ -1887,6 +1904,18 @@ async function loadAllData(uid) {
                 const data = snap.data();
                 if (data.status === "running") {
                     showBackfillProgress(data);
+                    
+                    // 📌 자동 재개 — 체이닝이 안 돌고 있는데 status가 running이면 페이지 새로고침된 것
+                    // 1초 후 자동으로 체이닝 재개 (취소 안 되어 있을 때만)
+                    if (!data.cancelRequested && !window.__backfillChainActive) {
+                        window.__backfillChainActive = true;
+                        setTimeout(() => {
+                            console.log('[backfillChain] 페이지 복원 — 자동 재개');
+                            runBackfillChain(data.scope, data.overwrite).finally(() => {
+                                window.__backfillChainActive = false;
+                            });
+                        }, 1500);
+                    }
                 } else {
                     // 완료/취소된 경우 잠깐 보여주고 자동 숨김
                     if (data.processed > 0 || data.cancelled) {
@@ -2145,8 +2174,26 @@ function renderProjectNav() {
 
     if (groups.length === 0 && untaggedTotal === 0) {
         nav.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400 italic">아직 프로젝트 태그가 없습니다.<br>✨ 버튼으로 일괄 분석하세요.</div>`;
+        // 검색창은 숨김
+        const searchEl = document.getElementById('project-search');
+        if (searchEl) searchEl.parentElement.parentElement.classList.add('hidden');
         return;
     }
+    
+    // 검색창 표시 여부 — 프로젝트가 있을 때만 보임
+    const searchEl = document.getElementById('project-search');
+    if (searchEl) searchEl.parentElement.parentElement.classList.remove('hidden');
+
+    // 검색 필터링
+    const q = (projectSearchQuery || '').toLowerCase().trim();
+    const filteredGroups = q 
+        ? groups.filter(g => g.tag.toLowerCase().includes(q))
+        : groups;
+
+    // 표시 개수 결정 — 검색 중이면 전체, 아니면 8개 + 더보기
+    const COLLAPSED_LIMIT = 8;
+    const isCollapsed = !q && !projectsExpanded && filteredGroups.length > COLLAPSED_LIMIT;
+    const displayGroups = isCollapsed ? filteredGroups.slice(0, COLLAPSED_LIMIT) : filteredGroups;
 
     let html = `<button onclick="filterByProject('all')"
         class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
@@ -2155,18 +2202,28 @@ function renderProjectNav() {
         <span class="text-slate-400">${groups.reduce((s, g) => s + g.total, 0) + untaggedTotal}</span>
     </button>`;
 
-    groups.forEach((g, idx) => {
+    if (q && filteredGroups.length === 0) {
+        html += `<div class="px-3 py-2 text-xs text-slate-400 italic">'${escHtml(q)}'에 일치하는 프로젝트가 없습니다.</div>`;
+    }
+
+    displayGroups.forEach((g) => {
         const safeTag = escHtml(g.tag);
         const isActive = currentProjectFilter === g.tag;
         const tagJsonEscaped = JSON.stringify(g.tag).replace(/"/g, '&quot;');
-        // 활성/전체 카운트 표시 ("5 / 12" 처럼)
         const countStr = g.active === g.total ? `${g.total}` : `${g.active} / ${g.total}`;
+        // 검색어 강조 표시
+        let displayTag = safeTag;
+        if (q) {
+            const safeQ = escHtml(q);
+            const regex = new RegExp(`(${safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            displayTag = safeTag.replace(regex, '<mark class="bg-yellow-200 text-yellow-900 rounded px-0.5">$1</mark>');
+        }
         html += `<div class="group flex items-center gap-0.5">
             <button onclick="filterByProject(${tagJsonEscaped})"
                 class="flex-1 text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center min-w-0
                 ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}"
                 title="${safeTag}">
-                <span class="truncate">📁 ${safeTag}</span>
+                <span class="truncate">📁 ${displayTag}</span>
                 <span class="text-slate-400 flex-shrink-0 ml-2">${countStr}</span>
             </button>
             <button onclick="event.stopPropagation(); openProjectMenu(${tagJsonEscaped}, this)" 
@@ -2177,11 +2234,29 @@ function renderProjectNav() {
         </div>`;
     });
 
-    if (untaggedTotal > 0) {
+    // 더보기 / 접기 버튼
+    if (!q && filteredGroups.length > COLLAPSED_LIMIT) {
+        const hiddenCount = filteredGroups.length - COLLAPSED_LIMIT;
+        if (isCollapsed) {
+            html += `<button onclick="toggleProjectsExpanded()" 
+                class="w-full text-left px-3 py-1 rounded-lg text-xs text-slate-500 hover:bg-slate-100 transition-colors flex items-center gap-1">
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                <span>${hiddenCount}개 더 표시</span>
+            </button>`;
+        } else {
+            html += `<button onclick="toggleProjectsExpanded()" 
+                class="w-full text-left px-3 py-1 rounded-lg text-xs text-slate-500 hover:bg-slate-100 transition-colors flex items-center gap-1">
+                <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+                <span>접기</span>
+            </button>`;
+        }
+    }
+
+    if (untaggedTotal > 0 && !q) {
         const isActive = currentProjectFilter === '__none__';
         const countStr = untaggedActive === untaggedTotal ? `${untaggedTotal}` : `${untaggedActive} / ${untaggedTotal}`;
         html += `<button onclick="filterByProject('__none__')"
-            class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
+            class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center mt-1
             ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">
             <span>❓ 미분류 / 단일</span>
             <span class="text-slate-400">${countStr}</span>
@@ -2190,6 +2265,26 @@ function renderProjectNav() {
     nav.innerHTML = html;
     lucide.createIcons();
 }
+
+window.toggleProjectsExpanded = function() {
+    projectsExpanded = !projectsExpanded;
+    renderProjectNav();
+};
+
+window.onProjectSearchInput = function(value) {
+    projectSearchQuery = value || '';
+    const clearBtn = document.getElementById('project-search-clear');
+    if (clearBtn) clearBtn.classList.toggle('hidden', !projectSearchQuery);
+    renderProjectNav();
+};
+
+window.clearProjectSearch = function() {
+    const searchEl = document.getElementById('project-search');
+    if (searchEl) searchEl.value = '';
+    projectSearchQuery = '';
+    document.getElementById('project-search-clear')?.classList.add('hidden');
+    renderProjectNav();
+};
 
 window.filterByProject = function(tag) {
     currentProjectFilter = tag;
@@ -2389,7 +2484,7 @@ function updateBackfillCounts() {
 window.confirmBackfillScope = async function(scope) {
     const overwrite = document.getElementById('backfill-overwrite')?.checked || false;
     
-    // 예상 대상 건수 다시 확인
+    // 예상 대상 건수 다시 확인 (모달 표시용)
     const isUntagged = (t) => !t.projectTag || t.projectTag.trim() === '';
     const filterFn = overwrite ? () => true : isUntagged;
     
@@ -2417,42 +2512,79 @@ window.confirmBackfillScope = async function(scope) {
     
     // 비용 경고 — 200건 이상이면 추가 확인
     if (candidates.length >= 200) {
-        const cost = (candidates.length / 20 * 0.01).toFixed(2);  // 대략적 비용 (USD, Gemini Flash 기준)
+        const chunks = Math.ceil(candidates.length / 200);
+        const aiCalls = Math.ceil(candidates.length / 20);
+        const cost = (aiCalls * 0.01).toFixed(2);
         const msg = `${candidates.length}건의 업무를 분석합니다.\n\n` +
-                    `예상 AI 호출: 약 ${Math.ceil(candidates.length / 20)}회\n` +
+                    `처리 방식: 200건씩 ${chunks}개 청크로 나누어 자동 진행\n` +
+                    `예상 AI 호출: 약 ${aiCalls}회\n` +
                     `예상 비용: 약 $${cost} (USD, Gemini Flash 기준 추정치)\n` +
-                    `예상 시간: 약 ${Math.ceil(candidates.length / 20 * 3)}초\n\n` +
+                    `예상 시간: 약 ${Math.ceil(aiCalls * 3 / 60)}~${Math.ceil(aiCalls * 5 / 60)}분\n\n` +
+                    `진행 바에서 실시간 진행 상황을 확인할 수 있고, 언제든 취소 가능합니다.\n\n` +
                     `계속하시겠습니까?`;
         if (!confirm(msg)) return;
     }
     
-    // 모달 닫고 진행
+    // 모달 닫고 자동 체이닝 시작
     window.closeModal('backfill-scope-modal');
-    
-    const sidebarBtn = document.querySelector('[onclick^="runBackfillProjectTags"]');
-    let originalIcon = null;
-    if (sidebarBtn) {
-        originalIcon = sidebarBtn.innerHTML;
-        sidebarBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>';
-        sidebarBtn.disabled = true;
-        lucide.createIcons();
-    }
+    runBackfillChain(scope, overwrite);
+};
+
+// ============================================================
+// 📌 자동 체이닝 — 청크 단위로 backfill을 반복 호출
+// ============================================================
+let __backfillChainAborted = false;
+
+async function runBackfillChain(scope, overwrite) {
+    __backfillChainAborted = false;
+    window.__backfillChainActive = true;
+    let isFirstCall = true;
+    let totalProcessed = 0;
     
     try {
-        window.showToast(`🤖 AI가 ${candidates.length}건의 업무를 분석 중입니다... (수십 초~수 분 소요)`);
-        const res = await fnBackfillProjectTags({ scope, overwrite });
-        const data = res.data || {};
-        window.showToast(`✅ ${data.message || '완료되었습니다.'}`);
-    } catch (e) {
-        window.showToast('태그 분석 실패: ' + e.message, 'error');
-    } finally {
-        if (sidebarBtn) {
-            sidebarBtn.innerHTML = originalIcon;
-            sidebarBtn.disabled = false;
-            lucide.createIcons();
+        while (true) {
+            if (__backfillChainAborted) {
+                console.log('[backfillChain] 사용자가 취소함');
+                break;
+            }
+            
+            const payload = isFirstCall 
+                ? { scope, overwrite, isNewSession: true }
+                : { isNewSession: false };
+            
+            let res;
+            try {
+                res = await fnBackfillProjectTags(payload);
+            } catch (e) {
+                window.showToast('분석 실패: ' + e.message, 'error');
+                console.error('[backfillChain] 호출 실패:', e);
+                break;
+            }
+            
+            const data = res.data || {};
+            totalProcessed = data.processed || totalProcessed;
+            isFirstCall = false;
+            
+            if (data.cancelled) {
+                window.showToast(`⏹ ${data.message}`);
+                break;
+            }
+            
+            if (!data.hasMore) {
+                window.showToast(`✅ ${data.message || '완료되었습니다.'}`);
+                break;
+            }
+            
+            // 다음 청크 호출 전 잠시 대기 (서버에 숨 돌릴 시간)
+            await new Promise(r => setTimeout(r, 1000));
         }
+    } catch (e) {
+        window.showToast('체이닝 중 오류: ' + e.message, 'error');
+        console.error('[backfillChain] 예외:', e);
+    } finally {
+        window.__backfillChainActive = false;
     }
-};
+}
 
 // ============================================================
 // backfill 진행 바 + 취소
@@ -2534,10 +2666,13 @@ function formatElapsed(seconds) {
 }
 
 window.cancelBackfillTask = async function() {
-    if (!confirm('진행 중인 분석 작업을 취소하시겠습니까?\n\n현재 처리 중인 배치까지는 완료된 후 중단됩니다.\n이미 분석된 태스크의 태그는 유지됩니다.')) return;
+    if (!confirm('진행 중인 분석 작업을 취소하시겠습니까?\n\n현재 처리 중인 청크까지는 완료된 후 중단됩니다.\n이미 분석된 태스크의 태그는 유지됩니다.')) return;
     
     const cancelBtn = document.getElementById('backfill-cancel-btn');
     if (cancelBtn) cancelBtn.disabled = true;
+    
+    // 📌 프론트엔드의 자동 체이닝도 중단 (서버 응답 기다리지 않고 즉시)
+    __backfillChainAborted = true;
     
     try {
         const res = await fnCancelBackfill();
