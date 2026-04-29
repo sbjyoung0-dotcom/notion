@@ -1018,9 +1018,26 @@
 
             <div class="mt-6 px-4 mb-2 flex justify-between items-center">
                 <span class="text-xs font-bold text-slate-400 uppercase">Projects</span>
-                <button onclick="runBackfillProjectTags(this)" title="기존 업무에 AI로 프로젝트 태그 자동 부여" class="text-slate-400 hover:text-blue-600 transition-colors">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                </button>
+                <div class="flex gap-1">
+                    <button onclick="togglePendingProjectInput()" title="새 프로젝트 태그 추가 (자동완성 등록)" class="text-slate-400 hover:text-blue-600 transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="runBackfillProjectTags(this)" title="기존 업무에 AI로 프로젝트 태그 자동 부여" class="text-slate-400 hover:text-blue-600 transition-colors">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="pending-project-input" class="hidden px-2 mb-2 space-y-1">
+                <input type="text" id="new-project-tag" placeholder="새 프로젝트 태그명"
+                    class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <div class="flex gap-1">
+                    <button onclick="confirmAddProject()" class="flex-1 text-xs bg-blue-50 text-blue-600 border border-blue-100 py-1 rounded hover:bg-blue-100 font-medium">추가</button>
+                    <button onclick="togglePendingProjectInput()" class="flex-1 text-xs bg-slate-50 text-slate-500 border border-slate-100 py-1 rounded hover:bg-slate-100">취소</button>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-relaxed px-1">
+                    💡 빈 프로젝트는 사이드바에 즉시 표시되지 않습니다.<br>
+                    업무를 추가/수정할 때 자동완성 목록에서 이 태그를 선택하세요.
+                </p>
             </div>
             <nav id="project-nav" class="space-y-0.5 px-2"></nav>
 
@@ -1512,6 +1529,55 @@
     </div>
 </div>
 
+<div id="task-detail-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+        <div class="flex justify-between items-start px-6 pt-6 pb-3 flex-shrink-0">
+            <div class="flex-1 min-w-0 pr-3">
+                <h3 id="detail-title" class="text-2xl font-normal text-slate-800" style="font-family: var(--f-serif); font-style: italic; line-height: 1.2;"></h3>
+                <div id="detail-meta" class="flex flex-wrap gap-1.5 mt-3"></div>
+            </div>
+            <button onclick="closeModal('task-detail-modal')" class="text-gray-400 hover:text-slate-600 flex-shrink-0">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 pb-3">
+            <div id="detail-overdue-banner" class="hidden mb-3 px-3 py-2 bg-red-50 text-red-700 text-xs font-medium rounded-lg border border-red-100 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                <span>마감일이 지난 업무입니다.</span>
+            </div>
+            <div class="mb-4">
+                <h4 class="text-[10px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-2">상세 내용</h4>
+                <div id="detail-note" class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100"></div>
+            </div>
+            <div id="detail-refdoc-section" class="mb-4 hidden">
+                <h4 class="text-[10px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-2">참고 문서 / 원본</h4>
+                <p id="detail-refdoc" class="text-xs text-slate-600 bg-slate-50 rounded p-2 border border-slate-100"></p>
+            </div>
+            <div id="detail-history-section" class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-[10px] font-mono font-semibold text-slate-400 uppercase tracking-wider">진행 이력</h4>
+                    <button onclick="openHistoryFromDetail()" class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> 이력 관리
+                    </button>
+                </div>
+                <div id="detail-history-list" class="space-y-1.5"></div>
+            </div>
+        </div>
+        <div class="flex justify-between items-center gap-2 px-6 py-4 border-t border-slate-100 flex-shrink-0">
+            <button id="detail-toggle-status-btn" onclick="toggleStatusFromDetail()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span id="detail-toggle-label">완료 처리</span>
+            </button>
+            <div class="flex gap-2">
+                <button onclick="closeModal('task-detail-modal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">닫기</button>
+                <button onclick="editFromDetail()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+                    <i data-lucide="pencil" class="w-4 h-4"></i> 수정
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="review-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 flex flex-col" style="max-height: 90vh;">
         <div class="flex justify-between items-center mb-3 flex-shrink-0">
@@ -1628,6 +1694,8 @@ let searchQuery         = '';
 let bulkParsedTasks     = [];
 let memoTimer           = null;
 let unsubscribers       = [];
+// 사용자가 사이드바 + 버튼으로 미리 등록한 빈 프로젝트 태그들 (자동완성용)
+let pendingProjectTags  = [];
 
 onAuthStateChanged(auth, user => {
     const loginScreen = document.getElementById('login-screen');
@@ -1921,29 +1989,49 @@ window.filterByClient = function(clientId) {
 // 프로젝트 그룹핑 — 사이드바 nav, 필터, 일괄 분석
 // ============================================================
 function getProjectGroups() {
-    const map = new Map();
-    let untaggedCount = 0;
+    // 활성/완료 모두 포함 (이벤트/루틴만 제외)
+    // 프로젝트 카운트는 "활성 / 전체" 형식으로 표시
+    const map = new Map();   // tag -> { active, total }
+    let untaggedActive = 0;
+    let untaggedTotal = 0;
     tasks.forEach(t => {
-        if (t.status === 'done' || t.isEvent || t.isRoutine) return;
+        if (t.isEvent || t.isRoutine || t.status === 'event' || t.status === 'routine') return;
         if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return;
+        const isActive = t.status !== 'done';
         if (t.projectTag && t.projectTag.trim()) {
             const tag = t.projectTag.trim();
-            map.set(tag, (map.get(tag) || 0) + 1);
+            if (!map.has(tag)) map.set(tag, { active: 0, total: 0 });
+            const entry = map.get(tag);
+            entry.total++;
+            if (isActive) entry.active++;
         } else {
-            untaggedCount++;
+            untaggedTotal++;
+            if (isActive) untaggedActive++;
         }
     });
-    const groups = Array.from(map.entries()).map(([tag, count]) => ({ tag, count }));
-    groups.sort((a, b) => b.count - a.count);
-    return { groups, untaggedCount };
+
+    // 2건 이상인 프로젝트만 사이드바에 표시
+    const groups = [];
+    map.forEach((c, tag) => {
+        if (c.total >= 2) {
+            groups.push({ tag, active: c.active, total: c.total });
+        } else {
+            // 1건짜리 프로젝트는 미분류 카운트에 포함시켜 사용자가 접근 가능하게 함
+            untaggedTotal += c.total;
+            untaggedActive += c.active;
+        }
+    });
+    groups.sort((a, b) => b.total - a.total);
+    
+    return { groups, untaggedActive, untaggedTotal };
 }
 
 function renderProjectNav() {
     const nav = document.getElementById('project-nav');
     if (!nav) return;
-    const { groups, untaggedCount } = getProjectGroups();
+    const { groups, untaggedActive, untaggedTotal } = getProjectGroups();
 
-    if (groups.length === 0 && untaggedCount === 0) {
+    if (groups.length === 0 && untaggedTotal === 0) {
         nav.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400 italic">아직 프로젝트 태그가 없습니다.<br>✨ 버튼으로 일괄 분석하세요.</div>`;
         return;
     }
@@ -1952,32 +2040,43 @@ function renderProjectNav() {
         class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
         ${currentProjectFilter === 'all' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">
         <span>🌐 전체 프로젝트</span>
-        <span class="text-slate-400">${groups.reduce((s, g) => s + g.count, 0) + untaggedCount}</span>
+        <span class="text-slate-400">${groups.reduce((s, g) => s + g.total, 0) + untaggedTotal}</span>
     </button>`;
 
-    groups.forEach(g => {
+    groups.forEach((g, idx) => {
         const safeTag = escHtml(g.tag);
         const isActive = currentProjectFilter === g.tag;
         const tagJsonEscaped = JSON.stringify(g.tag).replace(/"/g, '&quot;');
-        html += `<button onclick="filterByProject(${tagJsonEscaped})"
-            class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
-            ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}"
-            title="${safeTag}">
-            <span class="truncate">📁 ${safeTag}</span>
-            <span class="text-slate-400 flex-shrink-0 ml-2">${g.count}</span>
-        </button>`;
+        // 활성/전체 카운트 표시 ("5 / 12" 처럼)
+        const countStr = g.active === g.total ? `${g.total}` : `${g.active} / ${g.total}`;
+        html += `<div class="group flex items-center gap-0.5">
+            <button onclick="filterByProject(${tagJsonEscaped})"
+                class="flex-1 text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center min-w-0
+                ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}"
+                title="${safeTag}">
+                <span class="truncate">📁 ${safeTag}</span>
+                <span class="text-slate-400 flex-shrink-0 ml-2">${countStr}</span>
+            </button>
+            <button onclick="event.stopPropagation(); openProjectMenu(${tagJsonEscaped}, this)" 
+                class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-slate-700 flex-shrink-0" 
+                title="프로젝트 옵션">
+                <i data-lucide="more-vertical" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>`;
     });
 
-    if (untaggedCount > 0) {
+    if (untaggedTotal > 0) {
         const isActive = currentProjectFilter === '__none__';
+        const countStr = untaggedActive === untaggedTotal ? `${untaggedTotal}` : `${untaggedActive} / ${untaggedTotal}`;
         html += `<button onclick="filterByProject('__none__')"
             class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex justify-between items-center
             ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">
-            <span>❓ 미분류</span>
-            <span class="text-slate-400">${untaggedCount}</span>
+            <span>❓ 미분류 / 단일</span>
+            <span class="text-slate-400">${countStr}</span>
         </button>`;
     }
     nav.innerHTML = html;
+    lucide.createIcons();
 }
 
 window.filterByProject = function(tag) {
@@ -1997,6 +2096,147 @@ window.filterByProject = function(tag) {
         if (headerDesc)  headerDesc.textContent  = `${tag} 프로젝트 관련 업무입니다.`;
     }
     renderProjectNav(); renderTasks(); renderStats(); lucide.createIcons();
+};
+
+// ============================================================
+// 프로젝트 추가/이름변경/해제 — 사이드바 우측 ⋯ 메뉴 액션
+// ============================================================
+window.togglePendingProjectInput = function() {
+    const div = document.getElementById('pending-project-input');
+    if (!div) return;
+    const wasHidden = div.classList.contains('hidden');
+    div.classList.toggle('hidden');
+    if (wasHidden) {
+        const input = document.getElementById('new-project-tag');
+        if (input) { input.value = ''; setTimeout(() => input.focus(), 50); }
+    }
+};
+
+window.confirmAddProject = function() {
+    const input = document.getElementById('new-project-tag');
+    if (!input) return;
+    const tag = input.value.trim();
+    if (!tag) { window.showToast('태그명을 입력하세요.', 'error'); return; }
+    if (tag.length > 100) { window.showToast('태그는 100자 이내여야 합니다.', 'error'); return; }
+    
+    // 이미 사용 중이거나 등록된 태그인지 확인
+    const existsInTasks = tasks.some(t => (t.projectTag || '').trim() === tag);
+    const existsInPending = pendingProjectTags.includes(tag);
+    if (existsInTasks || existsInPending) {
+        window.showToast(`'${tag}' 태그는 이미 등록되어 있습니다.`, 'error');
+        return;
+    }
+    
+    pendingProjectTags.push(tag);
+    pendingProjectTags.sort();
+    populateProjectTagDatalist();
+    window.showToast(`✅ '${tag}' 태그가 자동완성 목록에 추가되었습니다. 업무 추가/수정 시 사용하세요.`);
+    
+    // 입력창 닫기 + 초기화
+    document.getElementById('pending-project-input').classList.add('hidden');
+    input.value = '';
+};
+
+window.openProjectMenu = function(tag, btnEl) {
+    // 기존 메뉴 닫기
+    document.querySelectorAll('.project-menu-popup').forEach(el => el.remove());
+    
+    const rect = btnEl.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'project-menu-popup fixed bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50';
+    menu.style.top  = `${rect.bottom + 4}px`;
+    menu.style.left = `${rect.left - 120}px`;
+    menu.style.minWidth = '160px';
+    
+    const tagJsonEsc = JSON.stringify(tag).replace(/"/g, '&quot;');
+    menu.innerHTML = `
+        <button onclick="renameProject(${tagJsonEsc})" class="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> 이름 변경
+        </button>
+        <button onclick="untagProject(${tagJsonEsc})" class="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> 프로젝트 해제
+        </button>
+    `;
+    document.body.appendChild(menu);
+    lucide.createIcons();
+    
+    // 외부 클릭 시 닫기
+    setTimeout(() => {
+        const handler = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', handler);
+            }
+        };
+        document.addEventListener('click', handler);
+    }, 50);
+};
+
+window.renameProject = async function(oldTag) {
+    document.querySelectorAll('.project-menu-popup').forEach(el => el.remove());
+    
+    const newTag = prompt(`'${oldTag}' 프로젝트의 새 이름을 입력하세요:`, oldTag);
+    if (newTag === null) return;
+    const trimmed = newTag.trim();
+    if (!trimmed) { window.showToast('이름을 입력하세요.', 'error'); return; }
+    if (trimmed === oldTag) return;
+    if (trimmed.length > 100) { window.showToast('태그는 100자 이내여야 합니다.', 'error'); return; }
+    
+    const targets = tasks.filter(t => (t.projectTag || '').trim() === oldTag);
+    if (targets.length === 0) { window.showToast('대상 업무가 없습니다.', 'error'); return; }
+    
+    if (!confirm(`'${oldTag}' → '${trimmed}'로 ${targets.length}건의 업무를 일괄 변경하시겠습니까?`)) return;
+    
+    window.showToast(`🔄 ${targets.length}건의 태그를 변경 중입니다...`);
+    let okCount = 0;
+    try {
+        // 배치로 처리 - 너무 많으면 분할
+        for (const t of targets) {
+            try {
+                await fnSaveTask({ ...t, projectTag: trimmed, collection: 'tasks' });
+                okCount++;
+            } catch(e) {
+                console.error('태그 변경 실패:', t.id, e.message);
+            }
+        }
+        window.showToast(`✅ ${okCount}건의 태그 변경 완료`);
+        // pendingProjectTags에서 oldTag 제거
+        pendingProjectTags = pendingProjectTags.filter(t => t !== oldTag);
+        populateProjectTagDatalist();
+    } catch(e) {
+        window.showToast('이름 변경 실패: ' + e.message, 'error');
+    }
+};
+
+window.untagProject = async function(tag) {
+    document.querySelectorAll('.project-menu-popup').forEach(el => el.remove());
+    
+    const targets = tasks.filter(t => (t.projectTag || '').trim() === tag);
+    if (targets.length === 0) { window.showToast('대상 업무가 없습니다.', 'error'); return; }
+    
+    if (!confirm(`'${tag}' 프로젝트를 해제합니다.\n${targets.length}건의 업무에서 프로젝트 태그가 제거되며, 업무 자체는 삭제되지 않습니다.\n계속하시겠습니까?`)) return;
+    
+    window.showToast(`🔄 ${targets.length}건의 태그를 제거 중입니다...`);
+    let okCount = 0;
+    try {
+        for (const t of targets) {
+            try {
+                await fnSaveTask({ ...t, projectTag: null, collection: 'tasks' });
+                okCount++;
+            } catch(e) {
+                console.error('태그 제거 실패:', t.id, e.message);
+            }
+        }
+        window.showToast(`✅ ${okCount}건의 태그 제거 완료`);
+        pendingProjectTags = pendingProjectTags.filter(t => t !== tag);
+        populateProjectTagDatalist();
+        // 현재 필터가 해제된 태그였으면 전체로 변경
+        if (currentProjectFilter === tag) {
+            window.filterByProject('all');
+        }
+    } catch(e) {
+        window.showToast('태그 제거 실패: ' + e.message, 'error');
+    }
 };
 
 window.runBackfillProjectTags = async function(btn) {
@@ -2255,6 +2495,7 @@ function populateProjectTagDatalist() {
     if (!dl) return;
     const tags = new Set();
     tasks.forEach(t => { if (t.projectTag && t.projectTag.trim()) tags.add(t.projectTag.trim()); });
+    pendingProjectTags.forEach(t => { if (t) tags.add(t); });
     dl.innerHTML = Array.from(tags).sort().map(tag => `<option value="${escHtml(tag)}">`).join('');
 }
 
@@ -2285,13 +2526,31 @@ function renderStats() {
 }
 
 function getFilteredTasks() {
+    // "__none__" 필터는 미분류 + 사이드바에 표시되지 않는 1건짜리 프로젝트를 모두 보여줌
+    let visibleTags = null;
+    if (currentProjectFilter === '__none__') {
+        // 사이드바에 떠 있는 (2건 이상) 태그들을 미리 계산
+        const tagCounts = new Map();
+        tasks.forEach(t => {
+            if (t.isEvent || t.isRoutine || t.status === 'event' || t.status === 'routine') return;
+            if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return;
+            if (t.projectTag && t.projectTag.trim()) {
+                const tag = t.projectTag.trim();
+                tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+            }
+        });
+        visibleTags = new Set();
+        tagCounts.forEach((cnt, tag) => { if (cnt >= 2) visibleTags.add(tag); });
+    }
+
     let filtered = tasks.filter(t => {
         if (t.isEvent === true || t.isRoutine === true) return false;
         if (t.status === 'event' || t.status === 'routine') return false;
         if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return false;
         if (currentProjectFilter !== 'all') {
             if (currentProjectFilter === '__none__') {
-                if (t.projectTag) return false;
+                // 태그가 없거나, 있어도 사이드바에 표시 안 되는 1건짜리 태그
+                if (t.projectTag && t.projectTag.trim() && visibleTags.has(t.projectTag.trim())) return false;
             } else if (t.projectTag !== currentProjectFilter) return false;
         }
         if (currentFilter === 'active' && t.status === 'done')  return false;
@@ -2325,8 +2584,8 @@ function renderListView(filtered) {
         const overdue = isOverdue(t.due) && t.status !== 'done';
         const histCnt = (t.history || []).length;
         return `
-        <tr class="hover:bg-slate-50 transition-colors ${t.status === 'done' ? 'opacity-60' : ''} ${overdue ? 'bg-red-50' : ''}">
-            <td class="px-6 py-4 text-center">
+        <tr onclick="openTaskDetail('${escHtml(t.id)}')" class="cursor-pointer hover:bg-slate-50 transition-colors ${t.status === 'done' ? 'opacity-60' : ''} ${overdue ? 'bg-red-50' : ''}">
+            <td class="px-6 py-4 text-center" onclick="event.stopPropagation()">
                 <button onclick="toggleStatus('${escHtml(t.id)}')" title="상태 토글" class="w-6 h-6 rounded-full border-2 flex items-center justify-center mx-auto transition-colors ${t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400 hover:bg-green-50'}">${t.status === 'done' ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}</button>
             </td>
             <td class="px-6 py-4"><span class="px-2 py-1 rounded-md text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}</span></td>
@@ -2334,7 +2593,7 @@ function renderListView(filtered) {
             <td class="px-6 py-4 text-sm text-slate-500">${escHtml(t.startDate || '-')}</td>
             <td class="px-6 py-4 text-sm ${overdue ? 'text-red-600 font-bold' : 'text-slate-500'}">${escHtml(t.due || '-')}</td>
             <td class="px-6 py-4">${getPriorityBadge(t.priority)}</td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-end gap-1.5">
                     <button onclick="openHistoryModal('${escHtml(t.id)}')" title="이력" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"><i data-lucide="history" class="w-4 h-4"></i>${histCnt > 0 ? `<span class="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">${histCnt}</span>` : ''}</button>
                     <button onclick="openEditTaskModal('${escHtml(t.id)}')" title="수정" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
@@ -2358,15 +2617,18 @@ function renderKanbanView(filtered) {
         const overdue = isOverdue(t.due) && t.status !== 'done';
         return `
         <div data-id="${escHtml(t.id)}" class="kanban-card cursor-grab active:cursor-grabbing bg-white rounded-xl border ${overdue ? 'border-red-300' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start mb-2 pointer-events-none">
-                <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}</span>
-                ${getPriorityBadge(t.priority)}
+            <div onclick="openTaskDetail('${escHtml(t.id)}')" class="cursor-pointer">
+                <div class="flex justify-between items-start mb-2 pointer-events-none">
+                    <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:${client?.color || '#E2E8F0'}22; color:${client?.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || t.clientId)}</span>
+                    ${getPriorityBadge(t.priority)}
+                </div>
+                <p class="font-semibold text-slate-800 text-sm mb-1 pointer-events-none ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
+                ${t.projectTag ? `<span class="inline-block mb-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 pointer-events-none">📁 ${escHtml(t.projectTag)}</span>` : ''}
+                ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2 pointer-events-none">${escHtml(t.note)}</p>` : ''}
             </div>
-            <p class="font-semibold text-slate-800 text-sm mb-1 pointer-events-none ${t.status === 'done' ? 'line-through text-slate-400' : ''}">${escHtml(t.title)}</p>
-            ${t.note ? `<p class="text-xs text-slate-400 mb-2 line-clamp-2 pointer-events-none">${escHtml(t.note)}</p>` : ''}
             <div class="flex justify-between items-center mt-2">
                 <span class="text-xs pointer-events-none ${overdue ? 'text-red-600 font-bold' : 'text-slate-400'}">📅 ${escHtml(t.due || '기한 없음')} ${overdue ? '⚠ 초과' : ''}</span>
-                <div class="flex gap-1 z-10">
+                <div class="flex gap-1 z-10" onclick="event.stopPropagation()">
                     <button onclick="toggleStatus('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-green-600 rounded transition-colors"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
                     <button onclick="openHistoryModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"><i data-lucide="history" class="w-4 h-4"></i></button>
                     <button onclick="openEditTaskModal('${escHtml(t.id)}')" class="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
@@ -2459,6 +2721,141 @@ window.saveTask = async function() {
     const btn = document.getElementById('modal-save-btn'); btn.disabled = true; btn.textContent = '저장 중...';
     try { const res = await fnSaveTask(payload); window.closeModal('task-modal'); window.showToast(id ? '✅ 업무 수정 완료!' : '✅ 업무 추가 완료!'); } 
     catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '저장하기'; }
+};
+
+// ============================================================
+// 업무 상세 보기 모달 (행 클릭 시)
+// ============================================================
+let __currentDetailTaskId = null;
+
+window.openTaskDetail = function(taskId) {
+    const t = tasks.find(x => x.id === taskId);
+    if (!t) return;
+    __currentDetailTaskId = taskId;
+
+    // 제목
+    document.getElementById('detail-title').textContent = t.title || '(제목 없음)';
+
+    // 메타정보 칩들
+    const client = clients.find(c => c.id === t.clientId);
+    const meta = document.getElementById('detail-meta');
+    let metaHtml = '';
+    
+    // 고객사
+    if (client) {
+        metaHtml += `<span class="px-2 py-0.5 rounded-md text-xs font-semibold" style="background:${client.color || '#E2E8F0'}22; color:${client.color || '#64748B'}">
+            ${client.emoji || '🏢'} ${escHtml(client.name)}
+        </span>`;
+    }
+    // 프로젝트
+    if (t.projectTag) {
+        metaHtml += `<span class="px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+            📁 ${escHtml(t.projectTag)}
+        </span>`;
+    }
+    // 우선순위
+    metaHtml += getPriorityBadge(t.priority);
+    // 상태
+    const statusLabels = { active: '🔵 진행중', pending: '⏳ 대기', done: '✅ 완료', error: '⚠️ 오류' };
+    metaHtml += `<span class="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-50 text-slate-600 border border-slate-100">
+        ${statusLabels[t.status] || t.status}
+    </span>`;
+    // 시작일
+    if (t.startDate) {
+        metaHtml += `<span class="px-2 py-0.5 rounded-md text-xs font-mono text-slate-600 bg-slate-50 border border-slate-100">
+            🚀 시작: ${escHtml(t.startDate)}
+        </span>`;
+    }
+    // 마감일
+    if (t.due) {
+        const overdue = isOverdue(t.due) && t.status !== 'done';
+        metaHtml += `<span class="px-2 py-0.5 rounded-md text-xs font-mono ${overdue ? 'text-red-600 bg-red-50 border border-red-100 font-bold' : 'text-slate-600 bg-slate-50 border border-slate-100'}">
+            📅 마감: ${escHtml(t.due)}
+        </span>`;
+    }
+    meta.innerHTML = metaHtml;
+
+    // 마감 초과 배너
+    const overdueBanner = document.getElementById('detail-overdue-banner');
+    if (isOverdue(t.due) && t.status !== 'done') overdueBanner.classList.remove('hidden');
+    else overdueBanner.classList.add('hidden');
+
+    // 본문
+    const noteEl = document.getElementById('detail-note');
+    if (t.note && t.note.trim()) {
+        noteEl.textContent = t.note;
+        noteEl.classList.remove('text-slate-400', 'italic');
+    } else {
+        noteEl.textContent = '(내용이 없습니다)';
+        noteEl.classList.add('text-slate-400', 'italic');
+    }
+
+    // 참고 문서 / 원본
+    const refdocSection = document.getElementById('detail-refdoc-section');
+    if (t.refDoc && t.refDoc.trim()) {
+        refdocSection.classList.remove('hidden');
+        document.getElementById('detail-refdoc').textContent = t.refDoc;
+    } else {
+        refdocSection.classList.add('hidden');
+    }
+
+    // 이력 미리보기 (최근 3건)
+    const historyEl = document.getElementById('detail-history-list');
+    const history = t.history || [];
+    if (history.length === 0) {
+        historyEl.innerHTML = '<p class="text-xs text-slate-400 italic px-1">아직 기록된 이력이 없습니다.</p>';
+    } else {
+        const recent = [...history].reverse().slice(0, 3);
+        historyEl.innerHTML = recent.map(h => `
+            <div class="flex gap-2 items-start">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></div>
+                <div class="flex-1 bg-slate-50 rounded p-2 border border-slate-100">
+                    <p class="text-xs text-slate-700 whitespace-pre-wrap">${escHtml(h.text)}</p>
+                    <p class="text-[10px] text-slate-400 mt-1 font-mono">${formatDate(h.createdAt)}</p>
+                </div>
+            </div>
+        `).join('');
+        if (history.length > 3) {
+            historyEl.innerHTML += `<p class="text-[10px] text-slate-400 text-right italic px-1">+ ${history.length - 3}건 더 — '이력 관리'에서 전체 확인</p>`;
+        }
+    }
+
+    // 완료/되돌리기 버튼 라벨
+    const toggleLabel = document.getElementById('detail-toggle-label');
+    if (t.status === 'done') {
+        toggleLabel.textContent = '완료 취소';
+    } else {
+        toggleLabel.textContent = '완료 처리';
+    }
+
+    window.openModal('task-detail-modal');
+    lucide.createIcons();
+};
+
+window.editFromDetail = function() {
+    if (!__currentDetailTaskId) return;
+    const taskId = __currentDetailTaskId;
+    window.closeModal('task-detail-modal');
+    setTimeout(() => window.openEditTaskModal(taskId), 100);
+};
+
+window.openHistoryFromDetail = function() {
+    if (!__currentDetailTaskId) return;
+    const taskId = __currentDetailTaskId;
+    window.closeModal('task-detail-modal');
+    setTimeout(() => window.openHistoryModal(taskId), 100);
+};
+
+window.toggleStatusFromDetail = async function() {
+    if (!__currentDetailTaskId) return;
+    const taskId = __currentDetailTaskId;
+    try {
+        await window.toggleStatus(taskId);
+        // 모달 갱신을 위해 약간 기다린 후 다시 열어 정보 갱신
+        setTimeout(() => window.openTaskDetail(taskId), 300);
+    } catch(e) {
+        window.showToast('상태 변경 실패: ' + e.message, 'error');
+    }
 };
 
 window.openHistoryModal = function(taskId) {
