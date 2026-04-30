@@ -1740,7 +1740,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, limit, where, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, limit, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey:            "AIzaSyCpKSQUJjxIuUD5BzCXqimJxSwQHsTV8yQ",
@@ -1894,6 +1894,8 @@ async function loadAllData(uid) {
         }));
 
         // 📌 backfill 진행 상황 실시간 구독
+        // 자동 재개는 하지 않음 — 사용자가 명시적으로 ✨를 다시 눌러야 진행
+        // (자동 재개는 무한 루프 위험이 있음)
         unsubscribers.push(onSnapshot(
             doc(db, "users", uid, "meta", "backfill"),
             (snap) => {
@@ -1903,22 +1905,19 @@ async function loadAllData(uid) {
                 }
                 const data = snap.data();
                 if (data.status === "running") {
-                    showBackfillProgress(data);
+                    // 📌 좀비 감지: lastBatchAt이 5분 이상 지났는데 아직 running 이면 좀비
+                    const lastBatchMs = data.lastBatchAt?.toMillis?.() || data.startedAt?.toMillis?.() || 0;
+                    const stale = lastBatchMs > 0 && (Date.now() - lastBatchMs > 5 * 60 * 1000);
                     
-                    // 📌 자동 재개 — 체이닝이 안 돌고 있는데 status가 running이면 페이지 새로고침된 것
-                    // 1초 후 자동으로 체이닝 재개 (취소 안 되어 있을 때만)
-                    if (!data.cancelRequested && !window.__backfillChainActive) {
-                        window.__backfillChainActive = true;
-                        setTimeout(() => {
-                            console.log('[backfillChain] 페이지 복원 — 자동 재개');
-                            runBackfillChain(data.scope, data.overwrite).finally(() => {
-                                window.__backfillChainActive = false;
-                            });
-                        }, 1500);
+                    if (stale && !window.__backfillChainActive) {
+                        // 사용자가 인지할 수 있도록 진행 바에 좀비 경고 표시
+                        showBackfillProgress(data, false, true);  // isStale=true
+                    } else {
+                        showBackfillProgress(data);
                     }
                 } else {
-                    // 완료/취소된 경우 잠깐 보여주고 자동 숨김
-                    if (data.processed > 0 || data.cancelled) {
+                    // 완료/취소/에러 — 잠깐 결과 보여주고 자동 숨김
+                    if (data.processed > 0 || data.cancelled || data.error) {
                         showBackfillProgress(data, true);
                         setTimeout(() => hideBackfillProgress(), 5000);
                     } else {
@@ -2591,7 +2590,7 @@ async function runBackfillChain(scope, overwrite) {
 // ============================================================
 let __backfillStartTimeMs = null;
 
-function showBackfillProgress(data, isFinishedShortly = false) {
+function showBackfillProgress(data, isFinishedShortly = false, isStale = false) {
     const bar = document.getElementById('backfill-progress-bar');
     const label = document.getElementById('backfill-progress-label');
     const fill = document.getElementById('backfill-progress-fill');
@@ -2605,17 +2604,36 @@ function showBackfillProgress(data, isFinishedShortly = false) {
     fill.style.width = `${pct}%`;
 
     const scopeLabelStr = data.scopeLabel || data.scope || '업무';
+    
+    // 📌 좀비 상태 — 5분 이상 진행 안 됨
+    if (isStale && !isFinishedShortly) {
+        label.innerHTML = `<i data-lucide="alert-triangle" class="w-3 h-3 text-amber-600"></i> <span class="text-amber-700">중단됨 (5분간 응답 없음)</span>`;
+        fill.style.background = '#f59e0b';  // amber-500
+        bar.style.background = '#fffbeb';   // amber-50
+        bar.style.borderColor = '#fde68a';  // amber-200
+        detail.innerHTML = `${data.processed}/${data.total} 처리됨 · <button onclick="forceCleanupBackfill()" class="underline text-amber-700 hover:text-amber-900">강제 정리</button>`;
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        lucide.createIcons();
+        return;
+    }
+    
+    // 좀비 아닌 경우 스타일 복원
+    bar.style.background = '';
+    bar.style.borderColor = '';
 
     if (isFinishedShortly) {
         // 완료된 상태로 잠깐 표시
-        if (data.cancelled) {
+        if (data.error) {
+            label.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i> 오류 발생`;
+            fill.style.background = '#ef4444';  // red-500
+        } else if (data.cancelled) {
             label.innerHTML = `<i data-lucide="x-circle" class="w-3 h-3"></i> 취소됨`;
             fill.style.background = '#94a3b8';  // slate-400
         } else {
             label.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3"></i> 완료`;
             fill.style.background = '#10b981';  // emerald-500
         }
-        detail.textContent = `${data.scopeLabel || ''} ${data.processed}/${data.total} (${pct}%) 처리됨`;
+        detail.textContent = `${data.scopeLabel || ''} ${data.processed}/${data.total} (${pct}%) ${data.error ? '— ' + (data.errorMessage || '오류') : '처리됨'}`;
         if (cancelBtn) cancelBtn.style.display = 'none';
     } else {
         // 진행 중
@@ -2630,13 +2648,17 @@ function showBackfillProgress(data, isFinishedShortly = false) {
         }
         
         const elapsedSec = __backfillStartTimeMs ? Math.floor((Date.now() - __backfillStartTimeMs) / 1000) : 0;
-        const elapsedStr = formatElapsed(elapsedSec);
+        // 📌 음수 방지
+        const elapsedSafeSec = Math.max(0, elapsedSec);
+        const elapsedStr = formatElapsed(elapsedSafeSec);
         
         // 남은 시간 추정 (이미 처리된 비율 기반)
         let etaStr = '';
-        if (data.processed > 0 && elapsedSec > 5) {
-            const remaining = Math.round((elapsedSec / data.processed) * (data.total - data.processed));
-            etaStr = ` · 남은 시간 약 ${formatElapsed(remaining)}`;
+        if (data.processed > 0 && elapsedSafeSec > 5) {
+            const remaining = Math.round((elapsedSafeSec / data.processed) * (data.total - data.processed));
+            if (remaining > 0) {
+                etaStr = ` · 남은 시간 약 ${formatElapsed(remaining)}`;
+            }
         }
         
         detail.textContent = `${data.processed} / ${data.total} (${pct}%) · 경과 ${elapsedStr}${etaStr}`;
@@ -2644,10 +2666,13 @@ function showBackfillProgress(data, isFinishedShortly = false) {
         if (cancelBtn) {
             cancelBtn.style.display = data.cancelRequested ? 'none' : '';
             if (data.cancelRequested) {
-                label.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> 취소 처리 중...`;
+                label.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> 취소 처리 중... (현재 청크가 끝나면 중단)`;
             }
         }
     }
+    
+    lucide.createIcons();
+}
     
     lucide.createIcons();
 }
@@ -2657,6 +2682,31 @@ function hideBackfillProgress() {
     if (bar) bar.classList.add('hidden');
     __backfillStartTimeMs = null;
 }
+
+// 📌 강제 정리 — 좀비 메타 문서를 클라이언트에서 직접 done 처리
+window.forceCleanupBackfill = async function() {
+    if (!confirm('좀비 상태의 분석 작업을 강제 종료합니다.\n\n실제 백엔드 작업은 이미 멈춰있을 가능성이 높지만, 만약 진행 중이라면 다음 청크에서 자동 종료됩니다.\n\n계속하시겠습니까?')) return;
+    
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+        window.showToast('로그인 필요', 'error');
+        return;
+    }
+    
+    try {
+        await updateDoc(doc(db, "users", uid, "meta", "backfill"), {
+            cancelRequested: true,
+            status: "done",
+            cancelled: true,
+            forcedCleanup: true
+        });
+        window.showToast('✅ 좀비 작업 강제 정리 완료');
+        hideBackfillProgress();
+    } catch (e) {
+        window.showToast('정리 실패: ' + e.message + ' — Firestore Console에서 직접 메타 문서의 status를 done으로 변경하세요.', 'error');
+        console.error(e);
+    }
+};
 
 function formatElapsed(seconds) {
     if (seconds < 60) return `${seconds}초`;
