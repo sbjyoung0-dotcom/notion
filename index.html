@@ -3421,11 +3421,23 @@ window.saveEvent = async function() {
     try {
         const payload = { title, due: date, time, duration: 60, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true };
         const res = await fnSaveTask(payload); const eventId = res.data.id;
-        await fnAddToCalendar({ eventId, title, date, time, duration: 60 }).catch(e=>console.log("Calendar sync issue:", e));
-        window.closeModal('add-event-modal'); window.showToast('✅ 일정 추가 완료!');
+        window.closeModal('add-event-modal');
+        // 📌 Google Calendar 동기화 — 실패 시 명확히 사용자에게 알림
+        try {
+            await fnAddToCalendar({ eventId, title, date, time, duration: 60 });
+            window.showToast('✅ 일정 추가 + 캘린더 동기화 완료!');
+        } catch (calErr) {
+            console.error('[saveEvent] 캘린더 동기화 실패:', calErr);
+            const msg = calErr?.message || '알 수 없는 오류';
+            // 권한 에러는 더 친절한 안내
+            if (msg.includes('insufficient') || msg.includes('PERMISSION') || msg.includes('scope')) {
+                window.showToast('⚠ 일정은 저장됐지만 Calendar 권한 부족으로 Google Calendar에 동기화되지 않았습니다. (관리자에게 OAuth scope 추가 요청 필요)', 'error');
+            } else {
+                window.showToast('⚠ 일정은 저장됐지만 Google Calendar 동기화 실패: ' + msg, 'error');
+            }
+        }
     } catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '일정 저장'; }
 };
-
 function renderRoutines() {
     const container = document.getElementById('routine-list'); if(!container) return;
     if (!routines.length) { container.innerHTML = `<div class="text-center py-16 text-slate-400"><i data-lucide="repeat" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i><p class="text-sm">등록된 루틴이 없습니다.</p></div>`; lucide.createIcons(); return; }
@@ -3562,6 +3574,42 @@ window.runMergeDuplicateTasks = async function() {
         alert("병합 실패: " + e.message);
     }
 };
+
+// 📌 중복 호출 방지 플래그 (탭 전환 시 API 폭주 방어)
+let isCalendarSyncing = false;
+
+async function fetchCalendarUpdatesOnVisible() {
+    if (isCalendarSyncing) return;
+    isCalendarSyncing = true;
+
+    try {
+        console.log("👀 대시보드 활성화 감지: 캘린더 동기화 시작...");
+        
+        // 1. 백엔드의 수동 캘린더 동기화 API 호출
+        const triggerCalendarSync = firebase.functions().httpsCallable('triggerCalendarSync');
+        const result = await triggerCalendarSync();
+        
+        console.log("✅ 캘린더 갱신 완료:", result.data);
+        
+        // 2. 동기화 완료 후 화면 새로고침 (★ 매우 중요)
+        // 진영님이 기존에 프론트엔드 화면을 다시 그릴 때 쓰시던 함수명을 여기에 넣으세요.
+        // 예: loadDashboardData(); 또는 renderCalendar();
+        
+    } catch (error) {
+        console.error("❌ 캘린더 갱신 실패:", error);
+    } finally {
+        isCalendarSyncing = false;
+    }
+}
+
+// 🎯 브라우저 진입 및 탭 전환 이벤트 리스너 등록
+window.addEventListener('load', fetchCalendarUpdatesOnVisible);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        fetchCalendarUpdatesOnVisible();
+    }
+});
+
 </script>
 </body>
 </html>
