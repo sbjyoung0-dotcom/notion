@@ -1700,11 +1700,14 @@
 <div id="add-event-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="event-modal-title">
                 <i data-lucide="calendar-plus" class="w-5 h-5 text-blue-600"></i> 일정 추가
             </h3>
             <button onclick="closeModal('add-event-modal')" class="text-gray-400 hover:text-slate-600"><i data-lucide="x"></i></button>
         </div>
+        
+        <input type="hidden" id="event-id-input">
+        
         <div class="space-y-4">
             <div>
                 <label class="block text-xs font-bold text-gray-500 mb-1">일정명</label>
@@ -1772,10 +1775,12 @@ const fnParseTasksAI   = httpsCallable(functions, 'parseTasksWithAI');
 const fnDailySummary   = httpsCallable(functions, 'generateDailySummaryText');
 const fnMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryText');
 const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
+const fnAddToCalendar  = httpsCallable(functions, 'addToGoogleCalendar');
 const fnDeleteFromCalendar = httpsCallable(functions, 'deleteFromGoogleCalendar');
 const fnBackfillProjectTags = httpsCallable(functions, 'backfillProjectTags', { timeout: 540000 });
 const fnCancelBackfill = httpsCallable(functions, 'cancelBackfillProjectTags');
 const fnMergeDuplicates = httpsCallable(functions, 'mergeDuplicateTasks', { timeout: 300000 });
+const fnUpdateCalendar = httpsCallable(functions, 'updateGoogleCalendar');
 
 window.escHtml = function(str) {
     if (!str || typeof str !== 'string') return '';
@@ -3403,41 +3408,90 @@ function renderEvents() {
     container.innerHTML = upcoming.map(e => {
         const d = new Date(e.due); const diff = Math.round((d - today) / 86400000); const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
         const color = diff === 0 ? 'bg-red-100 text-red-700' : diff <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700';
-        return `<div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group"><span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span><div class="flex-1 min-w-0"><p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p><p class="text-[10px] text-slate-400">${escHtml(e.due)} ${e.time || ''}</p></div><button onclick="deleteTask('${escHtml(e.id)}')" class="hidden group-hover:block text-slate-300 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button></div>`;
+        
+        // 📌 기존 코드를 아래 리턴문으로 교체 (수정/삭제 버튼 컨테이너 추가)
+        return `<div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group"><span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span><div class="flex-1 min-w-0"><p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p><p class="text-[10px] text-slate-400">${escHtml(e.due)} ${e.time || ''}</p></div><div class="hidden group-hover:flex gap-1 flex-shrink-0"><button onclick="openEditEventModal('${escHtml(e.id)}')" class="text-slate-300 hover:text-amber-500 p-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button><button onclick="deleteTask('${escHtml(e.id)}')" class="text-slate-300 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div>`;
     }).join('');
     lucide.createIcons();
 }
 
 window.openAddEventModal = function() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('event-title-input').value = ''; document.getElementById('event-date-input').value  = today; document.getElementById('event-time-input').value  = '09:00'; document.getElementById('event-client-input').value = '';
+    document.getElementById('event-id-input').value = '';
+    document.getElementById('event-title-input').value = ''; 
+    document.getElementById('event-date-input').value  = today; 
+    document.getElementById('event-time-input').value  = '09:00'; 
+    document.getElementById('event-client-input').value = '';
+    
+    document.getElementById('event-modal-title').innerHTML = '<i data-lucide="calendar-plus" class="w-5 h-5 text-blue-600"></i> 일정 추가';
+    document.getElementById('btn-save-event').textContent = '일정 저장';
+    
     window.openModal('add-event-modal');
+    lucide.createIcons();
 };
 
+// 📌 추가: 일정 수정 모달 열기
+window.openEditEventModal = function(id) {
+    const e = tasks.find(x => x.id === id); if (!e) return;
+    document.getElementById('event-id-input').value = e.id;
+    document.getElementById('event-title-input').value = e.title || '';
+    document.getElementById('event-date-input').value = e.due || '';
+    document.getElementById('event-time-input').value = e.time || '09:00';
+    document.getElementById('event-client-input').value = e.clientId === 'ALL' ? '' : (e.clientId || '');
+    
+    document.getElementById('event-modal-title').innerHTML = '<i data-lucide="pencil" class="w-5 h-5 text-amber-600"></i> 일정 수정';
+    document.getElementById('btn-save-event').textContent = '일정 수정';
+    
+    window.openModal('add-event-modal');
+    lucide.createIcons();
+};
+
+// 📌 통합: 저장/수정 로직
 window.saveEvent = async function() {
-    const title = document.getElementById('event-title-input').value.trim(); const date = document.getElementById('event-date-input').value; const time = document.getElementById('event-time-input').value || '09:00'; const clientId = document.getElementById('event-client-input').value;
+    const eventId = document.getElementById('event-id-input').value;
+    const title = document.getElementById('event-title-input').value.trim(); 
+    const date = document.getElementById('event-date-input').value; 
+    const time = document.getElementById('event-time-input').value || '09:00'; 
+    const clientId = document.getElementById('event-client-input').value;
+    
     if (!title || !date) { window.showToast('일정명과 날짜를 입력하세요.', 'error'); return; }
-    const btn = document.getElementById('btn-save-event'); btn.disabled = true; btn.textContent = '저장 중...';
+    
+    const btn = document.getElementById('btn-save-event'); 
+    btn.disabled = true; 
+    btn.textContent = '처리 중...';
+    
     try {
-        const payload = { title, due: date, time, duration: 60, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true };
-        const res = await fnSaveTask(payload); const eventId = res.data.id;
-        window.closeModal('add-event-modal');
-        // 📌 Google Calendar 동기화 — 실패 시 명확히 사용자에게 알림
-        try {
-            await fnAddToCalendar({ eventId, title, date, time, duration: 60 });
-            window.showToast('✅ 일정 추가 + 캘린더 동기화 완료!');
-        } catch (calErr) {
-            console.error('[saveEvent] 캘린더 동기화 실패:', calErr);
-            const msg = calErr?.message || '알 수 없는 오류';
-            // 권한 에러는 더 친절한 안내
-            if (msg.includes('insufficient') || msg.includes('PERMISSION') || msg.includes('scope')) {
-                window.showToast('⚠ 일정은 저장됐지만 Calendar 권한 부족으로 Google Calendar에 동기화되지 않았습니다. (관리자에게 OAuth scope 추가 요청 필요)', 'error');
-            } else {
-                window.showToast('⚠ 일정은 저장됐지만 Google Calendar 동기화 실패: ' + msg, 'error');
+        if (eventId) {
+            // [수정 모드]
+            try {
+                await fnUpdateCalendar({ eventId, title, date, time, duration: 60 });
+                // 구글 캘린더 수정 성공 후 로컬 DB도 갱신
+                await fnSaveTask({ id: eventId, title, due: date, startDate: date, time, clientId: clientId || 'ALL', collection: 'tasks' });
+                window.showToast('✅ 일정 수정 완료!');
+            } catch (calErr) {
+                window.showToast('⚠ 일정 수정 실패: ' + calErr.message, 'error');
+            }
+        } else {
+            // [추가 모드]
+            const payload = { title, due: date, time, duration: 60, startDate: date, clientId: clientId || 'ALL', priority: 'medium', status: 'event', isEvent: true };
+            const res = await fnSaveTask(payload); const newEventId = res.data.id;
+            try {
+                await fnAddToCalendar({ eventId: newEventId, title, date, time, duration: 60 });
+                window.showToast('✅ 일정 추가 + 캘린더 동기화 완료!');
+            } catch (calErr) {
+                const msg = calErr?.message || '알 수 없는 오류';
+                window.showToast('⚠ Google Calendar 동기화 실패: ' + msg, 'error');
             }
         }
-    } catch(e) { window.showToast('저장 실패: ' + e.message, 'error'); } finally { btn.disabled = false; btn.textContent = '일정 저장'; }
+        window.closeModal('add-event-modal');
+    } catch(e) { 
+        window.showToast('저장/수정 실패: ' + e.message, 'error'); 
+    } finally { 
+        btn.disabled = false; 
+        btn.textContent = eventId ? '일정 수정' : '일정 저장'; 
+    }
 };
+
 function renderRoutines() {
     const container = document.getElementById('routine-list'); if(!container) return;
     if (!routines.length) { container.innerHTML = `<div class="text-center py-16 text-slate-400"><i data-lucide="repeat" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i><p class="text-sm">등록된 루틴이 없습니다.</p></div>`; lucide.createIcons(); return; }
@@ -3584,17 +3638,12 @@ async function fetchCalendarUpdatesOnVisible() {
 
     try {
         console.log("👀 대시보드 활성화 감지: 캘린더 동기화 시작...");
-        
-        // 1. 백엔드의 수동 캘린더 동기화 API 호출
         const triggerCalendarSync = firebase.functions().httpsCallable('triggerCalendarSync');
         const result = await triggerCalendarSync();
-        
         console.log("✅ 캘린더 갱신 완료:", result.data);
         
-        // 2. 동기화 완료 후 화면 새로고침 (★ 매우 중요)
-        // 진영님이 기존에 프론트엔드 화면을 다시 그릴 때 쓰시던 함수명을 여기에 넣으세요.
-        // 예: loadDashboardData(); 또는 renderCalendar();
-        
+        // 🔥 onSnapshot이 실시간으로 DB 변경을 감지하고 화면을 다시 그리므로 
+        // 프론트엔드에서 수동으로 리로드 함수를 부를 필요가 없습니다. (주석 정리)
     } catch (error) {
         console.error("❌ 캘린더 갱신 실패:", error);
     } finally {
