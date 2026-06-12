@@ -3403,13 +3403,32 @@ function renderEvents() {
     const container = document.getElementById('event-list'); if(!container) return;
     const today = new Date(); today.setHours(0,0,0,0);
     const upcoming = tasks.filter(t => t.isEvent === true && t.due && new Date(t.due) >= today).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 5);
-    if (!upcoming.length) { container.innerHTML = '<p class="text-xs text-slate-400 px-2 py-4 text-center border border-dashed border-slate-200 rounded-lg">예정된 일정이 없습니다.</p>'; return; }
+    
+    if (!upcoming.length) { 
+        container.innerHTML = '<p class="text-xs text-slate-400 px-2 py-4 text-center border border-dashed border-slate-200 rounded-lg">예정된 일정이 없습니다.</p>'; 
+        return; 
+    }
+
     container.innerHTML = upcoming.map(e => {
-        const d = new Date(e.due); const diff = Math.round((d - today) / 86400000); const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
+        const d = new Date(e.due); const diff = Math.round((d - today) / 86400000); 
+        const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
         const color = diff === 0 ? 'bg-red-100 text-red-700' : diff <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700';
         
-        // 📌 기존 코드를 아래 리턴문으로 교체 (수정/삭제 버튼 컨테이너 추가)
-        return `<div class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group"><span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span><div class="flex-1 min-w-0"><p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p><p class="text-[10px] text-slate-400">${escHtml(e.due)} ${e.time || ''}</p></div><div class="hidden group-hover:flex gap-1 flex-shrink-0"><button onclick="openEditEventModal('${escHtml(e.id)}')" class="text-slate-300 hover:text-amber-500 p-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button><button onclick="deleteTask('${escHtml(e.id)}')" class="text-slate-300 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div>`;
+        return `<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 group transition-colors">
+            <span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span>
+            <div class="flex-1 min-w-0 cursor-pointer" onclick="openEditEventModal('${escHtml(e.id)}')">
+                <p class="text-xs font-medium text-slate-700 truncate">${escHtml(e.title)}</p>
+                <p class="text-[10px] text-slate-400">${escHtml(e.due)} ${e.time || ''}</p>
+            </div>
+            <div class="flex gap-1 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
+                <button onclick="openEditEventModal('${escHtml(e.id)}')" class="text-slate-400 hover:text-amber-500 p-1.5 rounded hover:bg-amber-50 transition-colors" title="수정">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteTask('${escHtml(e.id)}')" class="text-slate-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors" title="삭제">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </div>`;
     }).join('');
     lucide.createIcons();
 }
