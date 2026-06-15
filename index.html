@@ -3656,12 +3656,16 @@ async function fetchCalendarUpdatesOnVisible() {
 
     try {
         console.log("👀 대시보드 활성화 감지: 캘린더 동기화 시작...");
-        const triggerCalendarSync = firebase.functions().httpsCallable('triggerCalendarSync');
+        
+        // 💡 수정됨: 최신 Firebase 모듈형(v11) 문법에 맞춘 호출 방식
+        const triggerCalendarSync = window.httpsCallable(window.functions, 'triggerCalendarSync');
         const result = await triggerCalendarSync();
+        
         console.log("✅ 캘린더 갱신 완료:", result.data);
         
-        // 🔥 onSnapshot이 실시간으로 DB 변경을 감지하고 화면을 다시 그리므로 
-        // 프론트엔드에서 수동으로 리로드 함수를 부를 필요가 없습니다. (주석 정리)
+        // 💡 동기화 완료 후 화면의 일정 리스트를 강제로 다시 그립니다
+        if (typeof renderEvents === 'function') renderEvents();
+        
     } catch (error) {
         console.error("❌ 캘린더 갱신 실패:", error);
     } finally {
@@ -3676,7 +3680,6 @@ document.addEventListener('visibilitychange', () => {
         fetchCalendarUpdatesOnVisible();
     }
 });
-
 </script>
 </body>
 </html>
