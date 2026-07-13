@@ -1028,7 +1028,6 @@
                 </div>
             </div>
             
-            <!-- 📌 진행 바: backfill 작업 중일 때만 표시 -->
             <div id="backfill-progress-bar" class="hidden mx-2 mb-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-[11px] font-medium text-blue-700 flex items-center gap-1">
@@ -1046,7 +1045,6 @@
                 <p id="backfill-progress-detail" class="text-[10px] text-blue-500 mt-1 font-mono"></p>
             </div>
             
-            <!-- 📌 프로젝트 검색창 -->
             <div class="px-2 mb-2">
                 <div class="relative">
                     <i data-lucide="search" class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none"></i>
@@ -1243,7 +1241,7 @@
                             </div>
                             <div class="w-px h-6 bg-slate-200"></div>
                             <input type="text" id="search-input"
-                                placeholder="업무명 또는 내용 검색..."
+                                placeholder="업무명 또는 발신자, 내용 검색..."
                                 class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56 shadow-sm">
                             <div class="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
                                 <button onclick="setFilter('active')" class="filter-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-slate-100 text-slate-800" data-filter="active">진행중</button>
@@ -1857,7 +1855,13 @@ function initApp() {
     if(dailyDate) dailyDate.value = todayStr;
     loadMemo();
     const searchInput = document.getElementById('search-input');
-    if(searchInput) { searchInput.addEventListener('input', e => { searchQuery = e.target.value.toLowerCase(); renderTasks(); }); }
+    if(searchInput) { 
+        searchInput.addEventListener('input', e => { 
+            searchQuery = e.target.value.toLowerCase(); 
+            renderTasks(); 
+            renderProjectNav(); // 👈 검색 시 프로젝트 메뉴 즉각 갱신 연결
+        }); 
+    }
     lucide.createIcons();
 }
 
@@ -2141,6 +2145,13 @@ function getProjectGroups() {
     tasks.forEach(t => {
         if (t.isEvent || t.isRoutine || t.status === 'event' || t.status === 'routine') return;
         if (currentClientFilter !== 'all' && t.clientId !== currentClientFilter) return;
+        
+        // 💡 추가됨: 검색어가 있을 경우, 발신자(sender)나 제목 등에 검색어가 없으면 프로젝트 집계 제외
+        if (searchQuery) {
+            const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '') + ' ' + (t.projectTag || '') + ' ' + (t.sender || '')).toLowerCase();
+            if (!hay.includes(searchQuery)) return;
+        }
+
         const isActive = t.status !== 'done';
         if (t.projectTag && t.projectTag.trim()) {
             const tag = t.projectTag.trim();
@@ -3076,7 +3087,12 @@ function getFilteredTasks() {
         }
         if (currentFilter === 'active' && t.status === 'done')  return false;
         if (currentFilter === 'done'   && t.status !== 'done')  return false;
-        if (searchQuery) { const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '') + ' ' + (t.projectTag || '')).toLowerCase(); if (!hay.includes(searchQuery)) return false; }
+        
+        // 💡 수정됨: t.sender 속성을 검색 풀(hay)에 병합
+        if (searchQuery) { 
+            const hay = (t.title + ' ' + (t.note || '') + ' ' + (t.clientId || '') + ' ' + (t.projectTag || '') + ' ' + (t.sender || '')).toLowerCase(); 
+            if (!hay.includes(searchQuery)) return false; 
+        }
         return true;
     });
 
