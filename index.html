@@ -1977,12 +1977,23 @@ window.deleteContract = async function(id) {
 };
 
 // 🔥 모듈 담당자 동적 렌더링
+// 🔥 DB 연동형으로 수정된 최종 renderModules 함수
 window.renderModules = function() {
-    const grid = document.getElementById('modules-grid'); if (!grid) return;
-    if (!modulesData.length) { grid.innerHTML = '<p class="text-sm text-slate-400 col-span-full py-8 text-center">등록된 담당자 정보가 없습니다.</p>'; return; }
+    const grid = document.getElementById('modules-grid'); 
+    if (!grid) return;
     
+    // DB에 데이터가 없으면 안내 문구 표시
+    if (!modulesData || modulesData.length === 0) { 
+        grid.innerHTML = '<p class="text-sm text-slate-400 col-span-full py-8 text-center">등록된 담당자 정보가 없습니다. 상단의 [+ 담당자 추가] 버튼을 눌러 등록하세요.</p>'; 
+        return; 
+    }
+    
+    // clientId 별로 그룹핑
     const grouped = {};
-    modulesData.forEach(m => { if(!grouped[m.clientId]) grouped[m.clientId] = []; grouped[m.clientId].push(m); });
+    modulesData.forEach(m => { 
+        if (!grouped[m.clientId]) grouped[m.clientId] = []; 
+        grouped[m.clientId].push(m); 
+    });
     
     let html = '';
     for (const [clientId, mods] of Object.entries(grouped)) {
