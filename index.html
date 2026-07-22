@@ -1777,6 +1777,41 @@
         </div>
     </div>
 </div>
+<!-- 🔥 계약 정보 관리 모달 -->
+<div id="contract-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">계약 정보 관리</h3><button onclick="closeModal('contract-modal')"><i data-lucide="x" class="text-gray-400"></i></button></div>
+        <input type="hidden" id="contract-id">
+        <div class="space-y-4">
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">고객사</label><select id="contract-client" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"></select></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">계약명</label><input type="text" id="contract-title" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="예: 2026년 SAP 유지보수 계약"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">시작일</label><input type="date" id="contract-start" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">종료일</label><input type="date" id="contract-end" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
+            </div>
+            <!-- 👇 공수 / 금액 입력 영역 -->
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">계약 공수 (M/M)</label><input type="text" id="contract-effort" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="예: 2.5 M/M"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">계약 금액</label><input type="text" id="contract-amount" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="예: 1,500만 원"></div>
+            </div>
+            <button onclick="saveContract()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 담당자 관리 모달 -->
+<div id="module-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">담당자 관리</h3><button onclick="closeModal('module-modal')"><i data-lucide="x" class="text-gray-400"></i></button></div>
+        <input type="hidden" id="module-id">
+        <div class="space-y-4">
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">고객사</label><select id="module-client" class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"></select></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">모듈명</label><input type="text" id="module-name" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="예: SD (판매/유통)"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">담당자 이름 (쉼표로 구분)</label><input type="text" id="module-persons" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="예: 홍길동, 김철수"></div>
+            <button onclick="saveModule()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700">저장</button>
+        </div>
+    </div>
+</div>
 
 <div id="toast" class="hidden fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-xl text-sm font-medium text-white transition-all duration-300 flex items-center gap-2 max-w-sm bg-slate-800">
     <i data-lucide="check-circle" class="w-4 h-4 flex-shrink-0" id="toast-icon"></i>
@@ -1824,6 +1859,10 @@ const fnBackfillProjectTags = httpsCallable(functions, 'backfillProjectTags', { 
 const fnCancelBackfill = httpsCallable(functions, 'cancelBackfillProjectTags');
 const fnMergeDuplicates = httpsCallable(functions, 'mergeDuplicateTasks', { timeout: 300000 });
 const fnUpdateCalendar = httpsCallable(functions, 'updateGoogleCalendar');
+const fnSaveContract   = httpsCallable(functions, 'saveContract');
+const fnDeleteContract = httpsCallable(functions, 'deleteContract');
+const fnSaveModule     = httpsCallable(functions, 'saveModule');
+const fnDeleteModule   = httpsCallable(functions, 'deleteModule');
 
 window.escHtml = function(str) {
     if (!str || typeof str !== 'string') return '';
@@ -1851,76 +1890,156 @@ let projectSearchQuery  = '';
 let projectsExpanded    = false;
 
 // 🔥 Data For Contracts & Modules
-const CONTRACT_DATA = [
-    { client: 'c_klean', title: '2026년 깨끗한나라 SAP ERP 운영 유지보수 계약', start: '2026.01.01', end: '2026.12.31' },
-    { client: 'c_kakao', title: '2026년 카카오스타일 SAP License MA 계약', start: '2026.01.01', end: '2026.12.31' },
-    { client: 'c_sunwoo', title: '2026년 선우프레시 SAP ERP 운영유지보수 계약', start: '2025.12.01', end: '2026.11.30' },
-    { client: 'c_skyhigh', title: '2026년 스카이하이메모리 S/4 HANA Public Cloud 운영 유지보수 계약', start: '2026.01.01', end: '2026.12.31' },
-    { client: 'c_xexy', title: '2026년 젝시믹스 SAP License MA 계약', start: '2026.01.01', end: '2026.12.31' },
-    { client: 'c_helinox', title: '2026년 헬리녹스 SAP ERP 운영 계약', start: '2026.02.01', end: '2027.01.31' },
-    { client: 'c_sunwoo', title: '2026년 선우프레시 SAP 소프트웨어 라이선스 MA 계약', start: '2026.04.01', end: '2026.12.31' },
-    { client: 'c_kakao', title: '2026년 카카오스타일 ERP 운영유지보수 계약', start: '2026.06.01', end: '2027.05.31' },
-    { client: 'c_helinox', title: '헬리녹스 MS 365 Apps for Business', start: '2026.08.01', end: '2027.07.31' }
-];
+let contractsData = [];
+let modulesData = [];
 
-const MODULE_DATA = {
-    'c_klean': [
-        { mod: 'AM', names: ['성진영'] }, { mod: 'SD (판매/유통관리)', names: ['최석현', '서다희', '정인준'] },
-        { mod: 'MM (구매)', names: ['김정현', '정성재'] }, { mod: 'FI (재무회계)', names: ['박재성', '이강준'] },
-        { mod: 'CO (관리회계)', names: ['윤현진', '김민정', '양유림'] }, { mod: 'BW', names: ['윤서연', '김혜인'] },
-        { mod: 'BC (시스템)', names: ['이화연', '허은', '강선기'] }, { mod: 'PP (생산관리)', names: ['이석호', '강동연'] }
-    ],
-    'c_deloitte': [
-        { mod: 'Web', names: ['김성'] }, { mod: 'HR (인적자원관리)', names: ['신동혁', '유보미'] },
-        { mod: 'FI (재무회계)', names: ['서희원', '박정화'] }, { mod: 'CO (관리회계)', names: ['윤현진'] },
-        { mod: 'BC (시스템)', names: ['오진혁', '심민섭'] }
-    ],
-    'c_mizmedi': [
-        { mod: 'MM (구매)', names: ['정나리'] }, { mod: 'FI (재무회계)', names: ['서희원', '박정화'] },
-        { mod: 'CO (관리회계)', names: ['윤현진'] }, { mod: 'BC (시스템)', names: ['박재영', '지희정'] }
-    ],
-    'c_sunwoo': [
-        { mod: 'SFA', names: ['장용재'] }, { mod: 'SD (판매/유통관리)', names: ['배지현', '이정철', '서다희'] },
-        { mod: 'SAC', names: ['양필'] }, { mod: 'MM (구매)', names: ['김윤정'] },
-        { mod: 'FI (재무회계)', names: ['노주성', '민수진'] }, { mod: 'e-HR (인적자원관리)', names: ['한창완'] },
-        { mod: 'e-ACC', names: ['이승찬'] }, { mod: 'CO (관리회계)', names: ['김동열'] },
-        { mod: 'Cloud', names: ['김광원'] }, { mod: 'BC (시스템)', names: ['조진환', '홍정훈'] }
-    ],
-    'c_skyhigh': [
-        { mod: 'SD (판매/유통관리)', names: ['김지혜', '이정철'] }, { mod: 'MM (구매)', names: ['양아영', '마지안'] },
-        { mod: 'FI (재무회계)', names: ['김태훈', '이선영'] }, { mod: 'CPI', names: ['김동암'] },
-        { mod: 'CO (관리회계)', names: ['최민주', '신우석'] }
-    ],
-    'c_kakao': [
-        { mod: 'CSM', names: ['성진영'] }, { mod: 'FI (재무회계)', names: ['이선영', '정재우'] },
-        { mod: 'CO (관리회계)', names: ['양유림', '이동혁'] }, { mod: 'E-HR', names: ['심애신', '변송무', '홍석현', '한창완'] },
-        { mod: 'BC (시스템)', names: ['조진환', '박준용'] }
-    ],
-    'c_helinox': [
-        { mod: 'SD (영업관리)', names: ['최낙현', '신상균'] }, { mod: 'PP (생산관리)', names: ['송서연', '김민완'] },
-        { mod: 'MM (구매)', names: ['고명은', '김윤정'] }, { mod: 'FI (재무회계)', names: ['오미경', '박정화', '김가현'] },
-        { mod: 'CO (관리회계)', names: ['김동열', '최민주'] }, { mod: 'BC (시스템)', names: ['박준용', '손상우', '강성준'] }
-    ]
-};
-
+// 🔥 계약 현황 동적 렌더링 (공수/금액 표시 포함)
 window.renderContracts = function() {
-    const grid = document.getElementById('contracts-grid');
-    if (!grid) return;
-    grid.innerHTML = CONTRACT_DATA.map(c => {
-        const client = clients.find(x => x.id === c.client) || { name: c.client, emoji: '🏢', color: '#64748B' };
-        return `
-        <div class="contract-card">
-            <div class="flex items-center gap-2 mb-3">
-                <span class="px-2 py-0.5 rounded text-[11px] font-bold" style="background:${client.color || '#E2E8F0'}22; color:${client.color || '#64748B'}">${client.emoji} ${escHtml(client.name)}</span>
+    const grid = document.getElementById('contracts-grid'); if (!grid) return;
+    if (!contractsData.length) { grid.innerHTML = '<p class="text-sm text-slate-400 col-span-full py-8 text-center">등록된 계약 정보가 없습니다.</p>'; return; }
+    
+    grid.innerHTML = contractsData.map(c => {
+        const client = clients.find(x => x.id === c.clientId) || { name: c.clientId, emoji: '🏢', color: '#64748B' };
+        
+        const hasScaleInfo = c.effort || c.amount;
+        const scaleHtml = hasScaleInfo ? `
+            <div class="flex items-center justify-between text-xs mt-2 pt-2 border-t border-slate-100 border-dashed">
+                <span class="text-slate-400 flex items-center gap-1"><i data-lucide="calculator" class="w-3.5 h-3.5"></i> 규모</span>
+                <span class="font-medium text-slate-700">${c.effort ? escHtml(c.effort) : ''}${c.effort && c.amount ? ' / ' : ''}${c.amount ? escHtml(c.amount) : ''}</span>
             </div>
-            <h4 class="contract-title">${escHtml(c.title)}</h4>
-            <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100">
-                <i data-lucide="calendar-range" class="w-4 h-4 text-slate-400"></i>
-                <span class="contract-date">${c.start} ~ ${c.end}</span>
+        ` : '';
+
+        return `
+        <div class="contract-card group relative">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold" style="background:${client.color || '#E2E8F0'}22; color:${client.color || '#64748B'}">${client?.emoji || '🏢'} ${escHtml(client?.name || c.clientId)}</span>
+            </div>
+            <h4 class="contract-title pr-6">${escHtml(c.title)}</h4>
+            <div class="flex flex-col gap-1 mt-4 pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-400 flex items-center gap-1"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> 기간</span>
+                    <span class="font-mono text-slate-600">${c.start || '-'} ~ ${c.end || '-'}</span>
+                </div>
+                ${scaleHtml}
+            </div>
+            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <button onclick="openContractModal('${c.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                <button onclick="deleteContract('${c.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
             </div>
         </div>`;
     }).join('');
     lucide.createIcons();
+};
+
+window.openContractModal = function(id) {
+    if(id) {
+        const c = contractsData.find(x => x.id === id);
+        document.getElementById('contract-id').value = c.id;
+        document.getElementById('contract-client').value = c.clientId;
+        document.getElementById('contract-title').value = c.title || '';
+        document.getElementById('contract-start').value = c.start || '';
+        document.getElementById('contract-end').value = c.end || '';
+        document.getElementById('contract-effort').value = c.effort || '';
+        document.getElementById('contract-amount').value = c.amount || '';
+    } else {
+        document.getElementById('contract-id').value = '';
+        document.getElementById('contract-title').value = '';
+        document.getElementById('contract-start').value = '';
+        document.getElementById('contract-end').value = '';
+        document.getElementById('contract-effort').value = '';
+        document.getElementById('contract-amount').value = '';
+    }
+    window.openModal('contract-modal');
+};
+
+window.saveContract = async function() {
+    const id = document.getElementById('contract-id').value;
+    const clientId = document.getElementById('contract-client').value;
+    const title = document.getElementById('contract-title').value.trim();
+    const effort = document.getElementById('contract-effort').value.trim();
+    const amount = document.getElementById('contract-amount').value.trim();
+    
+    if(!title) return window.showToast('계약명을 입력하세요.', 'error');
+    try {
+        await fnSaveContract({ 
+            id: id||undefined, clientId, title, 
+            start: document.getElementById('contract-start').value, 
+            end: document.getElementById('contract-end').value,
+            effort, amount
+        });
+        window.closeModal('contract-modal'); window.showToast('✅ 계약 저장 완료!');
+    } catch(e) { window.showToast('오류: ' + e.message, 'error'); }
+};
+
+window.deleteContract = async function(id) {
+    if(!confirm('삭제하시겠습니까?')) return;
+    try { await fnDeleteContract({ id }); window.showToast('🗑️ 삭제 완료'); } catch(e) { window.showToast('오류: ' + e.message, 'error'); }
+};
+
+// 🔥 모듈 담당자 동적 렌더링
+window.renderModules = function() {
+    const grid = document.getElementById('modules-grid'); if (!grid) return;
+    if (!modulesData.length) { grid.innerHTML = '<p class="text-sm text-slate-400 col-span-full py-8 text-center">등록된 담당자 정보가 없습니다.</p>'; return; }
+    
+    const grouped = {};
+    modulesData.forEach(m => { if(!grouped[m.clientId]) grouped[m.clientId] = []; grouped[m.clientId].push(m); });
+    
+    let html = '';
+    for (const [clientId, mods] of Object.entries(grouped)) {
+        const client = clients.find(x => x.id === clientId) || { name: clientId, emoji: '🏢' };
+        html += `
+        <div class="module-card">
+            <h3 class="module-client">${client?.emoji || '🏢'} ${escHtml(client?.name || clientId)}</h3>
+            <div class="space-y-1">
+                ${mods.map(m => `
+                    <div class="module-item group relative">
+                        <span class="module-name">${escHtml(m.mod)}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="module-person">${escHtml((m.names || []).join(', '))}</span>
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 bg-white px-1 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                                <button onclick="openModuleModal('${m.id}')" class="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-100"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                                <button onclick="deleteModule('${m.id}')" class="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+    grid.innerHTML = html;
+    lucide.createIcons();
+};
+
+window.openModuleModal = function(id) {
+    if(id) {
+        const m = modulesData.find(x => x.id === id);
+        document.getElementById('module-id').value = m.id;
+        document.getElementById('module-client').value = m.clientId;
+        document.getElementById('module-name').value = m.mod || '';
+        document.getElementById('module-persons').value = (m.names || []).join(', ');
+    } else {
+        document.getElementById('module-id').value = '';
+        document.getElementById('module-name').value = '';
+        document.getElementById('module-persons').value = '';
+    }
+    window.openModal('module-modal');
+};
+
+window.saveModule = async function() {
+    const id = document.getElementById('module-id').value;
+    const clientId = document.getElementById('module-client').value;
+    const mod = document.getElementById('module-name').value.trim();
+    const names = document.getElementById('module-persons').value.split(',').map(s => s.trim()).filter(Boolean);
+    if(!mod) return window.showToast('모듈명을 입력하세요.', 'error');
+    try {
+        await fnSaveModule({ id: id||undefined, clientId, mod, names });
+        window.closeModal('module-modal'); window.showToast('✅ 담당자 저장 완료!');
+    } catch(e) { window.showToast('오류: ' + e.message, 'error'); }
+};
+
+window.deleteModule = async function(id) {
+    if(!confirm('삭제하시겠습니까?')) return;
+    try { await fnDeleteModule({ id }); window.showToast('🗑️ 삭제 완료'); } catch(e) { window.showToast('오류: ' + e.message, 'error'); }
 };
 
 window.renderModules = function() {
@@ -2042,6 +2161,15 @@ async function loadAllData(uid) {
             if (memoEl && !memoEl.dataset.editing) {
                 const savedMemo = memos.find(m => m.id === 'quick-memo-doc');
                 memoEl.value = savedMemo ? savedMemo.content : '';
+// 🔥 DB에서 계약/담당자 실시간 로딩
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "contracts"), (snap) => {
+            contractsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderContracts();
+        }));
+        unsubscribers.push(onSnapshot(collection(db, "users", uid, "modules"), (snap) => {
+            modulesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderModules();
+        }));
             }
         }));
 
@@ -2256,7 +2384,7 @@ function renderClientSettings() {
 }
 
 function populateClientSelects() {
-    ['modal-client', 'routine-client', 'event-client-input'].forEach(id => {
+    ['modal-client', 'routine-client', 'event-client-input', 'report-client', 'daily-client', 'contract-client', 'module-client'].forEach(id => {
         const el = document.getElementById(id); if (!el) return;
         const prev = el.value; el.innerHTML = (id === 'event-client-input' ? '<option value="">고객사 선택 안함</option>' : '') + clients.map(c => `<option value="${c.id}">${c.emoji || '🏢'} ${c.name}</option>`).join('');
         if (prev) el.value = prev;
