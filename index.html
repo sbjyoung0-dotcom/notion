@@ -2053,28 +2053,6 @@ window.deleteModule = async function(id) {
     try { await fnDeleteModule({ id }); window.showToast('🗑️ 삭제 완료'); } catch(e) { window.showToast('오류: ' + e.message, 'error'); }
 };
 
-window.renderModules = function() {
-    const grid = document.getElementById('modules-grid');
-    if (!grid) return;
-    let html = '';
-    for (const [clientId, mods] of Object.entries(MODULE_DATA)) {
-        const client = clients.find(x => x.id === clientId) || { name: clientId, emoji: '🏢' };
-        html += `
-        <div class="module-card">
-            <h3 class="module-client">${client.emoji} ${escHtml(client.name)}</h3>
-            <div class="space-y-1">
-                ${mods.map(m => `
-                    <div class="module-item">
-                        <span class="module-name">${escHtml(m.mod)}</span>
-                        <span class="module-person">${escHtml(m.names.join(', '))}</span>
-                    </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    grid.innerHTML = html;
-};
-
 onAuthStateChanged(auth, user => {
     const loginScreen = document.getElementById('login-screen');
     const appScreen   = document.getElementById('app-screen');
