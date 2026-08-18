@@ -3966,7 +3966,14 @@ window.runMigration = async function() {
     alert(`마이그레이션 완료. 총 ${count}개 복구됨.`); 
     location.reload(); 
 };
+    
+// 🔧 임시 관리자 콘솔용 (작업 끝나면 삭제)
+window.__call = (name, data = {}) =>
+  httpsCallable(getFunctions(app, "asia-northeast3"), name)(data)
+    .then(r => { console.log("✅", name, r.data); return r.data; })
+    .catch(e => { console.error("❌", name, e.code, e.message); throw e; });
 
+    
 window.runMergeDuplicateTasks = async function() {
     try {
         console.log("중복 태스크 병합 시작...");
