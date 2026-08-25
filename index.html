@@ -1378,23 +1378,32 @@
 
             <!-- 🔥 4. 신규: CONTRACTS (계약 현황) -->
             <div id="view-contracts" class="tab-panel hidden max-w-6xl mx-auto space-y-6">
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="file-signature" class="w-6 h-6"></i></div>
-                        <div><h3 class="text-lg font-bold text-slate-800">고객사별 계약 현황</h3><p class="text-xs text-slate-500">운영 및 유지보수, 라이선스 계약의 갱신 주기를 파악합니다.</p></div>
-                    </div>
+<div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+    <div class="flex items-center gap-3">
+        <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="file-signature" class="w-6 h-6"></i></div>
+        <div><h3 class="text-lg font-bold text-slate-800">고객사별 계약 현황</h3><p class="text-xs text-slate-500">운영 및 유지보수, 라이선스 계약의 갱신 주기를 파악합니다.</p></div>
+    </div>
+    <button onclick="openContractModal()"
+        class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+        <i data-lucide="plus" class="w-4 h-4"></i> 계약 추가
+    </button>
+</div>
                 </div>
                 <div id="contracts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
 
             <!-- 🔥 5. 신규: MODULES (모듈 담당자) -->
             <div id="view-modules" class="tab-panel hidden max-w-6xl mx-auto space-y-6">
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="users" class="w-6 h-6"></i></div>
-                        <div><h3 class="text-lg font-bold text-slate-800">고객사별 모듈 담당자 (M/M)</h3><p class="text-xs text-slate-500">각 시스템 모듈별 사내 전담 인력 연락망입니다.</p></div>
-                    </div>
-                </div>
+<div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+    <div class="flex items-center gap-3">
+        <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="users" class="w-6 h-6"></i></div>
+        <div><h3 class="text-lg font-bold text-slate-800">고객사별 모듈 담당자 (M/M)</h3><p class="text-xs text-slate-500">각 시스템 모듈별 사내 전담 인력 연락망입니다.</p></div>
+    </div>
+    <button onclick="openModuleModal()"
+        class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+        <i data-lucide="plus" class="w-4 h-4"></i> 담당자 추가
+    </button>
+</div>
                 <div id="modules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
             </div>
 
@@ -1984,7 +1993,7 @@ window.renderModules = function() {
     
     // DB에 데이터가 없으면 안내 문구 표시
     if (!modulesData || modulesData.length === 0) { 
-        grid.innerHTML = '<p class="text-sm text-slate-400 col-span-full py-8 text-center">등록된 담당자 정보가 없습니다. 상단의 [+ 담당자 추가] 버튼을 눌러 등록하세요.</p>'; 
+        grid.innerHTML = '<p class="text-sm text-slate-400 col-span-full py-8 text-center">등록된 담당자 정보가 없습니다. 우측 상단의 [담당자 추가] 버튼을 눌러 등록하세요.</p>'; 
         return; 
     }
     
@@ -2150,11 +2159,15 @@ async function loadAllData(uid) {
             if (memoEl && !memoEl.dataset.editing) {
                 const savedMemo = memos.find(m => m.id === 'quick-memo-doc');
                 memoEl.value = savedMemo ? savedMemo.content : '';
-// 🔥 DB에서 계약/담당자 실시간 로딩
+            }
+        }));
+
+        // 🔥 계약 / 담당자 실시간 로딩 (메모와 분리 — 독립적으로 갱신)
         unsubscribers.push(onSnapshot(collection(db, "users", uid, "contracts"), (snap) => {
             contractsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderContracts();
         }));
+
         unsubscribers.push(onSnapshot(collection(db, "users", uid, "modules"), (snap) => {
             modulesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderModules();
