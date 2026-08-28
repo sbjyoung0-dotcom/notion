@@ -2162,7 +2162,7 @@ async function loadAllData(uid) {
             }
         }));
 
-        // 🔥 계약 / 담당자 실시간 로딩 (메모와 분리 — 독립적으로 갱신)
+        // 🔥 계약 / 담당자 실시간 로딩 (메모와 완전히 분리)
         unsubscribers.push(onSnapshot(collection(db, "users", uid, "contracts"), (snap) => {
             contractsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderContracts();
@@ -2172,33 +2172,22 @@ async function loadAllData(uid) {
             modulesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderModules();
         }));
-            }
-        }));
 
         // 📌 backfill 진행 상황 실시간 구독
-        // 자동 재개는 하지 않음 — 사용자가 명시적으로 ✨를 다시 눌러야 진행
-        // (자동 재개는 무한 루프 위험이 있음)
         unsubscribers.push(onSnapshot(
             doc(db, "users", uid, "meta", "backfill"),
             (snap) => {
-                if (!snap.exists()) {
-                    hideBackfillProgress();
-                    return;
-                }
+                if (!snap.exists()) { hideBackfillProgress(); return; }
                 const data = snap.data();
                 if (data.status === "running") {
-                    // 📌 좀비 감지: lastBatchAt이 5분 이상 지났는데 아직 running 이면 좀비
                     const lastBatchMs = data.lastBatchAt?.toMillis?.() || data.startedAt?.toMillis?.() || 0;
                     const stale = lastBatchMs > 0 && (Date.now() - lastBatchMs > 5 * 60 * 1000);
-                    
                     if (stale && !window.__backfillChainActive) {
-                        // 사용자가 인지할 수 있도록 진행 바에 좀비 경고 표시
-                        showBackfillProgress(data, false, true);  // isStale=true
+                        showBackfillProgress(data, false, true);
                     } else {
                         showBackfillProgress(data);
                     }
                 } else {
-                    // 완료/취소/에러 — 잠깐 결과 보여주고 자동 숨김
                     if (data.processed > 0 || data.cancelled || data.error) {
                         showBackfillProgress(data, true);
                         setTimeout(() => hideBackfillProgress(), 5000);
