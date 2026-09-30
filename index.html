@@ -1246,6 +1246,13 @@
                         placeholder="급한 업무나 잊지 말아야 할 내용을 자유롭게 적으세요..."></textarea>
                 </section>
 
+                <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                        <i data-lucide="alarm-clock" class="w-4 h-4"></i> 마감 임박 업무 (지연 + D-7)
+                    </h3>
+                    <div id="due-soon-list" class="space-y-1"></div>
+                </section>
+
                 <section>
                     <div class="flex justify-between items-end mb-4 flex-wrap gap-3">
                         <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -3320,6 +3327,26 @@ function renderStats() {
 
     const sAct = document.getElementById('stat-active'); const sDn = document.getElementById('stat-done'); const sUrg = document.getElementById('stat-urgent');
     if(sAct) sAct.textContent = active.length; if(sDn) sDn.textContent = done.length; if(sUrg) sUrg.textContent = urgent.length;
+    renderDueSoon(urgent);
+}
+
+// 퀵메모 아래 "마감 임박 업무" — 통계 카드(마감 지연 및 임박 D-7)와 같은 목록을 마감일 순으로 표시
+function renderDueSoon(urgent) {
+    const container = document.getElementById('due-soon-list'); if (!container) return;
+    if (!urgent.length) { container.innerHTML = '<p class="text-xs text-slate-400 py-2 text-center">7일 이내 마감 업무가 없습니다.</p>'; return; }
+    const today = new Date(); today.setHours(0,0,0,0);
+    container.innerHTML = [...urgent].sort((a, b) => a.due.localeCompare(b.due)).map(t => {
+        const diff = Math.round((new Date(t.due) - today) / 86400000);
+        const label = diff < 0 ? `지연 ${-diff}일` : diff === 0 ? '오늘' : diff === 1 ? '내일' : `D-${diff}`;
+        const color = diff < 0 ? 'bg-red-600 text-white' : diff === 0 ? 'bg-red-100 text-red-700' : diff <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700';
+        const client = clients.find(c => c.id === t.clientId);
+        return `<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer" onclick="openEditTaskModal('${escHtml(t.id)}')">
+            <span class="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${color}">${label}</span>
+            <p class="text-sm text-slate-700 truncate flex-1">${escHtml(t.title)}</p>
+            ${client && t.clientId !== 'ALL' ? `<span class="text-[10px] text-slate-400 flex-shrink-0">${escHtml(client.name || '')}</span>` : ''}
+            <span class="text-[10px] text-slate-400 flex-shrink-0">${escHtml(t.due)}</span>
+        </div>`;
+    }).join('');
 }
 
 function getFilteredTasks() {
