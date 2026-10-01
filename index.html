@@ -4018,31 +4018,7 @@ window.runMergeDuplicateTasks = async function() {
     }
 };
 
-let isCalendarSyncing = false;
-
-async function fetchCalendarUpdatesOnVisible() {
-    if (isCalendarSyncing) return;
-    isCalendarSyncing = true;
-
-    try {
-        console.log("👀 대시보드 활성화 감지: 캘린더 동기화 시작...");
-        const triggerCalendarSync = window.httpsCallable(window.functions, 'triggerCalendarSync');
-        const result = await triggerCalendarSync();
-        console.log("✅ 캘린더 갱신 완료:", result.data);
-        if (typeof renderEvents === 'function') renderEvents();
-    } catch (error) {
-        console.error("❌ 캘린더 갱신 실패:", error);
-    } finally {
-        isCalendarSyncing = false;
-    }
-}
-
-window.addEventListener('load', fetchCalendarUpdatesOnVisible);
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        fetchCalendarUpdatesOnVisible();
-    }
-});
+// Google 캘린더 → 대시보드 자동 동기화는 사용하지 않음 (일정은 Upcoming Events "+"로만 추가 → 회사 캘린더로 등록)
 </script>
 </body>
 </html>
